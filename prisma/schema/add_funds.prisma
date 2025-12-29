@@ -1,0 +1,23 @@
+model AddFunds {
+  Id               Int                       @id @default(autoincrement())
+  userId           Int
+  name             String?
+  email            String
+  phoneNumber      String?
+  invoiceId        String                    @unique
+  transactionId    String?
+  usdAmount        Float
+  bdtAmount        Float?
+  currency         String?                   @default("USD") @db.VarChar(3)
+  gatewayFee       Float?
+  status           String?                   @default("Processing")
+  paymentGateway   String?
+  paymentMethod    String?
+  transactionDate  DateTime                  @default(now())
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @default(now()) @updatedAt
+  user             Users                      @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "addfund_userId_fkey")
+  @@map("add_funds")
+}

@@ -1,0 +1,12 @@
+model FavoriteCategories {
+  id        Int       @id @default(autoincrement())
+  name      String
+  userId    Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      Users      @relation(fields: [userId], references: [id])
+  services  Services[]
+
+  @@index([userId], map: "FavrouteCat_userId_fkey")
+  @@map("favorite_categories")
+}

@@ -1,0 +1,32 @@
+model SupportTickets {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  subject       String
+  message       String   @db.Text
+  status        String   @default("pending")
+  category      String
+  subcategory   String?
+  ticketType    String   @default("Human")
+  aiSubcategory String?
+  humanTicketSubject  String?
+  systemMessage String?  @db.Text
+  orderIds      String?  @db.Text
+  priority      String   @default("medium")
+  attachments   String?  @db.Text
+  adminReply    String?  @db.Text
+  isRead        Boolean  @default(false)
+  repliedAt     DateTime?
+  repliedBy     Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          Users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repliedByUser Users? @relation("RepliedByUser", fields: [repliedBy], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([priority])
+  @@index([createdAt])
+  @@map("support_tickets")
+}

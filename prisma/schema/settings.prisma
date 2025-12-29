@@ -1,0 +1,243 @@
+model GeneralSettings {
+  id             Int      @id @default(autoincrement())
+  siteTitle      String   @default("SMM Panel")
+  tagline        String   @default("Best SMM Services Provider")
+  siteIcon       String   @default("")
+  siteLogo       String   @default("")
+  siteDarkLogo   String?  @default("")
+  adminEmail     String   @default("admin@example.com")
+  supportEmail   String?  @default("")
+  whatsappSupport String? @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("general_settings")
+}
+
+model MetaSettings {
+  id              Int      @id @default(autoincrement())
+  googleTitle     String   @default("SMM Panel - Best Social Media Marketing Services")
+  siteTitle       String   @default("SMM Panel")
+  siteDescription String   @default("Get the best social media marketing services with fast delivery and affordable prices. Boost your social media presence today!") @db.Text
+  keywords        String   @default("smm panel, social media marketing, instagram followers, youtube views, facebook likes") @db.Text
+  thumbnail       String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("meta_settings")
+}
+
+model UserSettings {
+  id                       Int      @id @default(autoincrement())
+  resetPasswordEnabled     Boolean  @default(true)
+  signUpPageEnabled        Boolean  @default(true)
+  nameFieldEnabled         Boolean  @default(true)
+  emailConfirmationEnabled Boolean  @default(true)
+  resetLinkMax             Int      @default(3)
+  minimumFundsToAddUSD     Float    @default(10)
+  maximumFundsToAddUSD     Float    @default(10000)
+  transferFundsPercentage  Int      @default(3)
+  userFreeBalanceEnabled   Boolean  @default(false)
+  freeAmount               Float    @default(0)
+  paymentBonusEnabled      Boolean  @default(false)
+  bonusPercentage          Float    @default(0)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+model TicketSettings {
+  id                  Int             @id @default(autoincrement())
+  ticketSystemEnabled Boolean         @default(true)
+  maxPendingTickets   String          @default("3")
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  subjects            TicketSubjects[]
+
+  @@map("ticket_settings")
+}
+
+model TicketSubjects {
+  id               Int            @id @default(autoincrement())
+  name             String
+  ticketSettingsId Int
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  ticketSettings   TicketSettings @relation(fields: [ticketSettingsId], references: [id], onDelete: Cascade)
+
+  @@index([ticketSettingsId], map: "ticket_subjects_ticketSettingsId_fkey")
+  @@map("ticket_subjects")
+}
+
+model ContactSettings {
+  id                   Int               @id @default(autoincrement())
+  contactSystemEnabled Boolean           @default(true)
+  maxPendingContacts   String            @default("3")
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  categories           ContactCategories[]
+
+  @@map("contact_settings")
+}
+
+model ContactCategories {
+  id                Int             @id @default(autoincrement())
+  name              String
+  contactSettingsId Int
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  contactSettings   ContactSettings @relation(fields: [contactSettingsId], references: [id], onDelete: Cascade)
+
+  @@index([contactSettingsId], map: "contact_categories_contactSettingsId_fkey")
+  @@map("contact_categories")
+}
+
+model ModuleSettings {
+  id                           Int      @id @default(autoincrement())
+  affiliateSystemEnabled       Boolean  @default(false)
+  commissionRate               Float    @default(5)
+  minimumPayout                Float    @default(10)
+  servicePurchaseEarningCount  String   @default("1")
+  childPanelSellingEnabled      Boolean  @default(false)
+  childPanelPrice              Float    @default(10)
+  childPanelNameserver1        String?  @default("ns1.smmdoc.com")
+  childPanelNameserver2        String?  @default("ns2.smmdoc.com")
+  serviceUpdateLogsEnabled      Boolean  @default(true)
+  massOrderEnabled             Boolean  @default(false)
+  servicesListPublic           Boolean  @default(true)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  @@map("module_settings")
+}
+
+model ServiceUpdateLogs {
+  id          Int      @id @default(autoincrement())
+  serviceId   Int
+  serviceName String
+  adminId     Int
+  adminEmail  String
+  action      String
+  changes     String?  @db.LongText
+  oldValues   String?  @db.LongText
+  newValues   String?  @db.LongText
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@map("service_update_logs")
+}
+
+model Affiliates {
+  id                Int                   @id @default(autoincrement())
+  userId            Int                   @unique
+  referralCode      String                @unique
+  commissionRate    Float                 @default(5)
+  totalEarnings     Float                 @default(0)
+  availableEarnings Float                 @default(0)
+  totalReferrals    Int                   @default(0)
+  totalVisits       Int                   @default(0)
+  status            String                @default("active")
+  paymentMethod     String?
+  paymentDetails    String?               @db.LongText
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  commissions       AffiliateCommission[]
+  payouts           AffiliatePayout[]
+  referrals         AffiliateReferral[]
+
+  @@map("affiliates")
+}
+
+model AffiliateReferrals {
+  id             Int       @id @default(autoincrement())
+  affiliateId    Int
+  referredUserId Int       @unique
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+  affiliate      Affiliates @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId], map: "affiliate_referrals_affiliateId_fkey")
+  @@map("affiliate_referrals")
+}
+
+model AffiliateCommissions {
+  id               Int       @id @default(autoincrement())
+  affiliateId      Int
+  referredUserId   Int
+  orderId          Int?
+  amount           Float
+  commissionRate   Float
+  commissionAmount Float
+  status           String    @default("pending")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  affiliate        Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId], map: "affiliate_commissions_affiliateId_fkey")
+  @@map("affiliate_commissions")
+}
+
+model AffiliatePayouts {
+  id          Int       @id @default(autoincrement())
+  affiliateId Int
+  amount      Float
+  method      String
+  details     String?   @db.LongText
+  status      String    @default("pending")
+  requestedAt DateTime  @default(now())
+  processedAt DateTime?
+  notes       String?
+  adminId     Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId], map: "affiliate_payouts_affiliateId_fkey")
+  @@map("affiliate_payouts")
+}
+
+model ChildPanels {
+  id             Int                      @id @default(autoincrement())
+  userId         Int                      @unique
+  domain         String                   @unique
+  subdomain      String?
+  panelName      String
+  apiKey         String                   @unique
+  status         String                   @default("pending")
+  plan           String                   @default("basic")
+  theme          String                   @default("default")
+  customBranding Boolean                  @default(false)
+  totalOrders    Int                      @default(0)
+  totalRevenue   Float                    @default(0)
+  apiCallsToday  Int                      @default(0)
+  apiCallsTotal  Int                      @default(0)
+  lastActivity   DateTime?
+  expiryDate     DateTime?
+  settings       String?                  @db.LongText
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  subscriptions  ChildPanelSubscriptions[]
+
+  @@map("child_panels")
+}
+
+model ChildPanelSubscriptions {
+  id            Int        @id @default(autoincrement())
+  childPanelId  Int
+  amount        Float
+  currency      String     @default("USD")
+  status        String     @default("pending")
+  startDate     DateTime   @default(now())
+  endDate       DateTime
+  paymentMethod String?
+  transactionId String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  childPanel    ChildPanels @relation(fields: [childPanelId], references: [id], onDelete: Cascade)
+
+  @@index([childPanelId], map: "child_panel_subscriptions_childPanelId_fkey")
+  @@map("child_panel_subscriptions")
+}

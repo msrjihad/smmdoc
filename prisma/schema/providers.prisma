@@ -1,0 +1,16 @@
+model ApiProviders {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  api_key    String
+  login_user String?
+  login_pass String?
+  status     String   @default("active")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  api_url    String   @default("")
+  is_custom  Boolean  @default(false)
+
+  @@index([status])
+  @@index([name])
+  @@map("api_providers")
+}

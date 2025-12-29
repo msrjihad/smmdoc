@@ -1,0 +1,17 @@
+model ActivityLogs {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  username  String?
+  action    String
+  details   String   @db.Text
+  ipAddress String?
+  userAgent String?  @db.Text
+  metadata  String?  @db.LongText
+  createdAt DateTime @default(now())
+  user      Users?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
