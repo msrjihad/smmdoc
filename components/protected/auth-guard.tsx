@@ -230,7 +230,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     router,
   ]);
 
-  const showLoadingOverlay = status === 'loading' || isValidating;
+  const showLoadingOverlay = (status === 'loading' || isValidating) && !isAdminPage && !isDashboard;
 
   return (
     <>
