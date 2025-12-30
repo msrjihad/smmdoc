@@ -502,7 +502,7 @@ const SyncLogsPage = () => {
                               getPaginatedData().length > 0
                             }
                             onChange={handleSelectAll}
-                            className="rounded border-gray-300 w-4 h-4"
+                            className="rounded border-gray-300 dark:border-gray-600 w-4 h-4 text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer"
                           />
                         </th>
                         <th
@@ -546,9 +546,9 @@ const SyncLogsPage = () => {
                           <td className="p-3">
                             <input
                               type="checkbox"
-                              checked={selectedLogs.includes(log.id.toString())}
+                              checked={selectedLogs.includes(log.id)}
                               onChange={() => handleSelectLog(log.id)}
-                              className="rounded border-gray-300 w-4 h-4"
+                              className="rounded border-gray-300 dark:border-gray-600 w-4 h-4 text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer"
                             />
                           </td>
                           <td className="p-3">
@@ -625,7 +625,7 @@ const SyncLogsPage = () => {
                               type="checkbox"
                               checked={selectedLogs.includes(log.id)}
                               onChange={() => handleSelectLog(log.id)}
-                              className="rounded border-gray-300 w-4 h-4"
+                              className="rounded border-gray-300 dark:border-gray-600 w-4 h-4 text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer"
                             />
                             <div className="font-mono text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded">
                               {(pagination.page - 1) * pagination.limit + index + 1}

@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Setup:
  * - Add CRON_SECRET to your .env file for authentication
  * - Set up a cron job to call: GET /api/cron/calculate-average-time
- * - Example cron schedule: 0 */6 * * * (every 6 hours)
+ * - Example cron schedule: 0 0,6,12,18 * * * (every 6 hours)
  * 
  * Logic (matches old project):
  * - For each active service, get the last 10 completed orders with qty = 1000

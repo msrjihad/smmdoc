@@ -193,12 +193,21 @@ export const CreateServiceForm: React.FC<{
   const modeValue = watch('mode');
   const providerIdValue = watch('providerId');
 
+  const shouldFetchApiServices = (modeValue === 'auto' && providerIdValue) || 
+    (isEditMode && serviceData?.data?.providerId && serviceData.data.mode === 'auto');
+  
+  const effectiveProviderId = modeValue === 'auto' && providerIdValue 
+    ? providerIdValue 
+    : (isEditMode && serviceData?.data?.providerId && serviceData.data.mode === 'auto' 
+        ? String(serviceData.data.providerId) 
+        : null);
+
   const {
     data: apiServicesData,
     error: apiServicesError,
     isLoading: apiServicesLoading,
   } = useSWR(
-    modeValue === 'auto' && providerIdValue ? `/api/admin/providers/${providerIdValue}/services` : null,
+    shouldFetchApiServices && effectiveProviderId ? `/api/admin/providers/${effectiveProviderId}/services` : null,
     fetcher
   );
 
@@ -366,7 +375,7 @@ export const CreateServiceForm: React.FC<{
         exampleLink: serviceData.data.exampleLink || createServiceDefaultValues.exampleLink,
         orderLink: orderLinkValue,
         providerId: providerIdValue,
-        providerServiceId: serviceData.data.providerServiceId || createServiceDefaultValues.providerServiceId,
+        providerServiceId: serviceData.data.providerServiceId ? String(serviceData.data.providerServiceId) : createServiceDefaultValues.providerServiceId,
       };
 
       console.log('Reset data being passed to form:', resetData);
@@ -701,7 +710,7 @@ export const CreateServiceForm: React.FC<{
                 <FormMessage>{errors.providerId?.message}</FormMessage>
               </FormItem>
             )}
-            {modeValue === 'auto' && providerIdValue && (
+            {((modeValue === 'auto' && providerIdValue) || (isEditMode && serviceData?.data?.mode === 'auto' && serviceData.data.providerId)) && (
               <FormItem className="md:col-span-2">
                 <FormLabel
                   className="text-sm font-medium"
@@ -715,12 +724,13 @@ export const CreateServiceForm: React.FC<{
                     {...register('providerServiceId')}
                     disabled={isPending || apiServicesLoading}
                     required={modeValue === 'auto' && !!providerIdValue}
+                    value={watch('providerServiceId') || ''}
                   >
                     <option value="">
                       {apiServicesLoading ? 'Loading services...' : 'Select API Service'}
                     </option>
                     {apiServicesData?.data?.services?.map((service: any) => (
-                      <option key={service.id} value={service.id}>
+                      <option key={service.id} value={String(service.id)}>
                         {service.name}
                       </option>
                     ))}
