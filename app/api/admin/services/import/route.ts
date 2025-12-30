@@ -1059,7 +1059,7 @@ export async function PUT(req: NextRequest) {
               rate: finalRate,
               min_order: service.min || 100,
               max_order: service.max || 10000,
-              avg_time: '0-1 Hours',
+              avg_time: 'Not enough data', // Will be calculated automatically by cron job
               status: 'active',
               perqty: 1000,
               mode: 'auto',

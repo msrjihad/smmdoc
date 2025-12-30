@@ -204,7 +204,6 @@ export const EditServiceForm = ({
         setValue('min_order', selectedService.min?.toString() || '');
         setValue('max_order', selectedService.max?.toString() || '');
         setValue('perqty', '1000');
-        setValue('avg_time', '0-1 hours');
 
         if (selectedService.type && serviceTypesData?.data) {
           const mappedServiceTypeId = mapApiServiceTypeToInternalType(selectedService.type);
@@ -304,7 +303,6 @@ export const EditServiceForm = ({
         min_order: String(serviceData.data.min_order) || createServiceDefaultValues.min_order,
         max_order: String(serviceData.data.max_order) || createServiceDefaultValues.max_order,
         perqty: String(serviceData.data.perqty) || createServiceDefaultValues.perqty,
-        avg_time: serviceData.data.avg_time || '',
         updateText: serviceData.data.updateText || '',
         serviceTypeId: serviceTypeIdValue,
         mode: serviceData.data.mode || createServiceDefaultValues.mode,
@@ -698,55 +696,37 @@ export const EditServiceForm = ({
                   className="text-sm font-medium"
                   style={{ color: 'var(--text-primary)' }}
                 >
-                  Average Time <span className="text-red-500">*</span>
+                  Refill <span className="text-red-500">*</span>
                 </FormLabel>
                 <FormControl>
-                  <input
-                    type="text"
-                    placeholder="e.g., 1-2 hours, 24 hours"
-                    className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                    {...register('avg_time')}
+                  <select
+                    className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
+                    {...register('refill', {
+                      setValueAs: (value) => value === 'true',
+                    })}
                     disabled={isPending}
-                  />
+                    required
+                  >
+                    <option value="false">Off</option>
+                    <option value="true">On</option>
+                  </select>
                 </FormControl>
-                <FormMessage>{errors.avg_time?.message}</FormMessage>
+                <FormMessage>{errors.refill?.message}</FormMessage>
               </FormItem>
             </div>
-            <FormItem className="md:col-span-2">
-              <FormLabel
-                className="text-sm font-medium"
-                style={{ color: 'var(--text-primary)' }}
-              >
-                Refill <span className="text-red-500">*</span>
-              </FormLabel>
-              <FormControl>
-                <select
-                  className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
-                  {...register('refill', {
-                    setValueAs: (value) => value === 'true',
-                  })}
-                  disabled={isPending}
-                  required
-                >
-                  <option value="false">Off</option>
-                  <option value="true">On</option>
-                </select>
-              </FormControl>
-              <FormMessage>{errors.refill?.message}</FormMessage>
-            </FormItem>
             {refillValue === true && (
               <FormItem className="md:col-span-1">
                 <FormLabel
                   className="text-sm font-medium"
                   style={{ color: 'var(--text-primary)' }}
                 >
-                  Refill Days <span className="text-red-500">*</span>
+                  Refill Days <span className="text-gray-500 text-xs">(Leave blank for Lifetime)</span>
                 </FormLabel>
                 <FormControl>
                   <input
                     type="number"
                     min={0}
-                    placeholder="Enter refill days"
+                    placeholder="Leave blank for Lifetime"
                     className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     {...register('refillDays')}
                     disabled={isPending}
@@ -762,13 +742,12 @@ export const EditServiceForm = ({
                   style={{ color: 'var(--text-primary)' }}
                 >
                   Refill Display (in hours){' '}
-                  <span className="text-red-500">*</span>
                 </FormLabel>
                 <FormControl>
                   <input
                     type="number"
                     min={0}
-                    placeholder="Enter refill display hours"
+                    placeholder="Leave blank for Lifetime"
                     className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     {...register('refillDisplay')}
                     disabled={isPending}

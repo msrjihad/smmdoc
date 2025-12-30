@@ -352,6 +352,18 @@ export async function POST(request: Request) {
       return undefined;
     };
 
+    const toRefillValue = (value: unknown): number | null => {
+      if (value === null || value === undefined || value === '') {
+        return null; // Lifetime
+      }
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string' && value.trim() !== '') {
+        const num = Number(value.trim());
+        return isNaN(num) ? null : num;
+      }
+      return null; // Lifetime
+    };
+
     const createData: any = {
       name: name || '',
       description: description || '',
@@ -359,12 +371,12 @@ export async function POST(request: Request) {
       min_order: toNumber(min_order, 0),
       max_order: toNumber(max_order, 0),
       perqty: toNumber(perqty, 1000),
-      avg_time: avg_time || '0-1 hours',
+      avg_time: 'Not enough data', // Will be calculated automatically by cron job
       updateText: updateText || '',
       refill: toBool(refill),
       cancel: toBool(cancel),
-      refillDays: toNumber(refillDays, 30),
-      refillDisplay: toNumber(refillDisplay, 24),
+      refillDays: toRefillValue(refillDays),
+      refillDisplay: toRefillValue(refillDisplay),
       serviceSpeed: serviceSpeed || 'medium',
       mode: mode || 'manual',
       orderLink: orderLink || 'link',

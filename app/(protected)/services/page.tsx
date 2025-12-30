@@ -745,11 +745,17 @@ const UserServiceTable: React.FC = () => {
                                     </div>
                                     {service.refill && (
                                       <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
-                                        {service.refillDays && (
-                                          <div>Days: {service.refillDays}</div>
-                                        )}
-                                        {service.refillDisplay && (
-                                          <div>Hours: {service.refillDisplay}</div>
+                                        {service.refillDays === null || service.refillDays === undefined ? (
+                                          <div>Lifetime</div>
+                                        ) : (
+                                          <>
+                                            {service.refillDays && (
+                                              <div>Days: {service.refillDays}</div>
+                                            )}
+                                            {service.refillDisplay && (
+                                              <div>Hours: {service.refillDisplay}</div>
+                                            )}
+                                          </>
                                         )}
                                       </div>
                                     )}

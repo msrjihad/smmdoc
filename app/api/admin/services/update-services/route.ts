@@ -56,7 +56,6 @@ export async function PUT(request: Request) {
       min_order,
       max_order,
       perqty,
-      avg_time,
       updateText,
       serviceTypeId,
       refill,
@@ -132,6 +131,18 @@ export async function PUT(request: Request) {
       return undefined;
     };
 
+    const toRefillValue = (value: unknown): number | null => {
+      if (value === null || value === undefined || value === '') {
+        return null; // Lifetime
+      }
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string' && value.trim() !== '') {
+        const num = Number(value.trim());
+        return isNaN(num) ? null : num;
+      }
+      return null; // Lifetime
+    };
+
     const convertBigIntToString = (value: any): any => {
       if (typeof value === 'bigint') {
         return value.toString();
@@ -162,9 +173,7 @@ export async function PUT(request: Request) {
     if (perqty !== undefined && perqty !== null && perqty !== '') {
       updateData.perqty = toNumber(perqty, 1000);
     }
-    if (avg_time !== undefined && avg_time !== null && avg_time !== '') {
-      updateData.avg_time = avg_time;
-    }
+    // avg_time is now calculated automatically by cron job, not manually editable
     if (updateText !== undefined && updateText !== null && updateText !== '') {
       updateData.updateText = updateText;
     }
@@ -234,11 +243,11 @@ export async function PUT(request: Request) {
     if (cancel !== undefined && cancel !== null) {
       updateData.cancel = toBool(cancel);
     }
-    if (refillDays !== undefined && refillDays !== null && refillDays !== '') {
-      updateData.refillDays = toNumber(refillDays, 30);
+    if (refillDays !== undefined) {
+      updateData.refillDays = toRefillValue(refillDays);
     }
-    if (refillDisplay !== undefined && refillDisplay !== null && refillDisplay !== '') {
-      updateData.refillDisplay = toNumber(refillDisplay, 24);
+    if (refillDisplay !== undefined) {
+      updateData.refillDisplay = toRefillValue(refillDisplay);
     }
     if (serviceSpeed !== undefined && serviceSpeed !== null && serviceSpeed !== '') {
       updateData.serviceSpeed = serviceSpeed;

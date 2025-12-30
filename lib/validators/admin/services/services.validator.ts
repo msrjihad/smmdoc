@@ -13,15 +13,16 @@ const createServiceSchema = z.object({
   updateText: z.string().optional(),
   refill: z.boolean().default(false),
   cancel: z.boolean().default(false),
-  refillDays: z.number().optional().default(30),
-  refillDisplay: z.number().optional().default(24),
+  refillDays: z.number().nullable().optional(),
+  refillDisplay: z.number().nullable().optional(),
   serviceSpeed: z.enum(['slow', 'sometimes_slow', 'normal', 'fast']).default('normal'),
   exampleLink: z.string().optional(),
   mode: z.enum(['manual', 'auto']).default('manual'),
   orderLink: z.enum(['username', 'link']).optional().default('link'),
   providerId: z.string().optional(),
   providerServiceId: z.string().optional(),
-});
+});
+
 const editServiceSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
@@ -61,8 +62,8 @@ const createServiceDefaultValues: CreateServiceSchema = {
   updateText: '',
   refill: false,
   cancel: false,
-  refillDays: 30,
-  refillDisplay: 24,
+  refillDays: undefined,
+  refillDisplay: undefined,
   serviceSpeed: 'normal',
   exampleLink: '',
   mode: 'manual',

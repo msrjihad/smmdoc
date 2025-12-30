@@ -1212,69 +1212,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
-      {hasUsersPermission && (
-        <div className="mb-6">
-          <div className="card card-padding">
-            <div className="card-header mb-4">
-              <div className="flex items-center gap-2 lg:justify-between lg:w-full">
-                <div className="flex items-center gap-2 lg:flex-1">
-                  <div className="card-icon">
-                    <FaUsers />
-                  </div>
-                  <h3 className="card-title">Latest Users</h3>
-                </div>
-                <div className="hidden lg:block">
-                  <Link
-                    href="/admin/users"
-                    className="btn btn-secondary flex items-center gap-2"
-                  >
-                    <FaUsers className="w-4 h-4" />
-                    View All Users
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            <div className="min-h-[400px]">
-              {latestUsersLoading ? (
-                <UsersTableSkeleton />
-              ) : latestUsers.length === 0 ? (
-                <div className="text-center py-12">
-                  <FaUsers
-                    className="h-16 w-16 mx-auto mb-4"
-                    style={{ color: 'var(--text-muted)' }}
-                  />
-                  <h3
-                    className="text-lg font-semibold mb-2"
-                    style={{ color: 'var(--text-primary)' }}
-                  >
-                    No users found
-                  </h3>
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                    {latestUsers.length === 0
-                      ? 'No users exist yet.'
-                      : 'No users match your criteria.'}
-                  </p>
-                </div>
-              ) : (
-                <LatestUsers
-                  latestUsers={latestUsers}
-                  formatCurrency={formatCurrency}
-                />
-              )}
-            </div>
-            <div className="lg:hidden mt-4">
-              <Link
-                href="/admin/users"
-                className="btn btn-secondary flex items-center justify-center gap-2 w-full"
-              >
-                <FaUsers className="w-4 h-4" />
-                View All Users
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
 
       <ApproveTransactionModal
         open={approveConfirmDialog.open}
