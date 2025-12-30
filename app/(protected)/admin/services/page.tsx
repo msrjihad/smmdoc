@@ -61,13 +61,6 @@ const CreateCategoryForm = dynamic(
   { ssr: false }
 );
 
-const EditCategoryForm = dynamic(
-  () =>
-    import('@/components/admin/services/edit-category-form').then(
-      (m) => m.EditCategoryForm
-    ),
-  { ssr: false }
-);
 
 const DeleteCategoryModal = dynamic(
   () =>
@@ -77,18 +70,10 @@ const DeleteCategoryModal = dynamic(
   { ssr: false }
 );
 
-const CreateServiceForm = dynamic(
+const ServiceForm = dynamic(
   () =>
-    import('@/components/admin/services/create-service-form').then(
+    import('@/components/admin/services/service-form').then(
       (m) => m.CreateServiceForm
-    ),
-  { ssr: false }
-);
-
-const EditServiceForm = dynamic(
-  () =>
-    import('@/components/admin/services/edit-service-form').then(
-      (m) => m.EditServiceForm
     ),
   { ssr: false }
 );
@@ -2764,7 +2749,7 @@ function AdminServicesPage() {
               }`}
               onClick={(e) => e.stopPropagation()}
             >
-              <EditServiceForm
+              <ServiceForm
                 serviceId={editServiceModal.serviceId}
                 onClose={handleCloseEditModal}
                 showToast={showToast}
@@ -2790,7 +2775,7 @@ function AdminServicesPage() {
               }`}
               onClick={(e) => e.stopPropagation()}
             >
-              <CreateServiceForm
+              <ServiceForm
                 onClose={handleCloseCreateModal}
                 showToast={showToast}
                 onRefresh={refreshAllData}
@@ -2841,9 +2826,8 @@ function AdminServicesPage() {
               }`}
               onClick={(e) => e.stopPropagation()}
             >
-              <EditCategoryForm
+              <CreateCategoryForm
                 categoryId={editCategoryModal.categoryId}
-                categoryName={editCategoryModal.categoryName}
                 onClose={handleCloseEditCategoryModal}
                 showToast={showToast}
                 refreshAllData={refreshAllData}

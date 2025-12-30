@@ -1,12 +1,15 @@
 'use client';
+
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import {
   FaExclamationTriangle,
+  FaPlus,
   FaSave,
   FaTimes,
 } from 'react-icons/fa';
 import useSWR from 'swr';
+
 import { useGetCategories } from '@/hooks/categories-fetch';
 import { useGetServicesId } from '@/hooks/service-fetch-id';
 import axiosInstance from '@/lib/axios-instance';
@@ -54,28 +57,40 @@ const FormMessage = ({
     <div className={`text-xs text-red-500 mt-1 ${className}`}>{children}</div>
   ) : null;
 
-const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
-  <div className={`${size} ${className} relative`}>
-    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 animate-spin">
-      <div className="absolute inset-1 rounded-full bg-white"></div>
-    </div>
+const SkeletonField = ({ className = '' }: { className?: string }) => (
+  <div className={`space-y-2 ${className}`}>
+    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+    <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
   </div>
 );
 
-export const EditServiceForm = ({
-  serviceId,
-  onClose,
-  showToast,
-  refreshAllData,
-}: {
-  serviceId: number;
+const SkeletonTextarea = ({ className = '' }: { className?: string }) => (
+  <div className={`space-y-2 ${className}`}>
+    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+    <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+  </div>
+);
+
+export const CreateServiceForm: React.FC<{
+  serviceId?: number; // Optional: undefined for create, number for edit
   onClose: () => void;
   showToast: (
     message: string,
     type?: 'success' | 'error' | 'info' | 'pending'
   ) => void;
+  onRefresh?: () => void;
   refreshAllData?: () => Promise<void>;
+  refreshAllDataWithServices?: () => Promise<void>;
+}> = ({ 
+  serviceId, 
+  onClose, 
+  showToast, 
+  onRefresh, 
+  refreshAllData,
+  refreshAllDataWithServices 
 }) => {
+  const isEditMode = !!serviceId; // Determine mode based on serviceId
+
   const {
     data: categoriesData,
     error: categoriesError,
@@ -86,16 +101,36 @@ export const EditServiceForm = ({
     error: serviceTypesError,
     isLoading: serviceTypesLoading,
   } = useSWR('/api/admin/service-types', fetcher);
-  const {
-    data: serviceData,
-    error: serviceError,
-    isLoading: serviceLoading,
-  } = useGetServicesId(serviceId);
+
+  useEffect(() => {
+    console.log('🔍 Service Types Debug in Admin Services:');
+    console.log('📊 serviceTypesData:', serviceTypesData);
+    console.log('📊 serviceTypesError:', serviceTypesError);
+    console.log('📊 serviceTypesLoading:', serviceTypesLoading);
+    if (serviceTypesData?.data) {
+      console.log('📋 Service types count:', serviceTypesData.data.length);
+      serviceTypesData.data.forEach((type: any, index: number) => {
+        console.log(`  ${index + 1}. ID: ${type.id}, Name: ${type.name}`);
+      });
+    }
+  }, [serviceTypesData, serviceTypesError, serviceTypesLoading]);
+
   const {
     data: providersData,
     error: providersError,
     isLoading: providersLoading,
   } = useSWR('/api/admin/providers?filter=active', fetcher);
+
+  // Conditionally fetch service data only in edit mode
+  const {
+    data: serviceData,
+    error: serviceError,
+    isLoading: serviceLoading,
+  } = useSWR(
+    isEditMode && serviceId ? `/api/admin/services/update-services?id=${serviceId}` : null,
+    fetcher
+  );
+
   const [isPending, startTransition] = useTransition();
   const [orderLinkType, setOrderLinkType] = useState<'link' | 'username'>('link');
 
@@ -127,17 +162,39 @@ export const EditServiceForm = ({
     formState: { errors },
   } = useForm<CreateServiceSchema>({
     mode: 'onChange',
-
     defaultValues: {
       ...createServiceDefaultValues,
       mode: 'manual',
+      orderLink: 'link',
     },
   });
 
+  // Reset form when modal closes
+  useEffect(() => {
+    return () => {
+      // Cleanup: reset form when component unmounts (modal closes)
+      reset({
+        ...createServiceDefaultValues,
+        mode: 'manual',
+        orderLink: 'link',
+      });
+    };
+  }, [reset]);
+
+  // Set default service type for create mode
+  useEffect(() => {
+    if (!isEditMode && serviceTypesData?.data && !watch('serviceTypeId')) {
+      const defaultServiceType = serviceTypesData.data.find(
+        (serviceType: any) => serviceType.name === 'Default'
+      );
+      if (defaultServiceType) {
+        setValue('serviceTypeId', defaultServiceType.id.toString());
+      }
+    }
+  }, [isEditMode, serviceTypesData, setValue, watch]);
+
   const refillValue = watch('refill');
-
   const modeValue = watch('mode');
-
   const providerIdValue = watch('providerId');
 
   const {
@@ -170,7 +227,6 @@ export const EditServiceForm = ({
 
     for (const [internalTypeId, apiTypeVariants] of Object.entries(typeMapping)) {
       if (apiTypeVariants.some(variant => normalizedApiType.includes(variant))) {
-
         const serviceTypeExists = serviceTypesData.data.find(
           (type: any) => type.id.toString() === internalTypeId
         );
@@ -191,6 +247,7 @@ export const EditServiceForm = ({
     return null;
   };
 
+  // Auto-fill from API service selection (both create and edit)
   useEffect(() => {
     if (providerServiceIdValue && apiServicesData?.data?.services) {
       const selectedService = apiServicesData.data.services.find(
@@ -260,19 +317,21 @@ export const EditServiceForm = ({
     } else if (!providerServiceIdValue) {
       setValue('orderLink', 'link');
       setOrderLinkType('link');
+      if (!isEditMode) {
+        setValue('refill', false);
+        setValue('cancel', false);
+        setValue('refillDays', undefined as any);
+        setValue('refillDisplay', undefined as any);
+      }
     }
-  }, [providerServiceIdValue, apiServicesData, serviceTypesData, detectOrderLinkType, setValue]);
+  }, [providerServiceIdValue, apiServicesData, serviceTypesData, detectOrderLinkType, setValue, isEditMode]);
 
+  // Populate form when editing (only runs in edit mode)
   useEffect(() => {
-    console.log('Refill value changed:', refillValue, typeof refillValue);
-  }, [refillValue]);
-
-  useEffect(() => {
-    if (serviceData?.data && categoriesData?.data && serviceTypesData?.data) {
+    if (isEditMode && serviceData?.data && categoriesData?.data && serviceTypesData?.data) {
       console.log('=== EDIT SERVICE FORM DEBUG ===');
       console.log('Raw serviceTypeId from database:', serviceData.data.serviceTypeId, typeof serviceData.data.serviceTypeId);
       console.log('Available service types:', serviceTypesData.data);
-      console.log('Service types IDs:', serviceTypesData.data?.map((st: any) => ({ id: st.id, name: st.name, type: typeof st.id })));
 
       const serviceTypeIdValue = serviceData.data.serviceTypeId ? String(serviceData.data.serviceTypeId) : '';
       console.log('Converted serviceTypeIdValue:', serviceTypeIdValue, typeof serviceTypeIdValue);
@@ -291,7 +350,6 @@ export const EditServiceForm = ({
       }
 
       const providerIdValue = serviceData.data.providerId ? String(serviceData.data.providerId) : '';
-
       const orderLinkValue = serviceData.data.orderLink || createServiceDefaultValues.orderLink;
       setOrderLinkType(orderLinkValue as 'link' | 'username');
 
@@ -318,24 +376,26 @@ export const EditServiceForm = ({
       };
 
       console.log('Reset data being passed to form:', resetData);
-      console.log('serviceTypeId in reset data:', resetData.serviceTypeId);
-
       reset(resetData);
-
-      setTimeout(() => {
-        console.log('Form values after reset:', watch());
-        console.log('serviceTypeId field value after reset:', watch('serviceTypeId'));
-      }, 50);
 
       setTimeout(() => {
         setValue('refill', Boolean(serviceData.data.refill));
       }, 100);
     }
-  }, [categoriesData, reset, serviceData, serviceTypesData, watch, setValue]);
+  }, [isEditMode, serviceData, categoriesData, serviceTypesData, reset, setValue]);
+
+  const handleClose = () => {
+    // Reset form before closing
+    reset({
+      ...createServiceDefaultValues,
+      mode: 'manual',
+      orderLink: 'link',
+    });
+    onClose();
+  };
 
   const onSubmit: SubmitHandler<CreateServiceSchema> = async (values) => {
-    console.log('Edit form submitted with values:', values);
-    console.log('Service ID:', serviceId);
+    console.log(`${isEditMode ? 'Edit' : 'Create'} form submitted with values:`, values);
 
     if (!values.categoryId || values.categoryId === '') {
       showToast('Please select a service category', 'error');
@@ -354,6 +414,9 @@ export const EditServiceForm = ({
 
     const filteredValues = Object.fromEntries(
       Object.entries(values).filter(([key, value]) => {
+        if (key === 'categoryId' || key === 'serviceTypeId') {
+          return value !== null && value !== undefined && value !== '';
+        }
         if (value === '' || value === null || value === undefined) return false;
         return true;
       })
@@ -363,59 +426,127 @@ export const EditServiceForm = ({
 
     startTransition(async () => {
       try {
-        console.log('Sending edit request to API...');
-        const response = await axiosInstance.put(
-          `/api/admin/services/update-services?id=${serviceId}`,
-          filteredValues
-        );
-        console.log('Edit API response:', response.data);
+        let response;
+        if (isEditMode) {
+          console.log('Sending edit request to API...');
+          response = await axiosInstance.put(
+            `/api/admin/services/update-services?id=${serviceId}`,
+            filteredValues
+          );
+          console.log('Edit API response:', response.data);
+        } else {
+          console.log('Sending create request to API...');
+          response = await axiosInstance.post(
+            '/api/admin/services',
+            filteredValues
+          );
+          console.log('Create API response:', response.data);
+        }
+
         if (response.data.success) {
+          // Reset form after successful submit
+          reset({
+            ...createServiceDefaultValues,
+            mode: 'manual',
+            orderLink: 'link',
+          });
+
           showToast(
-            response.data.message || 'Service updated successfully',
+            response.data.message || (isEditMode ? 'Service updated successfully' : 'Service created successfully'),
             'success'
           );
 
-          if (refreshAllData) {
+          // Call appropriate refresh callbacks
+          if (isEditMode && refreshAllData) {
             await refreshAllData();
+          } else if (!isEditMode) {
+            if (refreshAllDataWithServices) {
+              await refreshAllDataWithServices();
+            }
+            if (onRefresh) {
+              onRefresh();
+            }
           }
+
           onClose();
         } else {
-          showToast(response.data.error || 'Failed to update service', 'error');
+          showToast(response.data.error || `Failed to ${isEditMode ? 'update' : 'create'} service`, 'error');
         }
       } catch (error: any) {
-        console.error('Edit API Error:', error);
+        console.error('API Error:', error);
         console.error('Error response:', error.response?.data);
         
-        const errorMessage = error.response?.data?.error || error.message || 'Something went wrong';
-        showToast(`Error: ${errorMessage}`, 'error');
+        let errorMessage = `Failed to ${isEditMode ? 'update' : 'create'} service. Please try again.`;
+        
+        if (error.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        console.error('Displaying error:', errorMessage);
+        showToast(errorMessage, 'error');
       }
     });
   };
 
-  if (categoriesLoading || serviceLoading || !serviceData?.data) {
+  // Loading state
+  if (categoriesLoading || (isEditMode && (serviceLoading || !serviceData?.data))) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center flex flex-col items-center">
-            <GradientSpinner size="w-12 h-12" className="mb-3" />
-            <div className="text-base font-medium">Loading service data...</div>
+      <div className="w-full max-w-6xl">
+        <div className="flex items-center justify-between p-6">
+          <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-40 animate-pulse"></div>
+          <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </div>
+
+        <div className="px-6 pb-6">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <SkeletonField className="md:col-span-2" />
+              <SkeletonField className="md:col-span-1" />
+              <SkeletonField className="md:col-span-1" />
+              <SkeletonField className="md:col-span-2" />
+              <div className="md:col-span-2 grid grid-cols-3 gap-6">
+                <SkeletonField className="col-span-1" />
+                <SkeletonField className="col-span-1" />
+                <SkeletonField className="col-span-1" />
+              </div>
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <SkeletonField className="col-span-1" />
+                <SkeletonField className="col-span-1" />
+              </div>
+              <SkeletonField className="md:col-span-1" />
+              <SkeletonField className="md:col-span-1" />
+              <SkeletonField className="md:col-span-2" />
+              <SkeletonField className="md:col-span-2" />
+            </div>
+            <SkeletonTextarea />
+            <div className="flex gap-2 justify-center">
+              <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+              <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  if (categoriesError || serviceError) {
+  // Error state
+  if (categoriesError || (isEditMode && serviceError)) {
     return (
       <div className="p-6">
         <div className="text-center py-12">
           <FaExclamationTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-          <p className="text-red-600 font-medium">Error loading service data</p>
+          <p className="text-red-600 font-medium">
+            Error loading {isEditMode ? 'service' : 'categories'} data
+          </p>
           <p className="text-gray-500 text-sm mt-1">
             {categoriesError || serviceError}
           </p>
           <div className="flex justify-center mt-4">
-            <button onClick={onClose} className="btn btn-secondary">
+            <button onClick={handleClose} className="btn btn-secondary">
               Close
             </button>
           </div>
@@ -424,17 +555,19 @@ export const EditServiceForm = ({
     );
   }
 
-  if (!categoriesData || !serviceData) {
+  if (!categoriesData || (isEditMode && !serviceData)) {
     return (
       <div className="p-6">
         <div className="text-center py-12">
           <FaExclamationTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 font-medium">No service data available</p>
+          <p className="text-gray-600 font-medium">
+            {isEditMode ? 'No service data available' : 'No categories available'}
+          </p>
           <p className="text-gray-500 text-sm mt-1">
-            Service not found or data unavailable
+            {isEditMode ? 'Service not found or data unavailable' : 'Please add categories first'}
           </p>
           <div className="flex justify-center mt-4">
-            <button onClick={onClose} className="btn btn-secondary">
+            <button onClick={handleClose} className="btn btn-secondary">
               Close
             </button>
           </div>
@@ -450,10 +583,10 @@ export const EditServiceForm = ({
           className="text-lg font-semibold"
           style={{ color: 'var(--text-primary)' }}
         >
-          Edit Service
+          {isEditMode ? 'Edit Service' : 'Create New Service'}
         </h3>
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="text-gray-400 hover:text-gray-600 transition-colors"
           title="Close"
         >
@@ -478,6 +611,7 @@ export const EditServiceForm = ({
                   className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
                   {...register('name')}
                   disabled={isPending}
+                  required
                 />
               </FormControl>
               <FormMessage>{errors.name?.message}</FormMessage>
@@ -537,13 +671,14 @@ export const EditServiceForm = ({
                 className="text-sm font-medium"
                 style={{ color: 'var(--text-primary)' }}
               >
-                Mode
+                Mode {!isEditMode && <span className="text-red-500">*</span>}
               </FormLabel>
               <FormControl>
                 <select
                   className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
                   {...register('mode')}
                   disabled={isPending}
+                  required={!isEditMode}
                 >
                   <option value="manual">Manual</option>
                   <option value="auto">Auto (API)</option>
@@ -616,7 +751,8 @@ export const EditServiceForm = ({
                   className="text-sm font-medium"
                   style={{ color: 'var(--text-primary)' }}
                 >
-                  Service Price (Always USD Price) <span className="text-red-500">*</span>
+                  Service Price{' '}
+                  <span className="text-red-500">* (Always USD Price)</span>
                 </FormLabel>
                 <FormControl>
                   <input
@@ -676,8 +812,8 @@ export const EditServiceForm = ({
                   className="text-sm font-medium"
                   style={{ color: 'var(--text-primary)' }}
                 >
-                  Per Quantity (Default: 1000){' '}
-                  <span className="text-red-500">*</span>
+                  Per Quantity (Default: 1000)
+                  {isEditMode && <span className="text-red-500">*</span>}
                 </FormLabel>
                 <FormControl>
                   <input
@@ -783,7 +919,7 @@ export const EditServiceForm = ({
                 className="text-sm font-medium"
                 style={{ color: 'var(--text-primary)' }}
               >
-                Order Link <span className="text-red-500">*</span>
+                {orderLinkType === 'username' ? 'Username' : 'Order Link'} <span className="text-red-500">*</span>
               </FormLabel>
               <FormControl>
                 <select
@@ -861,7 +997,7 @@ export const EditServiceForm = ({
           <div className="flex gap-2 justify-center">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isPending}
               className="btn btn-secondary px-8 py-3"
             >
@@ -874,12 +1010,12 @@ export const EditServiceForm = ({
             >
               {isPending ? (
                 <>
-                  Updating...
+                  {isEditMode ? 'Updating...' : 'Creating Service...'}
                 </>
               ) : (
                 <>
-                  <FaSave className="h-4 w-4" />
-                  Update Service
+                  {isEditMode ? <FaSave className="h-4 w-4" /> : <FaPlus className="h-4 w-4" />}
+                  {isEditMode ? 'Update Service' : 'Create Service'}
                 </>
               )}
             </button>
