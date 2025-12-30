@@ -354,14 +354,14 @@ export async function POST(request: Request) {
 
     const toRefillValue = (value: unknown): number | null => {
       if (value === null || value === undefined || value === '') {
-        return null; // Lifetime
+        return null;
       }
       if (typeof value === 'number') return value;
       if (typeof value === 'string' && value.trim() !== '') {
         const num = Number(value.trim());
         return isNaN(num) ? null : num;
       }
-      return null; // Lifetime
+      return null;
     };
 
     const createData: any = {
@@ -371,7 +371,7 @@ export async function POST(request: Request) {
       min_order: toNumber(min_order, 0),
       max_order: toNumber(max_order, 0),
       perqty: toNumber(perqty, 1000),
-      avg_time: 'Not enough data', // Will be calculated automatically by cron job
+      avg_time: 'Not enough data',
       updateText: updateText || '',
       refill: toBool(refill),
       cancel: toBool(cancel),

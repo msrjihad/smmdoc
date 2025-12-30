@@ -133,14 +133,14 @@ export async function PUT(request: Request) {
 
     const toRefillValue = (value: unknown): number | null => {
       if (value === null || value === undefined || value === '') {
-        return null; // Lifetime
+        return null;
       }
       if (typeof value === 'number') return value;
       if (typeof value === 'string' && value.trim() !== '') {
         const num = Number(value.trim());
         return isNaN(num) ? null : num;
       }
-      return null; // Lifetime
+      return null;
     };
 
     const convertBigIntToString = (value: any): any => {
@@ -173,7 +173,6 @@ export async function PUT(request: Request) {
     if (perqty !== undefined && perqty !== null && perqty !== '') {
       updateData.perqty = toNumber(perqty, 1000);
     }
-    // avg_time is now calculated automatically by cron job, not manually editable
     if (updateText !== undefined && updateText !== null && updateText !== '') {
       updateData.updateText = updateText;
     }

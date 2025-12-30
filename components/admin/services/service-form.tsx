@@ -72,7 +72,7 @@ const SkeletonTextarea = ({ className = '' }: { className?: string }) => (
 );
 
 export const CreateServiceForm: React.FC<{
-  serviceId?: number; // Optional: undefined for create, number for edit
+  serviceId?: number;
   onClose: () => void;
   showToast: (
     message: string,
@@ -89,7 +89,7 @@ export const CreateServiceForm: React.FC<{
   refreshAllData,
   refreshAllDataWithServices 
 }) => {
-  const isEditMode = !!serviceId; // Determine mode based on serviceId
+  const isEditMode = !!serviceId;
 
   const {
     data: categoriesData,
@@ -121,7 +121,6 @@ export const CreateServiceForm: React.FC<{
     isLoading: providersLoading,
   } = useSWR('/api/admin/providers?filter=active', fetcher);
 
-  // Conditionally fetch service data only in edit mode
   const {
     data: serviceData,
     error: serviceError,
@@ -169,10 +168,8 @@ export const CreateServiceForm: React.FC<{
     },
   });
 
-  // Reset form when modal closes
   useEffect(() => {
     return () => {
-      // Cleanup: reset form when component unmounts (modal closes)
       reset({
         ...createServiceDefaultValues,
         mode: 'manual',
@@ -181,7 +178,6 @@ export const CreateServiceForm: React.FC<{
     };
   }, [reset]);
 
-  // Set default service type for create mode
   useEffect(() => {
     if (!isEditMode && serviceTypesData?.data && !watch('serviceTypeId')) {
       const defaultServiceType = serviceTypesData.data.find(
@@ -247,7 +243,6 @@ export const CreateServiceForm: React.FC<{
     return null;
   };
 
-  // Auto-fill from API service selection (both create and edit)
   useEffect(() => {
     if (providerServiceIdValue && apiServicesData?.data?.services) {
       const selectedService = apiServicesData.data.services.find(
@@ -326,7 +321,6 @@ export const CreateServiceForm: React.FC<{
     }
   }, [providerServiceIdValue, apiServicesData, serviceTypesData, detectOrderLinkType, setValue, isEditMode]);
 
-  // Populate form when editing (only runs in edit mode)
   useEffect(() => {
     if (isEditMode && serviceData?.data && categoriesData?.data && serviceTypesData?.data) {
       console.log('=== EDIT SERVICE FORM DEBUG ===');
@@ -385,7 +379,6 @@ export const CreateServiceForm: React.FC<{
   }, [isEditMode, serviceData, categoriesData, serviceTypesData, reset, setValue]);
 
   const handleClose = () => {
-    // Reset form before closing
     reset({
       ...createServiceDefaultValues,
       mode: 'manual',
@@ -444,7 +437,6 @@ export const CreateServiceForm: React.FC<{
         }
 
         if (response.data.success) {
-          // Reset form after successful submit
           reset({
             ...createServiceDefaultValues,
             mode: 'manual',
@@ -456,7 +448,6 @@ export const CreateServiceForm: React.FC<{
             'success'
           );
 
-          // Call appropriate refresh callbacks
           if (isEditMode && refreshAllData) {
             await refreshAllData();
           } else if (!isEditMode) {
@@ -492,7 +483,6 @@ export const CreateServiceForm: React.FC<{
     });
   };
 
-  // Loading state
   if (categoriesLoading || (isEditMode && (serviceLoading || !serviceData?.data))) {
     return (
       <div className="w-full max-w-6xl">
@@ -533,7 +523,6 @@ export const CreateServiceForm: React.FC<{
     );
   }
 
-  // Error state
   if (categoriesError || (isEditMode && serviceError)) {
     return (
       <div className="p-6">

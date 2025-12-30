@@ -86,7 +86,6 @@ export const CreateCategoryForm = ({
     },
   });
 
-  // Populate form when editing
   useEffect(() => {
     if (isEditMode && categoriesData?.data && categoryId) {
       const category = categoriesData.data.find(
@@ -102,7 +101,6 @@ export const CreateCategoryForm = ({
     }
   }, [isEditMode, categoriesData, categoryId, reset]);
 
-  // Reset form when modal closes
   useEffect(() => {
     return () => {
       reset({
@@ -114,7 +112,6 @@ export const CreateCategoryForm = ({
   }, [reset]);
 
   const handleClose = () => {
-    // Reset form before closing
     reset({
       ...createCategoryDefaultValues,
       hideCategory: "no",
@@ -137,7 +134,6 @@ export const CreateCategoryForm = ({
         }
 
         if (response.data.success) {
-          // Reset form after successful submit
           reset({
             ...createCategoryDefaultValues,
             hideCategory: "no",

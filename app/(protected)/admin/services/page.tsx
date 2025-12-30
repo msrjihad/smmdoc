@@ -55,7 +55,7 @@ const fetcher = (url: string) => axiosInstance.get(url).then((res) => res.data);
 
 const CreateCategoryForm = dynamic(
   () =>
-    import('@/components/admin/services/create-category-form').then(
+    import('@/components/admin/services/category-form').then(
       (m) => m.CreateCategoryForm
     ),
   { ssr: false }

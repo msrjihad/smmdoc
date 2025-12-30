@@ -227,7 +227,6 @@ export async function POST(
       return refillOrder;
     });
 
-    // Forward refill order to provider API if service has provider
     let providerForwardResult = null;
     let providerError = null;
 
@@ -276,7 +275,6 @@ export async function POST(
           });
 
           if (forwardResult.order && forwardResult.order !== '') {
-            // Check provider order status to get accurate data
             let statusResult;
             try {
               statusResult = await forwarder.checkProviderOrderStatus(providerForApi, forwardResult.order);
@@ -317,7 +315,6 @@ export async function POST(
             const remains = BigInt(statusResult.remains || forwardResult.remains || refillQuantity);
             const profit = refillPrice - apiCharge;
 
-            // Update refill order with provider data
             await db.newOrders.update({
               where: { id: result.id },
               data: {
@@ -333,7 +330,6 @@ export async function POST(
               }
             });
 
-            // Log provider order forwarding
             await db.providerOrderLogs.create({
               data: {
                 orderId: result.id,
@@ -376,7 +372,6 @@ export async function POST(
         providerError = error instanceof Error ? error.message : 'Unknown error forwarding to provider';
         console.error('Error forwarding refill order to provider:', error);
         
-        // Log the error
         try {
           await db.providerOrderLogs.create({
             data: {
@@ -406,7 +401,6 @@ export async function POST(
       timestamp: new Date().toISOString()
     });
     
-    // Fetch updated refill order with provider data if forwarded
     let updatedRefillOrder = result;
     if (providerForwardResult) {
       updatedRefillOrder = await db.newOrders.findUnique({

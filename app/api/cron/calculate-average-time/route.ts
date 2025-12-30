@@ -23,7 +23,6 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(req: NextRequest) {
   try {
-    // Verify this is a cron request (optional: add authentication)
     const authHeader = req.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
     
@@ -36,7 +35,6 @@ export async function GET(req: NextRequest) {
 
     console.log('Starting average time calculation...');
 
-    // Get all active services
     const services = await db.services.findMany({
       where: {
         status: 'active',
@@ -55,13 +53,11 @@ export async function GET(req: NextRequest) {
 
     for (const service of services) {
       try {
-        // Get last 10 completed orders for this service
-        // Using quantity = 1000 as in old project logic
         const completedOrders = await db.newOrders.findMany({
           where: {
             serviceId: service.id,
             status: 'completed',
-            qty: BigInt(1000) // Match old project logic
+            qty: BigInt(1000)
           },
           select: {
             id: true,
@@ -75,9 +71,7 @@ export async function GET(req: NextRequest) {
           take: 10
         });
 
-        // Need at least 10 orders to calculate average (old project logic)
         if (completedOrders.length < 10) {
-          // Not enough data - set to default
           await db.services.update({
             where: { id: service.id },
             data: { avg_time: 'Not enough data' }
@@ -91,7 +85,6 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        // Calculate time differences and average
         let totalSeconds = 0;
         let validOrders = 0;
 
@@ -99,7 +92,6 @@ export async function GET(req: NextRequest) {
           const createdAt = new Date(order.createdAt);
           const updatedAt = new Date(order.updatedAt);
           
-          // Calculate difference in seconds
           const diffSeconds = Math.abs((updatedAt.getTime() - createdAt.getTime()) / 1000);
           
           if (diffSeconds > 0) {
@@ -122,14 +114,11 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        // Calculate average
         const avgSeconds = totalSeconds / validOrders;
         
-        // Convert to hours and minutes
         const hours = Math.floor(avgSeconds / 3600);
         const minutes = Math.floor((avgSeconds % 3600) / 60);
 
-        // Format the time string (matching old project format)
         let formattedTime = '';
         
         if (hours === 0 && minutes === 0) {
@@ -142,7 +131,6 @@ export async function GET(req: NextRequest) {
           formattedTime = `${hours} hours and ${minutes} minutes`;
         }
 
-        // Update service avg_time
         await db.services.update({
           where: { id: service.id },
           data: { avg_time: formattedTime }
