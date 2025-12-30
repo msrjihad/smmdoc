@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { toast } from 'sonner';
+import { FaExclamationTriangle, FaTimes } from 'react-icons/fa';
 
 export default function DatabaseConnectionDetector({ children }: { children: React.ReactNode }) {
   const [isDatabaseConnected, setIsDatabaseConnected] = useState<boolean | null>(null);
+  const [showToast, setShowToast] = useState(false);
   const toastShownRef = useRef(false);
 
   const checkDatabaseConnection = useCallback(async (): Promise<boolean> => {
@@ -30,9 +31,10 @@ export default function DatabaseConnectionDetector({ children }: { children: Rea
       setIsDatabaseConnected(connected);
 
       if (!connected && (wasConnected === true || (wasConnected === null && !toastShownRef.current))) {
-        toast.error('Internal Server Error!');
+        setShowToast(true);
         toastShownRef.current = true;
       } else if (connected && wasConnected === false) {
+        setShowToast(false);
         toastShownRef.current = false;
       }
     };
@@ -48,6 +50,27 @@ export default function DatabaseConnectionDetector({ children }: { children: Rea
     };
   }, [isDatabaseConnected, checkDatabaseConnection]);
 
-  return <>{children}</>;
+  return (
+    <>
+      {showToast && (
+        <div className="fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg backdrop-blur-sm border bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className="flex items-center space-x-2">
+            <FaExclamationTriangle className="w-4 h-4" />
+            <span className="font-medium">Internal Server Error!</span>
+            <button 
+              onClick={() => {
+                setShowToast(false);
+                toastShownRef.current = false;
+              }} 
+              className="ml-2 p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded"
+            >
+              <FaTimes className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      )}
+      {children}
+    </>
+  );
 }
 

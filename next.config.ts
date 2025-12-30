@@ -1,5 +1,6 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['@/components', '@/hooks', '@/lib'],
   },
@@ -14,7 +15,7 @@ const nextConfig = {
     ],
   },
 
-  webpack: (config: any, { dev, isServer }: { dev: boolean; isServer: boolean }) => {
+  webpack: (config, { dev, isServer }) => {
     if (dev && !isServer) {
       if (process.env.USE_POLLING === 'true') {
         config.watchOptions = {
@@ -57,4 +58,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;

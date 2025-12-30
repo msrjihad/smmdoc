@@ -230,18 +230,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
     router,
   ]);
 
-  const showLoadingOverlay = (status === 'loading' || isValidating) && !isAdminPage && !isDashboard;
-
   return (
     <>
-      {showLoadingOverlay && (
-        <div className="fixed inset-0 bg-white dark:bg-slate-900 bg-opacity-75 dark:bg-opacity-75 z-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100 mx-auto"></div>
-            <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading...</p>
-          </div>
-        </div>
-      )}
       {children}
     </>
   );
