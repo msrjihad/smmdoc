@@ -226,12 +226,6 @@ export async function GET(request: Request) {
                 category_name: true,
               }
             },
-            serviceType: {
-              select: {
-                id: true,
-                name: true,
-              }
-            },
           },
         });
       } else {
@@ -308,12 +302,6 @@ export async function GET(request: Request) {
               select: {
                 id: true,
                 category_name: true,
-              }
-            },
-            serviceType: {
-              select: {
-                id: true,
-                name: true,
               }
             },
           },

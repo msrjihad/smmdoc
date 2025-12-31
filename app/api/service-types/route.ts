@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { SERVICE_TYPE_CONFIGS } from '@/lib/service-types';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
@@ -6,16 +7,62 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const includeServices = searchParams.get('includeServices') === 'true';
 
-    const serviceTypes = await db.serviceTypes.findMany({
+    // Get service counts for each service type
+    const serviceCounts = await db.services.groupBy({
+      by: ['serviceTypeId'],
       where: {
         status: 'active',
+        deletedAt: null,
       },
-      orderBy: {
-        id: 'asc',
+      _count: {
+        id: true,
       },
-      include: includeServices ? {
-        services: {
+    });
+
+    const serviceCountMap = new Map(
+      serviceCounts.map(item => [item.serviceTypeId, item._count.id])
+    );
+
+    // Build service types from configs
+    const serviceTypes = Object.entries(SERVICE_TYPE_CONFIGS).map(([key, config]) => {
+      const serviceTypeId = parseInt(key);
+      const serviceCount = serviceCountMap.get(serviceTypeId) || 0;
+      
+      const result: any = {
+        id: config.id,
+        name: config.name,
+        description: config.description,
+        requiresQuantity: config.requiresQuantity,
+        requiresLink: config.requiresLink,
+        requiresComments: config.requiresComments,
+        requiresUsername: config.requiresUsername,
+        requiresPosts: config.requiresPosts,
+        isSubscription: config.isSubscription,
+        isLimited: config.isLimited,
+        fixedQuantity: config.fixedQuantity,
+        allowsDelay: config.allowsDelay,
+        allowsRuns: config.allowsRuns,
+        allowsInterval: config.allowsInterval,
+        status: 'active',
+        _count: {
+          services: serviceCount,
+        },
+      };
+
+      if (includeServices) {
+        // Fetch services for this service type
+        result.services = [];
+      }
+
+      return result;
+    });
+
+    // If includeServices is true, fetch services for each type
+    if (includeServices) {
+      for (const serviceType of serviceTypes) {
+        const services = await db.services.findMany({
           where: {
+            serviceTypeId: serviceType.id,
             status: 'active',
             deletedAt: null,
           },
@@ -30,30 +77,10 @@ export async function GET(request: Request) {
             categoryId: true,
             packageType: true,
           },
-        },
-        _count: {
-          select: {
-            services: {
-              where: {
-                status: 'active',
-                deletedAt: null,
-              },
-            },
-          },
-        },
-      } : {
-        _count: {
-          select: {
-            services: {
-              where: {
-                status: 'active',
-                deletedAt: null,
-              },
-            },
-          },
-        },
-      },
-    });
+        });
+        serviceType.services = services;
+      }
+    }
 
     return NextResponse.json(
       {
