@@ -236,24 +236,63 @@ export async function POST(req: NextRequest) {
           console.log(`✅ Successfully parsed ${parsedServices.length} services using API specification`);
         } catch (parseError) {
           console.warn('⚠️ API specification parsing failed, falling back to manual parsing:', parseError);
-          parsedServices = providerServices.map((service: any) => ({
-            serviceId: service.service || service.id,
-            name: service.name,
-            type: service.type || 'Default',
-            category: service.category || 'Uncategorized',
-            rate: parseFloat(service.rate || service.price || '0'),
-            min: parseInt(service.min || '1'),
-            max: parseInt(service.max || '10000'),
-            description: service.desc || service.description || service.details || service.info || '',
-            refill: service.refill === true || service.refill === 1 || service.refill === '1' || service.refill === 'true' || 
-                   service.refillable === true || service.refillable === 1 || service.refillable === '1' || service.refillable === 'true' ||
-                   service.can_refill === true || service.can_refill === 1 || service.can_refill === '1' || service.can_refill === 'true' ||
-                   false,
-            cancel: service.cancel === true || service.cancel === 1 || service.cancel === '1' || service.cancel === 'true' || 
-                   service.cancelable === true || service.cancelable === 1 || service.cancelable === '1' || service.cancelable === 'true' ||
-                   service.can_cancel === true || service.can_cancel === 1 || service.can_cancel === '1' || service.can_cancel === 'true' ||
-                   false
-          }));
+          parsedServices = providerServices.map((service: any) => {
+            let serviceSpeed = 'normal';
+            if (service.speed !== undefined && service.speed !== null) {
+              const speedValue = String(service.speed).toLowerCase().trim();
+              if (speedValue === 'slow') {
+                serviceSpeed = 'slow';
+              } else if (speedValue === 'sometimes_slow' || speedValue === 'sometimes slow' || speedValue === 'sometimes-slow') {
+                serviceSpeed = 'sometimes_slow';
+              } else if (speedValue === 'normal' || speedValue === 'medium') {
+                serviceSpeed = 'normal';
+              } else if (speedValue === 'fast') {
+                serviceSpeed = 'fast';
+              }
+            } else if (service.serviceSpeed !== undefined && service.serviceSpeed !== null) {
+              const speedValue = String(service.serviceSpeed).toLowerCase().trim();
+              if (speedValue === 'slow') {
+                serviceSpeed = 'slow';
+              } else if (speedValue === 'sometimes_slow' || speedValue === 'sometimes slow' || speedValue === 'sometimes-slow') {
+                serviceSpeed = 'sometimes_slow';
+              } else if (speedValue === 'normal' || speedValue === 'medium') {
+                serviceSpeed = 'normal';
+              } else if (speedValue === 'fast') {
+                serviceSpeed = 'fast';
+              }
+            } else if (service.speed_type !== undefined && service.speed_type !== null) {
+              const speedValue = String(service.speed_type).toLowerCase().trim();
+              if (speedValue === 'slow') {
+                serviceSpeed = 'slow';
+              } else if (speedValue === 'sometimes_slow' || speedValue === 'sometimes slow' || speedValue === 'sometimes-slow') {
+                serviceSpeed = 'sometimes_slow';
+              } else if (speedValue === 'normal' || speedValue === 'medium') {
+                serviceSpeed = 'normal';
+              } else if (speedValue === 'fast') {
+                serviceSpeed = 'fast';
+              }
+            }
+
+            return {
+              serviceId: service.service || service.id,
+              name: service.name,
+              type: service.type || 'Default',
+              category: service.category || 'Uncategorized',
+              rate: parseFloat(service.rate || service.price || '0'),
+              min: parseInt(service.min || '1'),
+              max: parseInt(service.max || '10000'),
+              description: service.desc || service.description || service.details || service.info || '',
+              refill: service.refill === true || service.refill === 1 || service.refill === '1' || service.refill === 'true' || 
+                     service.refillable === true || service.refillable === 1 || service.refillable === '1' || service.refillable === 'true' ||
+                     service.can_refill === true || service.can_refill === 1 || service.can_refill === '1' || service.can_refill === 'true' ||
+                     false,
+              cancel: service.cancel === true || service.cancel === 1 || service.cancel === '1' || service.cancel === 'true' || 
+                     service.cancelable === true || service.cancelable === 1 || service.cancelable === '1' || service.cancelable === 'true' ||
+                     service.can_cancel === true || service.can_cancel === 1 || service.can_cancel === '1' || service.can_cancel === 'true' ||
+                     false,
+              speed: serviceSpeed
+            };
+          });
         }
 
         const filteredServices = parsedServices.filter((service: any) => {
@@ -298,6 +337,42 @@ export async function POST(req: NextRequest) {
             cancelStatus = service.can_cancel === true || service.can_cancel === 1 || service.can_cancel === '1' || service.can_cancel === 'true';
           }
           
+          let serviceSpeed = 'normal';
+          if (service.speed !== undefined && service.speed !== null) {
+            const speedValue = String(service.speed).toLowerCase().trim();
+            if (speedValue === 'slow') {
+              serviceSpeed = 'slow';
+            } else if (speedValue === 'sometimes_slow' || speedValue === 'sometimes slow' || speedValue === 'sometimes-slow') {
+              serviceSpeed = 'sometimes_slow';
+            } else if (speedValue === 'normal' || speedValue === 'medium') {
+              serviceSpeed = 'normal';
+            } else if (speedValue === 'fast') {
+              serviceSpeed = 'fast';
+            }
+          } else if (service.serviceSpeed !== undefined && service.serviceSpeed !== null) {
+            const speedValue = String(service.serviceSpeed).toLowerCase().trim();
+            if (speedValue === 'slow') {
+              serviceSpeed = 'slow';
+            } else if (speedValue === 'sometimes_slow' || speedValue === 'sometimes slow' || speedValue === 'sometimes-slow') {
+              serviceSpeed = 'sometimes_slow';
+            } else if (speedValue === 'normal' || speedValue === 'medium') {
+              serviceSpeed = 'normal';
+            } else if (speedValue === 'fast') {
+              serviceSpeed = 'fast';
+            }
+          } else if (service.speed_type !== undefined && service.speed_type !== null) {
+            const speedValue = String(service.speed_type).toLowerCase().trim();
+            if (speedValue === 'slow') {
+              serviceSpeed = 'slow';
+            } else if (speedValue === 'sometimes_slow' || speedValue === 'sometimes slow' || speedValue === 'sometimes-slow') {
+              serviceSpeed = 'sometimes_slow';
+            } else if (speedValue === 'normal' || speedValue === 'medium') {
+              serviceSpeed = 'normal';
+            } else if (speedValue === 'fast') {
+              serviceSpeed = 'fast';
+            }
+          }
+
           const formatted = {
             id: service.serviceId || service.service || service.id,
             name: service.name,
@@ -309,7 +384,8 @@ export async function POST(req: NextRequest) {
             max: service.max || 10000,
             type: service.type || 'Default',
             refill: refillStatus,
-            cancel: cancelStatus
+            cancel: cancelStatus,
+            speed: serviceSpeed
           };
           
           console.log('  - Formatted result:', formatted);
@@ -962,21 +1038,18 @@ export async function PUT(req: NextRequest) {
           const finalRate = parseFloat((baseProviderPrice * (1 + servicePercentage / 100)).toFixed(2));
           console.log(`💰 Calculating rate: Base Provider $${baseProviderPrice} + ${servicePercentage}% = $${finalRate}`);
 
-          // Map service type to serviceTypeId using predefined mapping
-          // Since service types are predefined, we determine serviceTypeId from packageType
           const packageTypeToServiceTypeId: Record<number, number> = {
-            1: 1,   // Default
-            2: 2,   // Package
-            3: 3,   // Special Comments
-            4: 4,   // Package Comments
-            11: 5,  // Auto Likes
-            12: 6,  // Auto Views
-            13: 7,  // Auto Comments
-            14: 8,  // Subscription
-            15: 9,  // Limited Auto Likes
+            1: 1,
+            2: 2,
+            3: 3,
+            4: 4,
+            11: 5,
+            12: 6,
+            13: 7,
+            14: 8,
+            15: 9,
           };
 
-          // Try to determine packageType from service type name or use default
           const mapServiceTypeToPackageType = (typeName: string): number => {
             if (!typeName) return 1;
             
@@ -1027,6 +1100,44 @@ export async function PUT(req: NextRequest) {
             console.log(`Created new category: ${categoryName}`);
           }
 
+          let serviceSpeed = 'normal';
+          if (service.speed && ['slow', 'sometimes_slow', 'normal', 'fast'].includes(service.speed)) {
+            serviceSpeed = service.speed;
+          } else if (service.speed !== undefined && service.speed !== null) {
+            const speedValue = String(service.speed).toLowerCase().trim();
+            if (speedValue === 'slow') {
+              serviceSpeed = 'slow';
+            } else if (speedValue === 'sometimes_slow' || speedValue === 'sometimes slow' || speedValue === 'sometimes-slow') {
+              serviceSpeed = 'sometimes_slow';
+            } else if (speedValue === 'normal' || speedValue === 'medium') {
+              serviceSpeed = 'normal';
+            } else if (speedValue === 'fast') {
+              serviceSpeed = 'fast';
+            }
+          } else if (service.serviceSpeed !== undefined && service.serviceSpeed !== null) {
+            const speedValue = String(service.serviceSpeed).toLowerCase().trim();
+            if (speedValue === 'slow') {
+              serviceSpeed = 'slow';
+            } else if (speedValue === 'sometimes_slow' || speedValue === 'sometimes slow' || speedValue === 'sometimes-slow') {
+              serviceSpeed = 'sometimes_slow';
+            } else if (speedValue === 'normal' || speedValue === 'medium') {
+              serviceSpeed = 'normal';
+            } else if (speedValue === 'fast') {
+              serviceSpeed = 'fast';
+            }
+          } else if (service.speed_type !== undefined && service.speed_type !== null) {
+            const speedValue = String(service.speed_type).toLowerCase().trim();
+            if (speedValue === 'slow') {
+              serviceSpeed = 'slow';
+            } else if (speedValue === 'sometimes_slow' || speedValue === 'sometimes slow' || speedValue === 'sometimes-slow') {
+              serviceSpeed = 'sometimes_slow';
+            } else if (speedValue === 'normal' || speedValue === 'medium') {
+              serviceSpeed = 'normal';
+            } else if (speedValue === 'fast') {
+              serviceSpeed = 'fast';
+            }
+          }
+
           const newService = await db.services.create({
             data: {
               name: service.name,
@@ -1040,6 +1151,7 @@ export async function PUT(req: NextRequest) {
               mode: 'auto',
               refill: service.refill || false,
               cancel: service.cancel || false,
+              serviceSpeed: serviceSpeed,
               userId: session.user.id,
               categoryId: category.id,
               serviceTypeId: serviceTypeId,
@@ -1056,6 +1168,8 @@ export async function PUT(req: NextRequest) {
                 importedAt: new Date().toISOString(),
                 type: service.type,
                 mode: 'auto',
+                providerRefill: service.refill !== undefined ? service.refill : true,
+                providerCancel: service.cancel !== undefined ? service.cancel : true,
               }),
               packageType: packageType,
             },

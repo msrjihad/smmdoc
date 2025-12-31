@@ -164,6 +164,57 @@ const getActualCategoryName = (displayCategoryName: string) => {
     : displayCategoryName;
 };
 
+const getProviderRefillCancelStatus = (service: any) => {
+  let providerAllowsRefill = true;
+  let providerAllowsCancel = true;
+  
+  if (service.providerId) {
+    try {
+      const updateText = service.updateText;
+      if (updateText) {
+        const providerData = JSON.parse(updateText);
+        
+        if (providerData.providerRefill !== undefined) {
+          providerAllowsRefill = providerData.providerRefill === true || 
+                                 providerData.providerRefill === 1 || 
+                                 providerData.providerRefill === '1' || 
+                                 providerData.providerRefill === 'true';
+        }
+        
+        if (providerData.providerCancel !== undefined) {
+          providerAllowsCancel = providerData.providerCancel === true || 
+                                  providerData.providerCancel === 1 || 
+                                  providerData.providerCancel === '1' || 
+                                  providerData.providerCancel === 'true';
+        }
+        
+        if (providerData.providerRefill === undefined) {
+          if (providerData.refill === false || providerData.refill === 0 || providerData.refill === '0' || 
+              providerData.refillable === false || providerData.can_refill === false) {
+            providerAllowsRefill = false;
+          } else if (providerData.refill === true || providerData.refill === 1 || providerData.refill === '1' ||
+                     providerData.refillable === true || providerData.can_refill === true) {
+            providerAllowsRefill = true;
+          }
+        }
+        
+        if (providerData.providerCancel === undefined) {
+          if (providerData.cancel === false || providerData.cancel === 0 || providerData.cancel === '0' || 
+              providerData.cancelable === false || providerData.can_cancel === false) {
+            providerAllowsCancel = false;
+          } else if (providerData.cancel === true || providerData.cancel === 1 || providerData.cancel === '1' ||
+                     providerData.cancelable === true || providerData.can_cancel === true) {
+            providerAllowsCancel = true;
+          }
+        }
+      }
+    } catch (error) {
+    }
+  }
+  
+  return { providerAllowsRefill, providerAllowsCancel };
+};
+
 interface ServicesTableProps {
   groupedServices: Record<string, any[]>;
   statusFilter: string;
@@ -687,17 +738,14 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
                           <td className="p-3">
                             <div className="text-xs font-medium px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 w-fit">
                               {(() => {
-                                // Get service type name from serviceTypeId or packageType
                                 const serviceTypeId = service?.serviceTypeId;
                                 const packageType = service?.packageType;
                                 
-                                // Try to get from serviceTypeId first (mapped value)
                                 if (serviceTypeId) {
                                   const config = getServiceTypeConfig(serviceTypeId);
                                   if (config) return config.name;
                                 }
                                 
-                                // Fallback to packageType
                                 if (packageType) {
                                   const config = getServiceTypeConfig(packageType);
                                   if (config) return config.name;
@@ -777,62 +825,86 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
                           </td>
                           <td className="p-3">
                             <div className="space-y-2">
-                              <button
-                                onClick={() =>
-                                  toggleRefill(service)
-                                }
-                                className={`p-1 rounded transition-colors ${
-                                  service.refill
-                                    ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'
-                                    : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30'
-                                }`}
-                                title={
-                                  service.refill
-                                    ? 'Disable Refill'
-                                    : 'Enable Refill'
-                                }
-                              >
-                                {service.refill ? (
-                                  <FaToggleOn className="h-5 w-5" />
-                                ) : (
-                                  <FaToggleOff className="h-5 w-5" />
-                                )}
-                              </button>
-                              {service.refill && (
-                                <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                                  {service.refillDays === null || service.refillDays === undefined ? (
-                                    <div>Lifetime</div>
-                                  ) : (
-                                    service.refillDays && (
-                                      <div>
-                                        {service.refillDays}D {service.refillDisplay || 0}H
+                              {(() => {
+                                const { providerAllowsRefill } = getProviderRefillCancelStatus(service);
+                                const isDisabled = !providerAllowsRefill;
+                                
+                                return (
+                                  <>
+                                    <button
+                                      onClick={() => !isDisabled && toggleRefill(service)}
+                                      disabled={isDisabled}
+                                      className={`p-1 rounded transition-colors ${
+                                        isDisabled
+                                          ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                                          : service.refill
+                                          ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'
+                                          : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30'
+                                      }`}
+                                      title={
+                                        isDisabled
+                                          ? 'Provider service does not allow refill'
+                                          : service.refill
+                                          ? 'Disable Refill'
+                                          : 'Enable Refill'
+                                      }
+                                    >
+                                      {service.refill ? (
+                                        <FaToggleOn className="h-5 w-5" />
+                                      ) : (
+                                        <FaToggleOff className="h-5 w-5" />
+                                      )}
+                                    </button>
+                                    {service.refill && (
+                                      <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                                        {service.refillDays === null || service.refillDays === undefined ? (
+                                          <div>Lifetime</div>
+                                        ) : (
+                                          service.refillDays && (
+                                            <div>
+                                              {service.refillDays}D {service.refillDisplay || 0}H
+                                            </div>
+                                          )
+                                        )}
                                       </div>
-                                    )
-                                  )}
-                                </div>
-                              )}
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </div>
                           </td>
                           <td className="p-3">
-                            <button
-                              onClick={() => toggleCancel(service)}
-                              className={`p-1 rounded transition-colors ${
-                                service.cancel
-                                  ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'
-                                  : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30'
-                              }`}
-                              title={
-                                service.cancel
-                                  ? 'Disable Cancel'
-                                  : 'Enable Cancel'
-                              }
-                            >
-                              {service.cancel ? (
-                                <FaToggleOn className="h-5 w-5" />
-                              ) : (
-                                <FaToggleOff className="h-5 w-5" />
-                              )}
-                            </button>
+                            {(() => {
+                              const { providerAllowsCancel } = getProviderRefillCancelStatus(service);
+                              const isDisabled = !providerAllowsCancel;
+                              
+                              return (
+                                <button
+                                  onClick={() => !isDisabled && toggleCancel(service)}
+                                  disabled={isDisabled}
+                                  className={`p-1 rounded transition-colors ${
+                                    isDisabled
+                                      ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                                      : service.cancel
+                                      ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'
+                                      : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30'
+                                  }`}
+                                  title={
+                                    isDisabled
+                                      ? 'Provider service does not allow cancel'
+                                      : service.cancel
+                                      ? 'Disable Cancel'
+                                      : 'Enable Cancel'
+                                  }
+                                >
+                                  {service.cancel ? (
+                                    <FaToggleOn className="h-5 w-5" />
+                                  ) : (
+                                    <FaToggleOff className="h-5 w-5" />
+                                  )}
+                                </button>
+                              );
+                            })()}
                           </td>
                           {statusFilter !== 'trash' && (
                             <td className="p-3">

@@ -97,32 +97,28 @@ export const CreateServiceForm: React.FC<{
     error: categoriesError,
     isLoading: categoriesLoading,
   } = useGetCategories();
-  // Use predefined service types from SERVICE_TYPE_CONFIGS
-  // Map packageType (key in SERVICE_TYPE_CONFIGS) to serviceTypeId
   const packageTypeToServiceTypeId: Record<number, number> = useMemo(() => ({
-    1: 1,   // Default
-    2: 2,   // Package
-    3: 3,   // Special Comments
-    4: 4,   // Package Comments
-    11: 5,  // Auto Likes
-    12: 6,  // Auto Views
-    13: 7,  // Auto Comments
-    14: 8,  // Subscription
-    15: 9,  // Limited Auto Likes
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 4,
+    11: 5,
+    12: 6,
+    13: 7,
+    14: 8,
+    15: 9,
   }), []);
 
-  // Reverse mapping: serviceTypeId -> packageType
   const serviceTypeIdToPackageType: Record<number, number> = useMemo(() => 
     Object.fromEntries(
       Object.entries(packageTypeToServiceTypeId).map(([pkgType, svcTypeId]) => [svcTypeId, Number(pkgType)])
     ), [packageTypeToServiceTypeId]
   );
 
-  // Get all service types from predefined configs - memoized to prevent re-creation
   const serviceTypesData = useMemo(() => {
     const serviceTypes = Object.values(SERVICE_TYPE_CONFIGS).map(config => ({
-      id: packageTypeToServiceTypeId[config.id] || config.id, // Map to serviceTypeId
-      packageType: config.id, // Keep original packageType for reference
+      id: packageTypeToServiceTypeId[config.id] || config.id,
+      packageType: config.id,
       name: config.name,
       description: config.description,
     }));
@@ -209,6 +205,101 @@ export const CreateServiceForm: React.FC<{
   const refillValue = watch('refill');
   const modeValue = watch('mode');
   const providerIdValue = watch('providerId');
+  
+  const providerPrice = useMemo(() => {
+    if (isEditMode && serviceData?.data) {
+      if (serviceData.data.providerId) {
+        const price = serviceData.data.providerPrice || 
+                     serviceData.data.provider_price || 
+                     serviceData.data.originalRate || 
+                     null;
+        
+        if (!price && serviceData.data.updateText) {
+          try {
+            const updateData = JSON.parse(serviceData.data.updateText);
+            if (updateData.originalRate) {
+              return parseFloat(updateData.originalRate);
+            }
+          } catch (e) {
+          }
+        }
+        
+        return price ? parseFloat(price.toString()) : null;
+      }
+    }
+    return null;
+  }, [isEditMode, serviceData?.data]);
+
+  const providerMinOrder = useMemo(() => {
+    if (isEditMode && serviceData?.data) {
+      if (serviceData.data.providerId) {
+        const minOrder = serviceData.data.min_order;
+        return minOrder ? BigInt(minOrder).toString() : null;
+      }
+    }
+    return null;
+  }, [isEditMode, serviceData?.data]);
+
+  const providerMaxOrder = useMemo(() => {
+    if (isEditMode && serviceData?.data) {
+      if (serviceData.data.providerId) {
+        const maxOrder = serviceData.data.max_order;
+        return maxOrder ? BigInt(maxOrder).toString() : null;
+      }
+    }
+    return null;
+  }, [isEditMode, serviceData?.data]);
+
+  const providerRefillCancelStatus = useMemo(() => {
+    let providerAllowsRefill = true;
+    let providerAllowsCancel = true;
+    
+    if (isEditMode && serviceData?.data?.providerId) {
+      try {
+        const updateText = serviceData.data.updateText;
+        if (updateText) {
+          const providerData = JSON.parse(updateText);
+          
+          if (providerData.providerRefill !== undefined) {
+            providerAllowsRefill = providerData.providerRefill === true || 
+                                   providerData.providerRefill === 1 || 
+                                   providerData.providerRefill === '1' || 
+                                   providerData.providerRefill === 'true';
+          }
+          
+          if (providerData.providerCancel !== undefined) {
+            providerAllowsCancel = providerData.providerCancel === true || 
+                                   providerData.providerCancel === 1 || 
+                                   providerData.providerCancel === '1' || 
+                                   providerData.providerCancel === 'true';
+          }
+          
+          if (providerData.providerRefill === undefined) {
+            if (providerData.refill === false || providerData.refill === 0 || providerData.refill === '0' || 
+                providerData.refillable === false || providerData.can_refill === false) {
+              providerAllowsRefill = false;
+            } else if (providerData.refill === true || providerData.refill === 1 || providerData.refill === '1' ||
+                       providerData.refillable === true || providerData.can_refill === true) {
+              providerAllowsRefill = true;
+            }
+          }
+          
+          if (providerData.providerCancel === undefined) {
+            if (providerData.cancel === false || providerData.cancel === 0 || providerData.cancel === '0' || 
+                providerData.cancelable === false || providerData.can_cancel === false) {
+              providerAllowsCancel = false;
+            } else if (providerData.cancel === true || providerData.cancel === 1 || providerData.cancel === '1' ||
+                       providerData.cancelable === true || providerData.can_cancel === true) {
+              providerAllowsCancel = true;
+            }
+          }
+        }
+      } catch (error) {
+      }
+    }
+    
+    return { providerAllowsRefill, providerAllowsCancel };
+  }, [isEditMode, serviceData?.data]);
 
   const shouldFetchApiServices = (modeValue === 'auto' && providerIdValue) || 
     (isEditMode && serviceData?.data?.providerId && serviceData.data.mode === 'auto');
@@ -235,7 +326,6 @@ export const CreateServiceForm: React.FC<{
 
     const normalizedApiType = apiServiceType.toLowerCase().trim();
 
-    // Map API service type names to packageType, then convert to serviceTypeId
     const typeNameToPackageType: Record<string, number> = {
       'default': 1,
       'standard': 1,
@@ -274,7 +364,6 @@ export const CreateServiceForm: React.FC<{
       'limited auto view': 15,
     };
 
-    // Try to match by name and convert packageType to serviceTypeId
     for (const [name, packageType] of Object.entries(typeNameToPackageType)) {
       if (normalizedApiType.includes(name)) {
         const serviceTypeId = packageTypeToServiceTypeId[packageType];
@@ -287,7 +376,6 @@ export const CreateServiceForm: React.FC<{
       }
     }
 
-    // Fallback: try to match by service type name
     for (const serviceType of serviceTypesData.data) {
       const normalizedInternalName = serviceType.name.toLowerCase();
       if (normalizedApiType.includes(normalizedInternalName) || 
@@ -306,64 +394,66 @@ export const CreateServiceForm: React.FC<{
       );
 
       if (selectedService) {
-        setValue('name', selectedService.name || '');
-        setValue('description', selectedService.description || '');
-        setValue('rate', selectedService.rate?.toString() || '');
-        setValue('min_order', selectedService.min?.toString() || '');
-        setValue('max_order', selectedService.max?.toString() || '');
-        setValue('perqty', '1000');
+        if (!isEditMode) {
+          setValue('name', selectedService.name || '');
+          setValue('description', selectedService.description || '');
+          setValue('rate', selectedService.rate?.toString() || '');
+          setValue('min_order', selectedService.min?.toString() || '');
+          setValue('max_order', selectedService.max?.toString() || '');
+          setValue('perqty', '1000');
 
-        if (selectedService.type && serviceTypesData?.data) {
-          const mappedServiceTypeId = mapApiServiceTypeToInternalType(selectedService.type);
-          if (mappedServiceTypeId) {
-            setValue('serviceTypeId', mappedServiceTypeId);
-            console.log(`🎯 Auto-filled service type: ${selectedService.type} → ID ${mappedServiceTypeId}`);
+          if (selectedService.type && serviceTypesData?.data) {
+            const mappedServiceTypeId = mapApiServiceTypeToInternalType(selectedService.type);
+            if (mappedServiceTypeId) {
+              setValue('serviceTypeId', mappedServiceTypeId);
+              console.log(`🎯 Auto-filled service type: ${selectedService.type} → ID ${mappedServiceTypeId}`);
+            } else {
+              console.log(`⚠️ No mapping found for service type: ${selectedService.type}`);
+            }
+          }
+
+          let refillBoolValue = false;
+          if (selectedService.refill !== undefined && selectedService.refill !== null) {
+            if (typeof selectedService.refill === 'boolean') {
+              refillBoolValue = selectedService.refill;
+            } else if (typeof selectedService.refill === 'string') {
+              const refillStr = selectedService.refill.toLowerCase();
+              refillBoolValue = (refillStr === 'true' || refillStr === '1' || refillStr === 'on' || refillStr === 'yes');
+            } else if (typeof selectedService.refill === 'number') {
+              refillBoolValue = selectedService.refill > 0;
+            }
+          }
+
+          let cancelBoolValue = false;
+          if (selectedService.cancel !== undefined && selectedService.cancel !== null) {
+            if (typeof selectedService.cancel === 'boolean') {
+              cancelBoolValue = selectedService.cancel;
+            } else if (typeof selectedService.cancel === 'string') {
+              const cancelStr = selectedService.cancel.toLowerCase();
+              cancelBoolValue = (cancelStr === 'true' || cancelStr === '1' || cancelStr === 'on' || cancelStr === 'yes');
+            } else if (typeof selectedService.cancel === 'number') {
+              cancelBoolValue = selectedService.cancel > 0;
+            }
+          }
+
+          setValue('refill', refillBoolValue);
+          setValue('cancel', cancelBoolValue);
+
+          if (refillBoolValue) {
+            const refillDays = selectedService.refillDays || selectedService.refill_days || 30;
+            const refillDisplay = selectedService.refillDisplay || selectedService.refill_display || 24;
+
+            setValue('refillDays', Number(refillDays) as any);
+            setValue('refillDisplay', Number(refillDisplay) as any);
           } else {
-            console.log(`⚠️ No mapping found for service type: ${selectedService.type}`);
+            setValue('refillDays', undefined as any);
+            setValue('refillDisplay', undefined as any);
           }
+
+          const detectedType = detectOrderLinkType(selectedService.name, selectedService.type);
+          setValue('orderLink', detectedType);
+          setOrderLinkType(detectedType);
         }
-
-        let refillBoolValue = false;
-        if (selectedService.refill !== undefined && selectedService.refill !== null) {
-          if (typeof selectedService.refill === 'boolean') {
-            refillBoolValue = selectedService.refill;
-          } else if (typeof selectedService.refill === 'string') {
-            const refillStr = selectedService.refill.toLowerCase();
-            refillBoolValue = (refillStr === 'true' || refillStr === '1' || refillStr === 'on' || refillStr === 'yes');
-          } else if (typeof selectedService.refill === 'number') {
-            refillBoolValue = selectedService.refill > 0;
-          }
-        }
-
-        let cancelBoolValue = false;
-        if (selectedService.cancel !== undefined && selectedService.cancel !== null) {
-          if (typeof selectedService.cancel === 'boolean') {
-            cancelBoolValue = selectedService.cancel;
-          } else if (typeof selectedService.cancel === 'string') {
-            const cancelStr = selectedService.cancel.toLowerCase();
-            cancelBoolValue = (cancelStr === 'true' || cancelStr === '1' || cancelStr === 'on' || cancelStr === 'yes');
-          } else if (typeof selectedService.cancel === 'number') {
-            cancelBoolValue = selectedService.cancel > 0;
-          }
-        }
-
-        setValue('refill', refillBoolValue);
-        setValue('cancel', cancelBoolValue);
-
-        if (refillBoolValue) {
-          const refillDays = selectedService.refillDays || selectedService.refill_days || 30;
-          const refillDisplay = selectedService.refillDisplay || selectedService.refill_display || 24;
-
-          setValue('refillDays', Number(refillDays) as any);
-          setValue('refillDisplay', Number(refillDisplay) as any);
-        } else {
-          setValue('refillDays', undefined as any);
-          setValue('refillDisplay', undefined as any);
-        }
-
-        const detectedType = detectOrderLinkType(selectedService.name, selectedService.type);
-        setValue('orderLink', detectedType);
-        setOrderLinkType(detectedType);
       }
     } else if (!providerServiceIdValue) {
       const currentOrderLink = watch('orderLink');
@@ -468,7 +558,32 @@ export const CreateServiceForm: React.FC<{
       return;
     }
 
-    // Convert serviceTypeId to packageType before sending to API
+    if (providerPrice !== null && values.rate) {
+      const rateValue = parseFloat(values.rate.toString());
+      if (isNaN(rateValue) || rateValue < providerPrice) {
+        showToast(`Service price must be at least $${providerPrice.toFixed(2)} (provider price)`, 'error');
+        return;
+      }
+    }
+
+    if (providerMinOrder !== null && values.min_order) {
+      const minOrderValue = parseInt(values.min_order.toString());
+      const providerMin = parseInt(providerMinOrder);
+      if (isNaN(minOrderValue) || minOrderValue < providerMin) {
+        showToast(`Minimum order must be at least ${providerMinOrder} (provider minimum)`, 'error');
+        return;
+      }
+    }
+
+    if (providerMaxOrder !== null && values.max_order) {
+      const maxOrderValue = parseInt(values.max_order.toString());
+      const providerMax = parseInt(providerMaxOrder);
+      if (isNaN(maxOrderValue) || maxOrderValue < providerMax) {
+        showToast(`Maximum order must be at least ${providerMaxOrder} (provider maximum)`, 'error');
+        return;
+      }
+    }
+
     const serviceTypeId = values.serviceTypeId ? Number(values.serviceTypeId) : null;
     const packageType = serviceTypeId ? serviceTypeIdToPackageType[serviceTypeId] : null;
 
@@ -478,7 +593,6 @@ export const CreateServiceForm: React.FC<{
           return value !== null && value !== undefined && value !== '';
         }
         if (key === 'serviceTypeId') {
-          // Remove serviceTypeId, we'll send packageType instead
           return false;
         }
         if (value === '' || value === null || value === undefined) return false;
@@ -486,7 +600,6 @@ export const CreateServiceForm: React.FC<{
       })
     );
 
-    // Add packageType to the request (API will map it to serviceTypeId)
     if (packageType) {
       filteredValues.packageType = packageType;
     }
@@ -691,9 +804,13 @@ export const CreateServiceForm: React.FC<{
               </FormLabel>
               <FormControl>
                 <select
-                  className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
+                  className={`form-field w-full pl-4 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 appearance-none ${
+                    (isEditMode && serviceData?.data?.providerId) || isPending
+                      ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                      : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white cursor-pointer'
+                  }`}
                   {...register('categoryId')}
-                  disabled={isPending}
+                  disabled={isPending || (isEditMode && serviceData?.data?.providerId)}
                   required
                 >
                   <option value={''} hidden>
@@ -717,9 +834,13 @@ export const CreateServiceForm: React.FC<{
               </FormLabel>
               <FormControl>
                 <select
-                  className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
+                  className={`form-field w-full pl-4 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 appearance-none ${
+                    (isEditMode && serviceData?.data?.providerId) || isPending
+                      ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                      : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white cursor-pointer'
+                  }`}
                   {...register('serviceTypeId')}
-                  disabled={isPending}
+                  disabled={isPending || (isEditMode && serviceData?.data?.providerId)}
                   required
                 >
                   <option value="">Select Service Type</option>
@@ -741,9 +862,13 @@ export const CreateServiceForm: React.FC<{
               </FormLabel>
               <FormControl>
                 <select
-                  className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
+                  className={`form-field w-full pl-4 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 appearance-none ${
+                    (isEditMode && serviceData?.data?.providerId) || isPending
+                      ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                      : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white cursor-pointer'
+                  }`}
                   {...register('mode')}
-                  disabled={isPending}
+                  disabled={isPending || (isEditMode && serviceData?.data?.providerId)}
                   required={!isEditMode}
                 >
                   <option value="manual">Manual</option>
@@ -762,9 +887,13 @@ export const CreateServiceForm: React.FC<{
                 </FormLabel>
                 <FormControl>
                   <select
-                    className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
+                    className={`form-field w-full pl-4 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 appearance-none ${
+                      (isEditMode && serviceData?.data?.providerId) || isPending || providersLoading
+                        ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                        : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white cursor-pointer'
+                    }`}
                     {...register('providerId')}
-                    disabled={isPending || providersLoading}
+                    disabled={isPending || providersLoading || (isEditMode && serviceData?.data?.providerId)}
                     required={modeValue === 'auto'}
                   >
                     <option value="">Select API Provider</option>
@@ -788,9 +917,13 @@ export const CreateServiceForm: React.FC<{
                 </FormLabel>
                 <FormControl>
                   <select
-                    className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
+                    className={`form-field w-full pl-4 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 appearance-none ${
+                      (isEditMode && serviceData?.data?.providerId) || isPending || apiServicesLoading
+                        ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                        : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white cursor-pointer'
+                    }`}
                     {...register('providerServiceId')}
-                    disabled={isPending || apiServicesLoading}
+                    disabled={isPending || apiServicesLoading || (isEditMode && serviceData?.data?.providerId)}
                     required={modeValue === 'auto' && !!providerIdValue}
                     value={watch('providerServiceId') || ''}
                   >
@@ -825,10 +958,15 @@ export const CreateServiceForm: React.FC<{
                   <input
                     type="number"
                     step="0.01"
-                    min="0"
+                    min={providerPrice !== null ? providerPrice : 0}
                     placeholder="Enter service price"
                     className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    {...register('rate')}
+                    {...register('rate', {
+                      min: providerPrice !== null ? {
+                        value: providerPrice,
+                        message: `Must be at least $${providerPrice.toFixed(2)} (provider price)`
+                      } : undefined
+                    })}
                     disabled={isPending}
                   />
                 </FormControl>
@@ -844,10 +982,15 @@ export const CreateServiceForm: React.FC<{
                 <FormControl>
                   <input
                     type="number"
-                    min={0}
+                    min={providerMinOrder !== null ? parseInt(providerMinOrder) : 0}
                     placeholder="Enter minimum order"
                     className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    {...register('min_order')}
+                    {...register('min_order', {
+                      min: providerMinOrder !== null ? {
+                        value: parseInt(providerMinOrder),
+                        message: `Must be at least ${providerMinOrder} (provider minimum)`
+                      } : undefined
+                    })}
                     disabled={isPending}
                   />
                 </FormControl>
@@ -863,10 +1006,15 @@ export const CreateServiceForm: React.FC<{
                 <FormControl>
                   <input
                     type="number"
-                    min={0}
+                    min={providerMaxOrder !== null ? parseInt(providerMaxOrder) : 0}
                     placeholder="Enter maximum order"
                     className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    {...register('max_order')}
+                    {...register('max_order', {
+                      min: providerMaxOrder !== null ? {
+                        value: parseInt(providerMaxOrder),
+                        message: `Must be at least ${providerMaxOrder} (provider maximum)`
+                      } : undefined
+                    })}
                     disabled={isPending}
                   />
                 </FormControl>
@@ -890,7 +1038,7 @@ export const CreateServiceForm: React.FC<{
                     className="form-field w-full px-4 py-3 bg-gray-100 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none shadow-sm text-gray-600 dark:text-gray-400 placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-not-allowed"
                     {...register('perqty')}
                     readOnly
-                    disabled={isPending}
+                    disabled={true}
                   />
                 </FormControl>
                 <FormMessage>{errors.perqty?.message}</FormMessage>
@@ -904,11 +1052,15 @@ export const CreateServiceForm: React.FC<{
                 </FormLabel>
                 <FormControl>
                   <select
-                    className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
+                    className={`form-field w-full pl-4 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 appearance-none ${
+                      !providerRefillCancelStatus.providerAllowsRefill || isPending
+                        ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                        : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white cursor-pointer'
+                    }`}
                     {...register('refill', {
                       setValueAs: (value) => value === 'true',
                     })}
-                    disabled={isPending}
+                    disabled={isPending || !providerRefillCancelStatus.providerAllowsRefill}
                     required
                   >
                     <option value="false">Off</option>
@@ -931,9 +1083,13 @@ export const CreateServiceForm: React.FC<{
                     type="number"
                     min={0}
                     placeholder="Leave blank for Lifetime"
-                    className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className={`form-field w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                      !providerRefillCancelStatus.providerAllowsRefill || isPending
+                        ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                        : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white'
+                    }`}
                     {...register('refillDays')}
-                    disabled={isPending}
+                    disabled={isPending || !providerRefillCancelStatus.providerAllowsRefill}
                   />
                 </FormControl>
                 <FormMessage>{errors.refillDays?.message}</FormMessage>
@@ -952,9 +1108,13 @@ export const CreateServiceForm: React.FC<{
                     type="number"
                     min={0}
                     placeholder="Leave blank for Lifetime"
-                    className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className={`form-field w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                      !providerRefillCancelStatus.providerAllowsRefill || isPending
+                        ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                        : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white'
+                    }`}
                     {...register('refillDisplay')}
-                    disabled={isPending}
+                    disabled={isPending || !providerRefillCancelStatus.providerAllowsRefill}
                   />
                 </FormControl>
                 <FormMessage>{errors.refillDisplay?.message}</FormMessage>
@@ -969,11 +1129,15 @@ export const CreateServiceForm: React.FC<{
               </FormLabel>
               <FormControl>
                 <select
-                  className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
+                  className={`form-field w-full pl-4 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 appearance-none ${
+                    !providerRefillCancelStatus.providerAllowsCancel || isPending
+                      ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                      : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white cursor-pointer'
+                  }`}
                   {...register('cancel', {
                     setValueAs: (value) => value === 'true',
                   })}
-                  disabled={isPending}
+                  disabled={isPending || !providerRefillCancelStatus.providerAllowsCancel}
                   required
                 >
                   <option value="false">Off</option>
@@ -991,9 +1155,13 @@ export const CreateServiceForm: React.FC<{
               </FormLabel>
               <FormControl>
                 <select
-                  className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
+                  className={`form-field w-full pl-4 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 appearance-none ${
+                    (isEditMode && serviceData?.data?.providerId) || isPending
+                      ? 'bg-gray-100 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 cursor-not-allowed'
+                      : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white cursor-pointer'
+                  }`}
                   {...register('orderLink')}
-                  disabled={isPending}
+                  disabled={isPending || (isEditMode && serviceData?.data?.providerId)}
                   required
                 >
                   <option value="link">Link</option>

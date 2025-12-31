@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // Service types are predefined and cannot be created via API
   return NextResponse.json(
     { 
       error: 'Service types are predefined and cannot be created. Use the predefined SERVICE_TYPE_CONFIGS.',

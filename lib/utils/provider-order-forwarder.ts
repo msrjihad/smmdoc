@@ -268,7 +268,6 @@ export class ProviderOrderForwarder {
       const apiType = (provider as any).api_type || (provider as any).apiType || 1;
       
       if (apiType === 3) {
-        // SocialsMedia API doesn't support refill in the same way
         throw new Error('Refill not supported for SocialsMedia API type');
       }
       
@@ -303,18 +302,14 @@ export class ProviderOrderForwarder {
         };
       }
 
-      // Parse refill ID from response (matches old project: result->refill)
-      // Check response mapping first, then common field names
       let refillId = '';
       const responseParser = new ApiResponseParser(apiSpec);
       const refillMapping = apiSpec.responseMapping?.refill;
       
       if (refillMapping?.refillId) {
-        // Use response mapping if available
         const path = refillMapping.refillId.split('.');
         refillId = path.reduce((obj: any, key: string) => obj?.[key], result) || '';
       } else {
-        // Fallback to common field names (matches old project: $res->refill)
         refillId = result.refill || result.refill_id || result.refillId || result.refillOrderId || '';
       }
       

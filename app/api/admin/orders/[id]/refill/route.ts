@@ -230,7 +230,6 @@ export async function POST(
     let providerRefillResult = null;
     let providerError = null;
 
-    // Forward refill to provider API if original order has providerOrderId (matches old project logic)
     if (originalOrder.service.providerId && originalOrder.providerOrderId) {
       try {
         const provider = await db.apiProviders.findUnique({
@@ -258,7 +257,6 @@ export async function POST(
             refillOrderId: result.id
           });
 
-          // Use original order's providerOrderId to request refill (matches old project: action='refill', order=api_orderid)
           const refillResult = await forwarder.forwardRefillOrderToProvider(
             providerForApi,
             originalOrder.providerOrderId
@@ -272,7 +270,6 @@ export async function POST(
           });
 
           if (refillResult.error) {
-            // Provider returned an error
             providerError = refillResult.error;
             console.error('Provider refill request failed:', providerError);
             
@@ -287,7 +284,6 @@ export async function POST(
               }
             });
           } else if (refillResult.refill && refillResult.refill !== '') {
-            // Provider returned refill ID - store it and set status to inprogress (matches old project logic)
             providerRefillResult = {
               providerRefillId: refillResult.refill,
               status: refillResult.status || 'pending'
@@ -296,8 +292,8 @@ export async function POST(
             await db.newOrders.update({
               where: { id: result.id },
               data: {
-                providerOrderId: refillResult.refill, // Store refill ID as providerOrderId
-                providerStatus: 'processing', // Set to processing (inprogress in old project)
+                providerOrderId: refillResult.refill,
+                providerStatus: 'processing',
                 status: 'processing',
                 lastSyncAt: new Date(),
                 updatedAt: new Date()
@@ -324,7 +320,6 @@ export async function POST(
               status: refillResult.status
             });
           } else {
-            // No refill ID returned but no error - set status to processing (matches old project)
             providerRefillResult = {
               providerRefillId: '',
               status: refillResult.status || 'pending'

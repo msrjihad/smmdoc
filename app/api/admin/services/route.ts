@@ -420,22 +420,18 @@ export async function POST(request: Request) {
 
     createData.categoryId = categoryIdInt;
 
-    // Automatically determine serviceTypeId from packageType using predefined SERVICE_TYPE_CONFIGS
-    // Since service types are predefined, we use packageType directly as serviceTypeId
     const finalPackageType = createData.packageType || 1;
     
-    // Map packageType to serviceTypeId based on predefined mapping:
-    // packageType 1-4, 11-15 map to serviceTypeId 1-9
     const packageTypeToServiceTypeId: Record<number, number> = {
-      1: 1,   // Default
-      2: 2,   // Package
-      3: 3,   // Special Comments
-      4: 4,   // Package Comments
-      11: 5,  // Auto Likes
-      12: 6,  // Auto Views
-      13: 7,  // Auto Comments
-      14: 8,  // Subscription
-      15: 9,  // Limited Auto Likes
+      1: 1,
+      2: 2,
+      3: 3,
+      4: 4,
+      11: 5,
+      12: 6,
+      13: 7,
+      14: 8,
+      15: 9,
     };
 
     const mappedServiceTypeId = packageTypeToServiceTypeId[finalPackageType];
@@ -444,7 +440,6 @@ export async function POST(request: Request) {
       createData.serviceTypeId = mappedServiceTypeId;
       console.log(`Mapped packageType ${finalPackageType} to serviceTypeId ${mappedServiceTypeId}`);
     } else {
-      // Default to serviceTypeId 1 (Default) if packageType doesn't match
       createData.serviceTypeId = 1;
       console.warn(`No mapping found for packageType ${finalPackageType}. Defaulting to serviceTypeId 1.`);
     }
