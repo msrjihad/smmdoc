@@ -124,9 +124,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check if 24 hours have passed since order completion
+    const completionTime = new Date(order.updatedAt).getTime();
+    const currentTime = new Date().getTime();
+    const hoursSinceCompletion = (currentTime - completionTime) / (1000 * 60 * 60);
+    
+    if (hoursSinceCompletion < 24) {
+      return NextResponse.json(
+        {
+          error: 'The refill request will be eligible after 24 hours of order completion',
+          success: false,
+          data: null
+        },
+        { status: 400 }
+      );
+    }
+
     if (order.service.refillDays) {
       const daysSinceCompletion = Math.floor(
-        (new Date().getTime() - new Date(order.updatedAt).getTime()) / (1000 * 60 * 60 * 24)
+        (currentTime - completionTime) / (1000 * 60 * 60 * 24)
       );
       
       if (daysSinceCompletion > order.service.refillDays) {

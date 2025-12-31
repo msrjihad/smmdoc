@@ -440,11 +440,19 @@ export const CreateServiceForm: React.FC<{
           setValue('cancel', cancelBoolValue);
 
           if (refillBoolValue) {
-            const refillDays = selectedService.refillDays || selectedService.refill_days || 30;
-            const refillDisplay = selectedService.refillDisplay || selectedService.refill_display || 24;
+            const refillDays = selectedService.refillDays !== undefined && selectedService.refillDays !== null 
+              ? selectedService.refillDays 
+              : (selectedService.refill_days !== undefined && selectedService.refill_days !== null 
+                  ? selectedService.refill_days 
+                  : undefined);
+            const refillDisplay = selectedService.refillDisplay !== undefined && selectedService.refillDisplay !== null 
+              ? selectedService.refillDisplay 
+              : (selectedService.refill_display !== undefined && selectedService.refill_display !== null 
+                  ? selectedService.refill_display 
+                  : undefined);
 
-            setValue('refillDays', Number(refillDays) as any);
-            setValue('refillDisplay', Number(refillDisplay) as any);
+            setValue('refillDays', refillDays !== undefined ? Number(refillDays) : undefined as any);
+            setValue('refillDisplay', refillDisplay !== undefined ? Number(refillDisplay) : undefined as any);
           } else {
             setValue('refillDays', undefined as any);
             setValue('refillDisplay', undefined as any);
@@ -514,8 +522,12 @@ export const CreateServiceForm: React.FC<{
         serviceTypeId: serviceTypeIdValue,
         mode: serviceData.data.mode || createServiceDefaultValues.mode,
         refill: Boolean(serviceData.data.refill),
-        refillDays: serviceData.data.refillDays || createServiceDefaultValues.refillDays,
-        refillDisplay: serviceData.data.refillDisplay || createServiceDefaultValues.refillDisplay,
+        refillDays: serviceData.data.refillDays !== undefined && serviceData.data.refillDays !== null 
+          ? serviceData.data.refillDays 
+          : createServiceDefaultValues.refillDays,
+        refillDisplay: serviceData.data.refillDisplay !== undefined && serviceData.data.refillDisplay !== null 
+          ? serviceData.data.refillDisplay 
+          : createServiceDefaultValues.refillDisplay,
         cancel: Boolean(serviceData.data.cancel),
         serviceSpeed: serviceSpeedValue,
         exampleLink: serviceData.data.exampleLink || createServiceDefaultValues.exampleLink,
@@ -595,10 +607,20 @@ export const CreateServiceForm: React.FC<{
         if (key === 'serviceTypeId') {
           return false;
         }
+        if (key === 'refillDays' || key === 'refillDisplay') {
+          return true;
+        }
         if (value === '' || value === null || value === undefined) return false;
         return true;
       })
     );
+
+    if (values.refillDays === '' || values.refillDays === null || values.refillDays === undefined) {
+      filteredValues.refillDays = null;
+    }
+    if (values.refillDisplay === '' || values.refillDisplay === null || values.refillDisplay === undefined) {
+      filteredValues.refillDisplay = null;
+    }
 
     if (packageType) {
       filteredValues.packageType = packageType;

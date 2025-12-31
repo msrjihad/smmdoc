@@ -164,6 +164,8 @@ interface Service {
   refill?: boolean;
   cancel?: boolean;
   currency?: string;
+  refillDays?: number | null;
+  refillDisplay?: number;
 }
 
 const ImportServicesPage = () => {
@@ -237,6 +239,7 @@ const ImportServicesPage = () => {
   } | null>(null);
 
   const [duplicateServices, setDuplicateServices] = useState<Set<string>>(new Set());
+  const [existingServicesMap, setExistingServicesMap] = useState<Record<string, any>>({});
 
   const checkDuplicateServices = async (servicesToCheck: Service[]) => {
     try {
@@ -260,12 +263,33 @@ const ImportServicesPage = () => {
       if (response.ok) {
         const result = await response.json();
         console.log('Duplicate check result:', result);
-        if (result.success && result.data && result.data.duplicateIds) {
-          console.log('Setting duplicate services:', result.data.duplicateIds);
-          setDuplicateServices(new Set(result.data.duplicateIds));
+        if (result.success && result.data) {
+          if (result.data.duplicateIds) {
+            console.log('Setting duplicate services:', result.data.duplicateIds);
+            setDuplicateServices(new Set(result.data.duplicateIds));
+          }
+          if (result.data.existingServicesMap) {
+            console.log('Setting existing services map with refill data');
+            setExistingServicesMap(result.data.existingServicesMap);
+            setServices(prevServices => 
+              prevServices.map(service => {
+                const serviceId = service.id?.toString();
+                const existingService = result.data.existingServicesMap[serviceId];
+                if (existingService) {
+                  return {
+                    ...service,
+                    refillDays: existingService.refillDays !== undefined ? existingService.refillDays : service.refillDays,
+                    refillDisplay: existingService.refillDisplay !== undefined ? existingService.refillDisplay : service.refillDisplay,
+                  };
+                }
+                return service;
+              })
+            );
+          }
         } else {
           console.log('No duplicates found or invalid response structure');
           setDuplicateServices(new Set());
+          setExistingServicesMap({});
         }
       } else {
         console.error('API response not ok:', response.status, response.statusText);
@@ -445,10 +469,13 @@ const ImportServicesPage = () => {
         const servicesWithProfit = categoryServices.map((service: any) => {
           const providerPrice = parseFloat(service.rate) || 0;
           const salePrice = parseFloat((providerPrice * (1 + profitPercent / 100)).toFixed(2));
+          const serviceId = service.id?.toString();
+          const existingService = existingServicesMap[serviceId];
 
           console.log(`🔥 Service: ${service.name}, Provider: $${providerPrice}, Sale: $${salePrice}, Profit: ${profitPercent}%`);
           console.log(`📝 Service Description: "${service.description}" (length: ${service.description?.length || 0})`);
           console.log(`🔄 Refill: ${service.refill}, Cancel: ${service.cancel}`);
+          console.log(`🔄 RefillDays from API: ${service.refillDays}, RefillDisplay from API: ${service.refillDisplay}`);
 
           return {
             ...service,
@@ -458,6 +485,12 @@ const ImportServicesPage = () => {
             description: service.description || '',
             refill: service.refill || false,
             cancel: service.cancel || false,
+            refillDays: service.refillDays !== undefined 
+              ? service.refillDays 
+              : (existingService?.refillDays !== undefined ? existingService.refillDays : null),
+            refillDisplay: service.refillDisplay !== undefined 
+              ? service.refillDisplay 
+              : (existingService?.refillDisplay !== undefined ? existingService.refillDisplay : undefined),
           };
         });
 
@@ -929,18 +962,20 @@ const ImportServicesPage = () => {
                           {apiCategories.map((category) => (
                             <tr
                               key={category.id}
-                              className={`border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)] transition-colors duration-200 ${
+                              onClick={() => handleCategorySelect(category.id)}
+                              className={`border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)] transition-colors duration-200 cursor-pointer ${
                                 category.selected ? 'bg-blue-50 dark:bg-blue-900/30' : ''
                               }`}
                             >
-                              <td className="p-3">
+                              <td className="p-3" onClick={(e) => e.stopPropagation()}>
                                 <input
                                   type="checkbox"
                                   checked={category.selected || false}
                                   onChange={() =>
                                     handleCategorySelect(category.id)
                                   }
-                                  className="rounded border-gray-300 w-4 h-4"
+                                  className="rounded border-gray-300 w-4 h-4 cursor-pointer"
+                                  onClick={(e) => e.stopPropagation()}
                                 />
                               </td>
                               <td className="p-3">
@@ -1451,23 +1486,43 @@ const ImportServicesPage = () => {
                                               </td>
                                               <td className="p-3">
                                                 <div className="text-center">
-                                                  <button
-                                                    className={`p-1 rounded transition-colors duration-200 ${
-                                                      service.refill
-                                                        ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'
-                                                        : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                                                    }`}
-                                                    title={
-                                                      service.refill ? 'Refill Enabled' : 'Refill Disabled'
-                                                    }
-                                                    onClick={() => {}}
-                                                  >
-                                                    {service.refill ? (
-                                                      <FaToggleOn className="h-5 w-5" />
-                                                    ) : (
-                                                      <FaToggleOff className="h-5 w-5" />
-                                                    )}
-                                                  </button>
+                                                  {(() => {
+                                                    const refillValue = getCurrentValue(service, 'refill') as boolean | undefined;
+                                                    const refillDays = getCurrentValue(service, 'refillDays') as number | null | undefined;
+                                                    const refillDisplay = getCurrentValue(service, 'refillDisplay') as number | undefined;
+                                                    return (
+                                                      <>
+                                                        <button
+                                                          className={`p-1 rounded transition-colors duration-200 ${
+                                                            refillValue
+                                                              ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'
+                                                              : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                                          }`}
+                                                          title={
+                                                            refillValue ? 'Refill Enabled' : 'Refill Disabled'
+                                                          }
+                                                          onClick={() => {}}
+                                                        >
+                                                          {refillValue ? (
+                                                            <FaToggleOn className="h-5 w-5" />
+                                                          ) : (
+                                                            <FaToggleOff className="h-5 w-5" />
+                                                          )}
+                                                        </button>
+                                                        {refillValue && (
+                                                          <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1 mt-1">
+                                                            {refillDays === null || refillDays === undefined ? (
+                                                              <div>Lifetime</div>
+                                                            ) : (
+                                                              <div>
+                                                                {refillDays}D {refillDisplay || 0}H
+                                                              </div>
+                                                            )}
+                                                          </div>
+                                                        )}
+                                                      </>
+                                                    );
+                                                  })()}
                                                 </div>
                                               </td>
                                               <td className="p-3">
@@ -1678,27 +1733,49 @@ const ImportServicesPage = () => {
                                           <label className="form-label mb-2 text-gray-700 dark:text-gray-300">
                                             Refill
                                           </label>
-                                          <div className="flex items-center">
-                                            <button
-                                              className={`p-1 rounded transition-colors duration-200 ${
-                                                service.refill
-                                                  ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'
-                                                  : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                                              }`}
-                                              title={
-                                                service.refill ? 'Refill Enabled' : 'Refill Disabled'
-                                              }
-                                              onClick={() => {}}
-                                            >
-                                              {service.refill ? (
-                                                <FaToggleOn className="h-6 w-6" />
-                                              ) : (
-                                                <FaToggleOff className="h-6 w-6" />
-                                              )}
-                                            </button>
-                                            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-                                              {service.refill ? 'Enabled' : 'Disabled'}
-                                            </span>
+                                          <div className="flex flex-col">
+                                            {(() => {
+                                              const refillValue = getCurrentValue(service, 'refill') as boolean | undefined;
+                                              const refillDays = getCurrentValue(service, 'refillDays') as number | null | undefined;
+                                              const refillDisplay = getCurrentValue(service, 'refillDisplay') as number | undefined;
+                                              return (
+                                                <>
+                                                  <div className="flex items-center">
+                                                    <button
+                                                      className={`p-1 rounded transition-colors duration-200 ${
+                                                        refillValue
+                                                          ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'
+                                                          : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                                                      }`}
+                                                      title={
+                                                        refillValue ? 'Refill Enabled' : 'Refill Disabled'
+                                                      }
+                                                      onClick={() => {}}
+                                                    >
+                                                      {refillValue ? (
+                                                        <FaToggleOn className="h-6 w-6" />
+                                                      ) : (
+                                                        <FaToggleOff className="h-6 w-6" />
+                                                      )}
+                                                    </button>
+                                                    <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                                                      {refillValue ? 'Enabled' : 'Disabled'}
+                                                    </span>
+                                                  </div>
+                                                  {refillValue && (
+                                                    <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1 mt-1">
+                                                      {refillDays === null || refillDays === undefined ? (
+                                                        <div>Lifetime</div>
+                                                      ) : (
+                                                        <div>
+                                                          {refillDays}D {refillDisplay || 0}H
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  )}
+                                                </>
+                                              );
+                                            })()}
                                           </div>
                                         </div>
                                         <div>

@@ -144,6 +144,7 @@ const RefillModal = ({
   orderId,
   reason,
   setReason,
+  isLoading,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -151,6 +152,7 @@ const RefillModal = ({
   orderId: number | null;
   reason: string;
   setReason: (reason: string) => void;
+  isLoading?: boolean;
 }) => {
   if (!isOpen) return null;
 
@@ -167,9 +169,6 @@ const RefillModal = ({
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
             You are requesting a refill for Order #{orderId ? formatID(orderId) : 'N/A'}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Refill requests are reviewed within 24 hours.
-          </p>
         </div>
 
         <div className="mb-4">
@@ -182,6 +181,7 @@ const RefillModal = ({
             placeholder="Describe the issue (e.g., followers dropped, likes decreased, etc.)"
             className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 resize-none"
             rows={3}
+            disabled={isLoading}
           />
         </div>
 
@@ -189,14 +189,16 @@ const RefillModal = ({
           <button
             onClick={onClose}
             className="btn btn-secondary"
+            disabled={isLoading}
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             className="btn btn-primary"
+            disabled={isLoading}
           >
-            Submit Request
+            {isLoading ? 'Submitting...' : 'Submit Request'}
           </button>
         </div>
       </div>
@@ -236,10 +238,12 @@ export default function OrdersList() {
     isOpen: boolean;
     orderId: number | null;
     reason: string;
+    isLoading?: boolean;
   }>({
     isOpen: false,
     orderId: null,
-    reason: ''
+    reason: '',
+    isLoading: false
   });
 
   const [localPendingCancelRequests, setLocalPendingCancelRequests] = useState<Set<number>>(new Set());
@@ -610,7 +614,8 @@ export default function OrdersList() {
     setRefillModal({
       isOpen: false,
       orderId: null,
-      reason: ''
+      reason: '',
+      isLoading: false
     });
   };
 
@@ -622,6 +627,8 @@ export default function OrdersList() {
       });
       return;
     }
+
+    setRefillModal(prev => ({ ...prev, isLoading: true }));
 
     try {
       const response = await fetch('/api/user/refill-requests', {
@@ -648,6 +655,7 @@ export default function OrdersList() {
           message: result.error || 'Failed to submit refill request',
           type: 'error'
         });
+        setRefillModal(prev => ({ ...prev, isLoading: false }));
       }
     } catch (error) {
       console.error('Error submitting refill request:', error);
@@ -655,6 +663,7 @@ export default function OrdersList() {
         message: 'Failed to submit refill request',
         type: 'error'
       });
+      setRefillModal(prev => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -787,6 +796,7 @@ export default function OrdersList() {
         orderId={refillModal.orderId}
         reason={refillModal.reason}
         setReason={(reason) => setRefillModal(prev => ({ ...prev, reason }))}
+        isLoading={refillModal.isLoading}
       />
       {toastMessage && (
         <Toast
@@ -1083,28 +1093,51 @@ export default function OrdersList() {
                               <>
                                 {order.service?.refill && (() => {
                                   const refillDays = order.service?.refillDays;
+                                  const completionTime = new Date(order.updatedAt).getTime();
+                                  const currentTime = new Date().getTime();
+                                  const hoursSinceCompletion = (currentTime - completionTime) / (1000 * 60 * 60);
+                                  const is24HoursPassed = hoursSinceCompletion >= 24;
+                                  
                                   let isRefillTimeValid = true;
 
                                   if (refillDays) {
                                     const daysSinceCompletion = Math.floor(
-                                      (new Date().getTime() - new Date(order.updatedAt).getTime()) / (1000 * 60 * 60 * 24)
+                                      (currentTime - completionTime) / (1000 * 60 * 60 * 24)
                                     );
                                     isRefillTimeValid = daysSinceCompletion <= refillDays;
                                   }
 
-                                  return isRefillTimeValid ? (
+                                  const canRefill = is24HoursPassed && isRefillTimeValid;
+
+                                  return (
                                     <button
-                                      onClick={() => setRefillModal({
-                                        isOpen: true,
-                                        orderId: order.id,
-                                        reason: ''
-                                      })}
-                                      className="text-green-600 hover:text-green-800 text-xs px-2 py-1 border border-green-300 rounded hover:bg-green-50"
-                                      title="Refill Order"
+                                      onClick={() => {
+                                        if (canRefill) {
+                                          setRefillModal({
+                                            isOpen: true,
+                                            orderId: order.id,
+                                            reason: '',
+                                            isLoading: false
+                                          });
+                                        }
+                                      }}
+                                      disabled={!canRefill}
+                                      className={`text-xs px-2 py-1 border rounded transition-colors ${
+                                        canRefill
+                                          ? 'text-green-600 hover:text-green-800 border-green-300 hover:bg-green-50 cursor-pointer'
+                                          : 'text-gray-400 border-gray-300 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60'
+                                      }`}
+                                      title={
+                                        !is24HoursPassed
+                                          ? 'The refill request will be eligible after 24 hours of order completion'
+                                          : !isRefillTimeValid
+                                          ? `Refill period has expired. Refill is only available for ${refillDays} days after order completion.`
+                                          : 'Refill Order'
+                                      }
                                     >
                                       Refill
                                     </button>
-                                  ) : null;
+                                  );
                                 })()}
                                 {order.service?.id && (
                                   <button

@@ -46,7 +46,9 @@ export async function POST(request: NextRequest) {
         id: true,
         name: true,
         providerServiceId: true,
-        createdAt: true
+        createdAt: true,
+        refillDays: true,
+        refillDisplay: true
       }
     });
 
@@ -63,12 +65,17 @@ export async function POST(request: NextRequest) {
     console.log(`ðŸ” Duplicate check: Found ${duplicates.length} duplicates out of ${services.length} services`);
     console.log('Duplicate provider service IDs:', duplicateIds);
 
+    const existingServicesMap = new Map(
+      existingServices.map(service => [service.providerServiceId, service])
+    );
+
     return NextResponse.json({
       success: true,
       data: {
         duplicates: duplicates,
         duplicateIds: duplicateIds,
-        existingServices: existingServices
+        existingServices: existingServices,
+        existingServicesMap: Object.fromEntries(existingServicesMap)
       }
     });
 

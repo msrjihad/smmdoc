@@ -857,14 +857,12 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
                                     </button>
                                     {service.refill && (
                                       <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                                        {service.refillDays === null || service.refillDays === undefined ? (
+                                        {service.refillDays === null || service.refillDays === undefined || service.refillDays === 0 ? (
                                           <div>Lifetime</div>
                                         ) : (
-                                          service.refillDays && (
-                                            <div>
-                                              {service.refillDays}D {service.refillDisplay || 0}H
-                                            </div>
-                                          )
+                                          <div>
+                                            {service.refillDays}D {service.refillDisplay || 0}H
+                                          </div>
                                         )}
                                       </div>
                                     )}

@@ -100,12 +100,26 @@ export async function POST(
       );
     }
 
-    const refillDays = order.service.refillDays || 30;
-    const orderDate = new Date(order.createdAt);
-    const currentDate = new Date();
-    const daysDifference = Math.floor((currentDate.getTime() - orderDate.getTime()) / (1000 * 3600 * 24));
+    // Check if 24 hours have passed since order completion
+    const completionTime = new Date(order.updatedAt).getTime();
+    const currentTime = new Date().getTime();
+    const hoursSinceCompletion = (currentTime - completionTime) / (1000 * 60 * 60);
+    
+    if (hoursSinceCompletion < 24) {
+      return NextResponse.json(
+        { 
+          error: 'The refill request will be eligible after 24 hours of order completion',
+          success: false,
+          data: null 
+        },
+        { status: 400 }
+      );
+    }
 
-    if (daysDifference > refillDays) {
+    const refillDays = order.service.refillDays || 30;
+    const daysDifference = Math.floor((currentTime - completionTime) / (1000 * 60 * 60 * 24));
+
+    if (refillDays && daysDifference > refillDays) {
       return NextResponse.json(
         { 
           error: `Refill period has expired. Refill is only available for ${refillDays} days after order completion.`,

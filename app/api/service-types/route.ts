@@ -7,7 +7,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const includeServices = searchParams.get('includeServices') === 'true';
 
-    // Get service counts for each service type
     const serviceCounts = await db.services.groupBy({
       by: ['serviceTypeId'],
       where: {
@@ -23,7 +22,6 @@ export async function GET(request: Request) {
       serviceCounts.map(item => [item.serviceTypeId, item._count.id])
     );
 
-    // Build service types from configs
     const serviceTypes = Object.entries(SERVICE_TYPE_CONFIGS).map(([key, config]) => {
       const serviceTypeId = parseInt(key);
       const serviceCount = serviceCountMap.get(serviceTypeId) || 0;
@@ -50,14 +48,12 @@ export async function GET(request: Request) {
       };
 
       if (includeServices) {
-        // Fetch services for this service type
         result.services = [];
       }
 
       return result;
     });
 
-    // If includeServices is true, fetch services for each type
     if (includeServices) {
       for (const serviceType of serviceTypes) {
         const services = await db.services.findMany({

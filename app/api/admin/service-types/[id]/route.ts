@@ -36,7 +36,6 @@ export async function GET(
       );
     }
 
-    // Count services using this service type
     const serviceCount = await db.services.count({
       where: {
         serviceTypeId: serviceTypeId,

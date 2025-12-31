@@ -305,12 +305,35 @@ export async function POST(req: NextRequest) {
 
         console.log(`🔍 Filtered to ${filteredServices.length} services for categories: ${categoriesArray.join(', ')}`);
 
+        const providerServiceIds = filteredServices.map((s: any) => (s.serviceId || s.service || s.id)?.toString()).filter(Boolean);
+        const existingServices = await db.services.findMany({
+          where: {
+            providerServiceId: {
+              in: providerServiceIds
+            },
+            providerId: parseInt(providerId),
+            deletedAt: null
+          },
+          select: {
+            providerServiceId: true,
+            refillDays: true,
+            refillDisplay: true
+          }
+        });
+
+        const existingServicesMap = new Map(
+          existingServices.map(s => [s.providerServiceId?.toString(), s])
+        );
+
         const formattedServices = filteredServices.map((service: any) => {
           console.log(`🔍 FORMATTING SERVICE: ${service.name}`);
           console.log('  - Raw service data:', service);
           console.log('  - Description field:', service.description);
           console.log('  - Refill field:', service.refill);
           console.log('  - Cancel field:', service.cancel);
+          
+          const serviceId = (service.serviceId || service.service || service.id)?.toString();
+          const existingService = existingServicesMap.get(serviceId);
           
           const serviceName = service.name || '';
           const description = service.description || 
@@ -374,7 +397,7 @@ export async function POST(req: NextRequest) {
           }
 
           const formatted = {
-            id: service.serviceId || service.service || service.id,
+            id: serviceId,
             name: service.name,
             description: description,
             category: service.category,
@@ -385,7 +408,9 @@ export async function POST(req: NextRequest) {
             type: service.type || 'Default',
             refill: refillStatus,
             cancel: cancelStatus,
-            speed: serviceSpeed
+            speed: serviceSpeed,
+            refillDays: existingService?.refillDays !== undefined ? existingService.refillDays : null,
+            refillDisplay: existingService?.refillDisplay !== undefined ? existingService.refillDisplay : undefined
           };
           
           console.log('  - Formatted result:', formatted);
@@ -766,19 +791,46 @@ export async function GET(req: NextRequest) {
 
         console.log(`🔍 Filtered to ${filteredServices.length} services for categories: ${categoriesArray.join(', ')}`);
 
-        const formattedServices = filteredServices.map((service: any) => ({
-          id: service.service || service.id,
-          name: service.name,
-          description: service.desc || service.description || '',
-          category: service.category,
-          price: parseFloat(service.rate || service.price || '0'),
-          currency: service.currency || 'USD',
-          min: parseInt(service.min || '1'),
-          max: parseInt(service.max || '10000'),
-          type: service.type || 'Default',
-          refill: service.refill || false,
-          cancel: service.cancel || false
-        }));
+        const providerServiceIds = filteredServices.map((s: any) => (s.service || s.id)?.toString()).filter(Boolean);
+        const existingServices = await db.services.findMany({
+          where: {
+            providerServiceId: {
+              in: providerServiceIds
+            },
+            providerId: parseInt(providerId),
+            deletedAt: null
+          },
+          select: {
+            providerServiceId: true,
+            refillDays: true,
+            refillDisplay: true
+          }
+        });
+
+        const existingServicesMap = new Map(
+          existingServices.map(s => [s.providerServiceId?.toString(), s])
+        );
+
+        const formattedServices = filteredServices.map((service: any) => {
+          const serviceId = (service.service || service.id)?.toString();
+          const existingService = existingServicesMap.get(serviceId);
+          
+          return {
+            id: serviceId,
+            name: service.name,
+            description: service.desc || service.description || '',
+            category: service.category,
+            price: parseFloat(service.rate || service.price || '0'),
+            currency: service.currency || 'USD',
+            min: parseInt(service.min || '1'),
+            max: parseInt(service.max || '10000'),
+            type: service.type || 'Default',
+            refill: service.refill || false,
+            cancel: service.cancel || false,
+            refillDays: existingService?.refillDays !== undefined ? existingService.refillDays : null,
+            refillDisplay: existingService?.refillDisplay !== undefined ? existingService.refillDisplay : undefined
+          };
+        });
 
         console.log(`✅ Returning ${formattedServices.length} formatted services`);
 
@@ -1138,6 +1190,26 @@ export async function PUT(req: NextRequest) {
             }
           }
 
+          let refillDaysValue: number | null = null;
+          let refillDisplayValue: number | null = null;
+          
+          if (service.refill) {
+            if (service.refillDays !== undefined && service.refillDays !== null) {
+              refillDaysValue = Number(service.refillDays);
+            } else {
+              refillDaysValue = null;
+            }
+            
+            if (service.refillDisplay !== undefined && service.refillDisplay !== null) {
+              refillDisplayValue = Number(service.refillDisplay);
+            } else {
+              refillDisplayValue = null;
+            }
+          } else {
+            refillDaysValue = null;
+            refillDisplayValue = null;
+          }
+
           const newService = await db.services.create({
             data: {
               name: service.name,
@@ -1151,6 +1223,8 @@ export async function PUT(req: NextRequest) {
               mode: 'auto',
               refill: service.refill || false,
               cancel: service.cancel || false,
+              refillDays: refillDaysValue,
+              refillDisplay: refillDisplayValue,
               serviceSpeed: serviceSpeed,
               userId: session.user.id,
               categoryId: category.id,
