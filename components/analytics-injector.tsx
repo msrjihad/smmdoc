@@ -134,7 +134,15 @@ const AnalyticsInjector = () => {
       const gaCode = analyticsSettings.googleAnalytics.code.trim();
 
       const existingGAScripts = document.querySelectorAll('script[src*="googletagmanager.com/gtag"], script[data-analytics="ga"]');
-      existingGAScripts.forEach(script => script.remove());
+      existingGAScripts.forEach(script => {
+        try {
+          if (script.parentNode) {
+            script.remove();
+          }
+        } catch (error) {
+          console.warn('Error removing GA script:', error);
+        }
+      });
 
       console.log('🔍 Google Analytics: Injecting code', { gaCode: gaCode.substring(0, 100) + '...' });
 
@@ -194,7 +202,15 @@ const AnalyticsInjector = () => {
       const fbCode = analyticsSettings.facebookPixel.code.trim();
 
       const existingFBScripts = document.querySelectorAll('script[data-analytics="fb"], noscript[data-analytics="fb"]');
-      existingFBScripts.forEach(script => script.remove());
+      existingFBScripts.forEach(script => {
+        try {
+          if (script.parentNode) {
+            script.remove();
+          }
+        } catch (error) {
+          console.warn('Error removing FB script:', error);
+        }
+      });
 
       console.log('🔍 Facebook Pixel: Injecting code', { fbCode: fbCode.substring(0, 100) + '...' });
 
@@ -246,7 +262,7 @@ const AnalyticsInjector = () => {
           if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
           n.queue=[];t=b.createElement(e);t.async=!0;
           t.src=v;s=b.getElementsByTagName(e)[0];
-          s.parentNode.insertBefore(t,s)}(window, document,'script',
+          if(s&&s.parentNode){s.parentNode.insertBefore(t,s);}else{b.head.appendChild(t);}}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
           fbq('init', '${pixelId}');
           fbq('track', 'PageView');
@@ -267,7 +283,15 @@ const AnalyticsInjector = () => {
       const gtmCode = analyticsSettings.gtm.code.trim();
 
       const existingGTMScripts = document.querySelectorAll('script[data-analytics="gtm"], noscript[data-analytics="gtm"]');
-      existingGTMScripts.forEach(script => script.remove());
+      existingGTMScripts.forEach(script => {
+        try {
+          if (script.parentNode) {
+            script.remove();
+          }
+        } catch (error) {
+          console.warn('Error removing GTM script:', error);
+        }
+      });
 
       console.log('🔍 Google Tag Manager: Injecting code', { gtmCode: gtmCode.substring(0, 100) + '...' });
 
@@ -316,7 +340,7 @@ const AnalyticsInjector = () => {
           (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
           j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+          'https://www.googletagmanager.com/gtm.js?id='+i+dl;if(f&&f.parentNode){f.parentNode.insertBefore(j,f);}else{d.head.appendChild(j);}
           })(window,document,'script','dataLayer','${containerId}');
         `;
         document.head.appendChild(gtmScript);
@@ -329,12 +353,31 @@ const AnalyticsInjector = () => {
     }
 
     return () => {
+      try {
+        const analyticsScripts = document.querySelectorAll('script[data-analytics]');
+        analyticsScripts.forEach(script => {
+          try {
+            if (script.parentNode) {
+              script.remove();
+            }
+          } catch (error) {
+            console.warn('Error removing analytics script:', error);
+          }
+        });
 
-      const analyticsScripts = document.querySelectorAll('script[data-analytics]');
-      analyticsScripts.forEach(script => script.remove());
-
-      const analyticsNoscripts = document.querySelectorAll('noscript[data-analytics]');
-      analyticsNoscripts.forEach(noscript => noscript.remove());
+        const analyticsNoscripts = document.querySelectorAll('noscript[data-analytics]');
+        analyticsNoscripts.forEach(noscript => {
+          try {
+            if (noscript.parentNode) {
+              noscript.remove();
+            }
+          } catch (error) {
+            console.warn('Error removing analytics noscript:', error);
+          }
+        });
+      } catch (error) {
+        console.warn('Error in analytics cleanup:', error);
+      }
     };
   }, [analyticsSettings, isAuthenticated, pathname]);
 

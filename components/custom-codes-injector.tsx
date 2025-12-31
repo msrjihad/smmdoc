@@ -42,15 +42,19 @@ export function CustomCodesInjector() {
   const executeScripts = (container: HTMLElement) => {
     const scripts = container.querySelectorAll('script');
     scripts.forEach((oldScript) => {
-      const newScript = document.createElement('script');
-      Array.from(oldScript.attributes).forEach((attr) => {
-        newScript.setAttribute(attr.name, attr.value);
-      });
-      newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-      if (oldScript.parentNode) {
-        oldScript.parentNode.replaceChild(newScript, oldScript);
-      } else {
-        oldScript.replaceWith(newScript);
+      try {
+        const newScript = document.createElement('script');
+        Array.from(oldScript.attributes).forEach((attr) => {
+          newScript.setAttribute(attr.name, attr.value);
+        });
+        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+        if (oldScript.parentNode) {
+          oldScript.parentNode.replaceChild(newScript, oldScript);
+        } else {
+          oldScript.replaceWith(newScript);
+        }
+      } catch (error) {
+        console.warn('Error executing script:', error);
       }
     });
   };
@@ -60,9 +64,13 @@ export function CustomCodesInjector() {
 
     if (customCodes.headerCodes && customCodes.headerCodes.trim()) {
 
-      const existingHeaderCodes = document.getElementById('custom-header-codes');
-      if (existingHeaderCodes) {
-        existingHeaderCodes.remove();
+      try {
+        const existingHeaderCodes = document.getElementById('custom-header-codes');
+        if (existingHeaderCodes && existingHeaderCodes.parentNode) {
+          existingHeaderCodes.remove();
+        }
+      } catch (error) {
+        console.warn('Error removing existing header codes:', error);
       }
 
       const headerDiv = document.createElement('div');
@@ -75,9 +83,13 @@ export function CustomCodesInjector() {
 
     if (customCodes.footerCodes && customCodes.footerCodes.trim()) {
 
-      const existingFooterCodes = document.getElementById('custom-footer-codes');
-      if (existingFooterCodes) {
-        existingFooterCodes.remove();
+      try {
+        const existingFooterCodes = document.getElementById('custom-footer-codes');
+        if (existingFooterCodes && existingFooterCodes.parentNode) {
+          existingFooterCodes.remove();
+        }
+      } catch (error) {
+        console.warn('Error removing existing footer codes:', error);
       }
 
       const footerDiv = document.createElement('div');
@@ -89,10 +101,18 @@ export function CustomCodesInjector() {
     }
 
     return () => {
-      const headerCodes = document.getElementById('custom-header-codes');
-      const footerCodes = document.getElementById('custom-footer-codes');
-      if (headerCodes) headerCodes.remove();
-      if (footerCodes) footerCodes.remove();
+      try {
+        const headerCodes = document.getElementById('custom-header-codes');
+        const footerCodes = document.getElementById('custom-footer-codes');
+        if (headerCodes && headerCodes.parentNode) {
+          headerCodes.remove();
+        }
+        if (footerCodes && footerCodes.parentNode) {
+          footerCodes.remove();
+        }
+      } catch (error) {
+        console.warn('Error removing custom codes:', error);
+      }
     };
   }, [customCodes]);
 

@@ -105,17 +105,25 @@ export default function RootLayout({
       
       if (!shouldShow) {
         console.log('❌ Tawk.to widget hidden due to visibility setting:', liveChatSettings.visibility);
-        const existingScript = document.querySelector('script[src*="embed.tawk.to"]');
-        if (existingScript) {
-          existingScript.remove();
-          console.log('🗑️ Removed existing Tawk.to script due to visibility change');
+        try {
+          const existingScript = document.querySelector('script[src*="embed.tawk.to"]');
+          if (existingScript && existingScript.parentNode) {
+            existingScript.remove();
+            console.log('🗑️ Removed existing Tawk.to script due to visibility change');
+          }
+        } catch (error) {
+          console.warn('Error removing Tawk.to script:', error);
         }
         return;
       }
       
-      const existingScript = document.querySelector('script[src*="embed.tawk.to"]');
-      if (existingScript) {
-        existingScript.remove();
+      try {
+        const existingScript = document.querySelector('script[src*="embed.tawk.to"]');
+        if (existingScript && existingScript.parentNode) {
+          existingScript.remove();
+        }
+      } catch (error) {
+        console.warn('Error removing existing Tawk.to script:', error);
       }
       
       const script = document.createElement('script');
@@ -135,9 +143,13 @@ export default function RootLayout({
       console.log('✅ Tawk.to script loaded successfully');
       
       return () => {
-        const existingScript = document.querySelector('script[src*="embed.tawk.to"]');
-        if (existingScript) {
-          existingScript.remove();
+        try {
+          const existingScript = document.querySelector('script[src*="embed.tawk.to"]');
+          if (existingScript && existingScript.parentNode) {
+            existingScript.remove();
+          }
+        } catch (error) {
+          console.warn('Error removing Tawk.to script in cleanup:', error);
         }
       };
     } else {
