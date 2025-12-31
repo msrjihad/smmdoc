@@ -260,6 +260,75 @@ export class ProviderOrderForwarder {
     };
   }
 
+  async forwardRefillOrderToProvider(
+    provider: Provider,
+    originalProviderOrderId: string
+  ): Promise<{ refill: string; status: string; error?: string }> {
+    try {
+      const apiType = (provider as any).api_type || (provider as any).apiType || 1;
+      
+      if (apiType === 3) {
+        // SocialsMedia API doesn't support refill in the same way
+        throw new Error('Refill not supported for SocialsMedia API type');
+      }
+      
+      const apiSpec = createApiSpecFromProvider(provider);
+      const requestBuilder = new ApiRequestBuilder(
+        apiSpec,
+        provider.api_url,
+        provider.api_key,
+        (provider as any).http_method || (provider as any).httpMethod || 'POST'
+      );
+
+      const refillRequest = requestBuilder.buildRefillRequest(originalProviderOrderId);
+
+      const response = await fetch(refillRequest.url, {
+        method: refillRequest.method,
+        headers: refillRequest.headers,
+        body: refillRequest.data,
+        signal: AbortSignal.timeout((apiSpec.timeoutSeconds || 30) * 1000)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Provider API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.error) {
+        return {
+          refill: '',
+          status: 'error',
+          error: result.error
+        };
+      }
+
+      // Parse refill ID from response (matches old project: result->refill)
+      // Check response mapping first, then common field names
+      let refillId = '';
+      const responseParser = new ApiResponseParser(apiSpec);
+      const refillMapping = apiSpec.responseMapping?.refill;
+      
+      if (refillMapping?.refillId) {
+        // Use response mapping if available
+        const path = refillMapping.refillId.split('.');
+        refillId = path.reduce((obj: any, key: string) => obj?.[key], result) || '';
+      } else {
+        // Fallback to common field names (matches old project: $res->refill)
+        refillId = result.refill || result.refill_id || result.refillId || result.refillOrderId || '';
+      }
+      
+      return {
+        refill: refillId,
+        status: result.status || 'pending',
+        error: result.error
+      };
+    } catch (error) {
+      console.error('Error forwarding refill to provider:', error);
+      throw error;
+    }
+  }
+
   async checkProviderOrderStatus(
     provider: Provider,
     providerOrderId: string

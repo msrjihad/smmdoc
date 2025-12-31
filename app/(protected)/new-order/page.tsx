@@ -346,7 +346,16 @@ const ServiceDetailsCard = ({
               {selected.refill ? (
                 <span className="text-sm text-green-600 flex items-center">
                   <FaCheck className="text-green-600 text-xs mr-1" />
-                  {selected.refillDays || 30} days
+                  {selected.refillDays === null || selected.refillDays === undefined || selected.refillDays === 0 ? (
+                    'Lifetime'
+                  ) : (
+                    <>
+                      {selected.refillDays} {selected.refillDays === 1 ? 'day' : 'days'}
+                      {selected.refillDisplay && selected.refillDisplay > 0 && (
+                        <span className="ml-1">({selected.refillDisplay} {selected.refillDisplay === 1 ? 'hour' : 'hours'})</span>
+                      )}
+                    </>
+                  )}
                 </span>
               ) : (
                 <span className="text-sm text-red-600">

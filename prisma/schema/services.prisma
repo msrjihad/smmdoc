@@ -40,12 +40,10 @@ model Services {
   newOrders           NewOrders[]
   category            Categories          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   favrouteCat         FavrouteCat?      @relation(fields: [favrouteCatId], references: [id], onDelete: Cascade)
-  serviceType         ServiceTypes?      @relation(fields: [serviceTypeId], references: [id])
   user                Users              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([categoryId], map: "Service_categoryId_fkey")
   @@index([favrouteCatId], map: "Service_favrouteCatId_fkey")
-  @@index([serviceTypeId], map: "Service_serviceTypeId_idx")
   @@index([status], map: "Service_status_idx")
   @@index([userId], map: "Service_userId_idx")
   @@index([packageType], map: "Service_packageType_idx")

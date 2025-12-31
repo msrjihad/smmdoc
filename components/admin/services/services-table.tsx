@@ -18,6 +18,7 @@ import {
 } from 'react-icons/fa';
 import { PriceDisplay } from '@/components/price-display';
 import { formatID } from '@/lib/utils';
+import { getServiceTypeConfig } from '@/lib/service-types';
 
 const useClickOutside = (
   ref: React.RefObject<HTMLElement | null>,
@@ -685,8 +686,25 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
                           </td>
                           <td className="p-3">
                             <div className="text-xs font-medium px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 w-fit">
-                              {service?.serviceType?.name ||
-                                'Standard'}
+                              {(() => {
+                                // Get service type name from serviceTypeId or packageType
+                                const serviceTypeId = service?.serviceTypeId;
+                                const packageType = service?.packageType;
+                                
+                                // Try to get from serviceTypeId first (mapped value)
+                                if (serviceTypeId) {
+                                  const config = getServiceTypeConfig(serviceTypeId);
+                                  if (config) return config.name;
+                                }
+                                
+                                // Fallback to packageType
+                                if (packageType) {
+                                  const config = getServiceTypeConfig(packageType);
+                                  if (config) return config.name;
+                                }
+                                
+                                return 'Standard';
+                              })()}
                             </div>
                           </td>
                           <td className="p-3">

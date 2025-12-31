@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState, useTransition } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import {
   FaExclamationTriangle,
@@ -17,6 +17,7 @@ import {
   createServiceDefaultValues,
   CreateServiceSchema,
 } from '@/lib/validators/admin/services/services.validator';
+import { SERVICE_TYPE_CONFIGS } from '@/lib/service-types';
 
 const fetcher = (url: string) => axiosInstance.get(url).then((res) => res.data);
 
@@ -96,24 +97,39 @@ export const CreateServiceForm: React.FC<{
     error: categoriesError,
     isLoading: categoriesLoading,
   } = useGetCategories();
-  const {
-    data: serviceTypesData,
-    error: serviceTypesError,
-    isLoading: serviceTypesLoading,
-  } = useSWR('/api/admin/service-types', fetcher);
+  // Use predefined service types from SERVICE_TYPE_CONFIGS
+  // Map packageType (key in SERVICE_TYPE_CONFIGS) to serviceTypeId
+  const packageTypeToServiceTypeId: Record<number, number> = useMemo(() => ({
+    1: 1,   // Default
+    2: 2,   // Package
+    3: 3,   // Special Comments
+    4: 4,   // Package Comments
+    11: 5,  // Auto Likes
+    12: 6,  // Auto Views
+    13: 7,  // Auto Comments
+    14: 8,  // Subscription
+    15: 9,  // Limited Auto Likes
+  }), []);
 
-  useEffect(() => {
-    console.log('🔍 Service Types Debug in Admin Services:');
-    console.log('📊 serviceTypesData:', serviceTypesData);
-    console.log('📊 serviceTypesError:', serviceTypesError);
-    console.log('📊 serviceTypesLoading:', serviceTypesLoading);
-    if (serviceTypesData?.data) {
-      console.log('📋 Service types count:', serviceTypesData.data.length);
-      serviceTypesData.data.forEach((type: any, index: number) => {
-        console.log(`  ${index + 1}. ID: ${type.id}, Name: ${type.name}`);
-      });
-    }
-  }, [serviceTypesData, serviceTypesError, serviceTypesLoading]);
+  // Reverse mapping: serviceTypeId -> packageType
+  const serviceTypeIdToPackageType: Record<number, number> = useMemo(() => 
+    Object.fromEntries(
+      Object.entries(packageTypeToServiceTypeId).map(([pkgType, svcTypeId]) => [svcTypeId, Number(pkgType)])
+    ), [packageTypeToServiceTypeId]
+  );
+
+  // Get all service types from predefined configs - memoized to prevent re-creation
+  const serviceTypesData = useMemo(() => {
+    const serviceTypes = Object.values(SERVICE_TYPE_CONFIGS).map(config => ({
+      id: packageTypeToServiceTypeId[config.id] || config.id, // Map to serviceTypeId
+      packageType: config.id, // Keep original packageType for reference
+      name: config.name,
+      description: config.description,
+    }));
+    return { data: serviceTypes };
+  }, [packageTypeToServiceTypeId]);
+
+  const serviceTypesLoading = false;
 
   const {
     data: providersData,
@@ -132,6 +148,7 @@ export const CreateServiceForm: React.FC<{
 
   const [isPending, startTransition] = useTransition();
   const [orderLinkType, setOrderLinkType] = useState<'link' | 'username'>('link');
+  const formPopulatedRef = useRef(false);
 
   const detectOrderLinkType = useCallback((serviceName: string, serviceType?: string): 'link' | 'username' => {
     const name = serviceName.toLowerCase();
@@ -218,29 +235,59 @@ export const CreateServiceForm: React.FC<{
 
     const normalizedApiType = apiServiceType.toLowerCase().trim();
 
-    const typeMapping: { [key: string]: string[] } = {
-      '1': ['default', 'standard', 'normal', 'regular', 'basic'],
-      '2': ['package', 'pack', 'bundle', 'fixed'],
-      '3': ['special comments', 'custom comments', 'comments', 'special comment'],
-      '4': ['package comments', 'pack comments', 'bundle comments', 'package comment'],
-      '11': ['auto likes', 'auto like', 'subscription likes', 'auto-likes'],
-      '12': ['auto views', 'auto view', 'subscription views', 'auto-views'],
-      '13': ['auto comments', 'auto comment', 'subscription comments', 'auto-comments'],
-      '14': ['limited auto likes', 'limited likes', 'limited auto like'],
-      '15': ['limited auto views', 'limited views', 'limited auto view'],
+    // Map API service type names to packageType, then convert to serviceTypeId
+    const typeNameToPackageType: Record<string, number> = {
+      'default': 1,
+      'standard': 1,
+      'normal': 1,
+      'regular': 1,
+      'basic': 1,
+      'package': 2,
+      'pack': 2,
+      'bundle': 2,
+      'fixed': 2,
+      'special comments': 3,
+      'custom comments': 3,
+      'comments': 3,
+      'special comment': 3,
+      'package comments': 4,
+      'pack comments': 4,
+      'bundle comments': 4,
+      'package comment': 4,
+      'auto likes': 11,
+      'auto like': 11,
+      'subscription likes': 11,
+      'auto-likes': 11,
+      'auto views': 12,
+      'auto view': 12,
+      'subscription views': 12,
+      'auto-views': 12,
+      'auto comments': 13,
+      'auto comment': 13,
+      'subscription comments': 13,
+      'auto-comments': 13,
+      'limited auto likes': 15,
+      'limited likes': 15,
+      'limited auto like': 15,
+      'limited auto views': 15,
+      'limited views': 15,
+      'limited auto view': 15,
     };
 
-    for (const [internalTypeId, apiTypeVariants] of Object.entries(typeMapping)) {
-      if (apiTypeVariants.some(variant => normalizedApiType.includes(variant))) {
+    // Try to match by name and convert packageType to serviceTypeId
+    for (const [name, packageType] of Object.entries(typeNameToPackageType)) {
+      if (normalizedApiType.includes(name)) {
+        const serviceTypeId = packageTypeToServiceTypeId[packageType];
         const serviceTypeExists = serviceTypesData.data.find(
-          (type: any) => type.id.toString() === internalTypeId
+          (type: any) => type.id === serviceTypeId
         );
         if (serviceTypeExists) {
-          return internalTypeId;
+          return serviceTypeId.toString();
         }
       }
     }
 
+    // Fallback: try to match by service type name
     for (const serviceType of serviceTypesData.data) {
       const normalizedInternalName = serviceType.name.toLowerCase();
       if (normalizedApiType.includes(normalizedInternalName) || 
@@ -319,19 +366,28 @@ export const CreateServiceForm: React.FC<{
         setOrderLinkType(detectedType);
       }
     } else if (!providerServiceIdValue) {
-      setValue('orderLink', 'link');
-      setOrderLinkType('link');
+      const currentOrderLink = watch('orderLink');
+      if (currentOrderLink !== 'link') {
+        setValue('orderLink', 'link');
+        setOrderLinkType('link');
+      }
       if (!isEditMode) {
-        setValue('refill', false);
-        setValue('cancel', false);
+        const currentRefill = watch('refill');
+        const currentCancel = watch('cancel');
+        if (currentRefill !== false) {
+          setValue('refill', false);
+        }
+        if (currentCancel !== false) {
+          setValue('cancel', false);
+        }
         setValue('refillDays', undefined as any);
         setValue('refillDisplay', undefined as any);
       }
     }
-  }, [providerServiceIdValue, apiServicesData, serviceTypesData, detectOrderLinkType, setValue, isEditMode]);
+  }, [providerServiceIdValue, apiServicesData, detectOrderLinkType, setValue, isEditMode, watch]);
 
   useEffect(() => {
-    if (isEditMode && serviceData?.data && categoriesData?.data && serviceTypesData?.data) {
+    if (isEditMode && serviceData?.data && categoriesData?.data && serviceTypesData?.data && !formPopulatedRef.current) {
       console.log('=== EDIT SERVICE FORM DEBUG ===');
       console.log('Raw serviceTypeId from database:', serviceData.data.serviceTypeId, typeof serviceData.data.serviceTypeId);
       console.log('Available service types:', serviceTypesData.data);
@@ -380,12 +436,9 @@ export const CreateServiceForm: React.FC<{
 
       console.log('Reset data being passed to form:', resetData);
       reset(resetData);
-
-      setTimeout(() => {
-        setValue('refill', Boolean(serviceData.data.refill));
-      }, 100);
+      formPopulatedRef.current = true;
     }
-  }, [isEditMode, serviceData, categoriesData, serviceTypesData, reset, setValue]);
+  }, [isEditMode, serviceData?.data?.id, categoriesData?.data, reset, setValue, setOrderLinkType]);
 
   const handleClose = () => {
     reset({
@@ -393,6 +446,7 @@ export const CreateServiceForm: React.FC<{
       mode: 'manual',
       orderLink: 'link',
     });
+    formPopulatedRef.current = false;
     onClose();
   };
 
@@ -414,17 +468,31 @@ export const CreateServiceForm: React.FC<{
       return;
     }
 
+    // Convert serviceTypeId to packageType before sending to API
+    const serviceTypeId = values.serviceTypeId ? Number(values.serviceTypeId) : null;
+    const packageType = serviceTypeId ? serviceTypeIdToPackageType[serviceTypeId] : null;
+
     const filteredValues = Object.fromEntries(
       Object.entries(values).filter(([key, value]) => {
-        if (key === 'categoryId' || key === 'serviceTypeId') {
+        if (key === 'categoryId') {
           return value !== null && value !== undefined && value !== '';
+        }
+        if (key === 'serviceTypeId') {
+          // Remove serviceTypeId, we'll send packageType instead
+          return false;
         }
         if (value === '' || value === null || value === undefined) return false;
         return true;
       })
     );
 
+    // Add packageType to the request (API will map it to serviceTypeId)
+    if (packageType) {
+      filteredValues.packageType = packageType;
+    }
+
     console.log('Filtered values to send:', filteredValues);
+    console.log('Converted serviceTypeId', serviceTypeId, 'to packageType', packageType);
 
     startTransition(async () => {
       try {
@@ -651,7 +719,7 @@ export const CreateServiceForm: React.FC<{
                 <select
                   className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
                   {...register('serviceTypeId')}
-                  disabled={isPending || serviceTypesLoading}
+                  disabled={isPending}
                   required
                 >
                   <option value="">Select Service Type</option>
@@ -811,7 +879,7 @@ export const CreateServiceForm: React.FC<{
                   className="text-sm font-medium"
                   style={{ color: 'var(--text-primary)' }}
                 >
-                  Per Quantity (Default: 1000)
+                  Per Quantity
                   {isEditMode && <span className="text-red-500">*</span>}
                 </FormLabel>
                 <FormControl>
@@ -819,8 +887,9 @@ export const CreateServiceForm: React.FC<{
                     type="number"
                     min={1}
                     placeholder="Enter per quantity (default: 1000)"
-                    className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="form-field w-full px-4 py-3 bg-gray-100 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none shadow-sm text-gray-600 dark:text-gray-400 placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-not-allowed"
                     {...register('perqty')}
+                    readOnly
                     disabled={isPending}
                   />
                 </FormControl>

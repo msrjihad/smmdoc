@@ -222,8 +222,7 @@ export async function POST(req: NextRequest) {
     const service = await db.services.findUnique({
       where: { id: serviceId },
       include: { 
-        category: true,
-        serviceType: true
+        category: true
       }
     });
     

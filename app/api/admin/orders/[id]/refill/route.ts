@@ -227,10 +227,11 @@ export async function POST(
       return refillOrder;
     });
 
-    let providerForwardResult = null;
+    let providerRefillResult = null;
     let providerError = null;
 
-    if (originalOrder.service.providerId && originalOrder.service.providerServiceId) {
+    // Forward refill to provider API if original order has providerOrderId (matches old project logic)
+    if (originalOrder.service.providerId && originalOrder.providerOrderId) {
       try {
         const provider = await db.apiProviders.findUnique({
           where: { id: originalOrder.service.providerId }
@@ -249,82 +250,55 @@ export async function POST(
             timeout_seconds: (provider as any).timeout_seconds || 30
           };
 
-          const orderDataForProvider = {
-            service: String(originalOrder.service.providerServiceId),
-            link: originalOrder.link,
-            quantity: refillQuantity,
-            runs: originalOrder.dripfeedRuns ? Number(originalOrder.dripfeedRuns) : undefined,
-            interval: originalOrder.dripfeedInterval ? Number(originalOrder.dripfeedInterval) : undefined
-          };
-
-          console.log('Forwarding refill order to provider:', {
+          console.log('Forwarding refill request to provider:', {
             providerId: provider.id,
             providerName: provider.name,
-            refillOrderId: result.id,
             originalOrderId: originalOrder.id,
-            orderData: orderDataForProvider
+            originalProviderOrderId: originalOrder.providerOrderId,
+            refillOrderId: result.id
           });
 
-          const forwardResult = await forwarder.forwardOrderToProvider(providerForApi, orderDataForProvider);
-          
-          console.log('Refill order forwarded to provider successfully:', {
+          // Use original order's providerOrderId to request refill (matches old project: action='refill', order=api_orderid)
+          const refillResult = await forwarder.forwardRefillOrderToProvider(
+            providerForApi,
+            originalOrder.providerOrderId
+          );
+
+          console.log('Refill request forwarded to provider:', {
             refillOrderId: result.id,
-            providerOrderId: forwardResult.order,
-            status: forwardResult.status,
-            charge: forwardResult.charge
+            providerRefillId: refillResult.refill,
+            status: refillResult.status,
+            error: refillResult.error
           });
 
-          if (forwardResult.order && forwardResult.order !== '') {
-            let statusResult;
-            try {
-              statusResult = await forwarder.checkProviderOrderStatus(providerForApi, forwardResult.order);
-            } catch (statusError) {
-              console.warn('Failed to fetch provider order status, using forward result values:', statusError);
-              statusResult = {
-                charge: forwardResult.charge || 0,
-                start_count: BigInt(forwardResult.start_count || 0),
-                status: forwardResult.status || 'pending',
-                remains: BigInt(forwardResult.remains || refillQuantity),
-                currency: forwardResult.currency || 'USD'
-              };
-            }
-
-            const mapProviderStatus = (providerStatus: string): string => {
-              if (!providerStatus) return 'pending';
-              const normalizedStatus = providerStatus.toLowerCase().trim().replace(/\s+/g, '_');
-              const statusMap: { [key: string]: string } = {
-                'pending': 'pending',
-                'in_progress': 'processing',
-                'inprogress': 'processing',
-                'processing': 'processing',
-                'completed': 'completed',
-                'complete': 'completed',
-                'partial': 'partial',
-                'canceled': 'cancelled',
-                'cancelled': 'cancelled',
-                'refunded': 'refunded',
-                'failed': 'failed',
-                'fail': 'failed'
-              };
-              return statusMap[normalizedStatus] || 'pending';
+          if (refillResult.error) {
+            // Provider returned an error
+            providerError = refillResult.error;
+            console.error('Provider refill request failed:', providerError);
+            
+            await db.providerOrderLogs.create({
+              data: {
+                orderId: result.id,
+                providerId: originalOrder.service.providerId,
+                action: 'forward_refill_order',
+                status: 'error',
+                response: JSON.stringify({ error: providerError }),
+                createdAt: new Date()
+              }
+            });
+          } else if (refillResult.refill && refillResult.refill !== '') {
+            // Provider returned refill ID - store it and set status to inprogress (matches old project logic)
+            providerRefillResult = {
+              providerRefillId: refillResult.refill,
+              status: refillResult.status || 'pending'
             };
-
-            const providerStatus = mapProviderStatus(statusResult.status);
-            const apiCharge = statusResult.charge || forwardResult.charge || 0;
-            const startCount = BigInt(statusResult.start_count || forwardResult.start_count || 0);
-            const remains = BigInt(statusResult.remains || forwardResult.remains || refillQuantity);
-            const profit = refillPrice - apiCharge;
 
             await db.newOrders.update({
               where: { id: result.id },
               data: {
-                providerOrderId: forwardResult.order.toString(),
-                providerStatus: providerStatus,
-                status: providerStatus,
-                charge: apiCharge,
-                profit: profit,
-                startCount: startCount,
-                remains: remains,
+                providerOrderId: refillResult.refill, // Store refill ID as providerOrderId
+                providerStatus: 'processing', // Set to processing (inprogress in old project)
+                status: 'processing',
                 lastSyncAt: new Date(),
                 updatedAt: new Date()
               }
@@ -333,44 +307,57 @@ export async function POST(
             await db.providerOrderLogs.create({
               data: {
                 orderId: result.id,
-                providerId: provider.id,
+                providerId: originalOrder.service.providerId,
                 action: 'forward_refill_order',
                 status: 'success',
                 response: JSON.stringify({
-                  providerOrderId: forwardResult.order,
-                  status: providerStatus,
-                  charge: apiCharge,
-                  startCount: Number(startCount),
-                  remains: Number(remains)
+                  providerRefillId: refillResult.refill,
+                  status: refillResult.status
                 }),
                 createdAt: new Date()
               }
             });
 
-            providerForwardResult = {
-              providerOrderId: forwardResult.order,
-              status: providerStatus,
-              charge: apiCharge,
-              profit: profit,
-              startCount: Number(startCount),
-              remains: Number(remains)
-            };
-
-            console.log('Refill order updated with provider data:', {
+            console.log('Refill order updated with provider refill ID:', {
               refillOrderId: result.id,
-              providerOrderId: forwardResult.order,
-              providerStatus: providerStatus,
-              apiCharge: apiCharge,
-              profit: profit
+              providerRefillId: refillResult.refill,
+              status: refillResult.status
             });
           } else {
-            providerError = 'Provider did not return order ID';
-            console.error('Provider refill forwarding failed:', providerError);
+            // No refill ID returned but no error - set status to processing (matches old project)
+            providerRefillResult = {
+              providerRefillId: '',
+              status: refillResult.status || 'pending'
+            };
+
+            await db.newOrders.update({
+              where: { id: result.id },
+              data: {
+                providerStatus: 'processing',
+                status: 'processing',
+                lastSyncAt: new Date(),
+                updatedAt: new Date()
+              }
+            });
+
+            await db.providerOrderLogs.create({
+              data: {
+                orderId: result.id,
+                providerId: originalOrder.service.providerId,
+                action: 'forward_refill_order',
+                status: 'success',
+                response: JSON.stringify({
+                  status: refillResult.status,
+                  note: 'No refill ID returned, status set to processing'
+                }),
+                createdAt: new Date()
+              }
+            });
           }
         }
       } catch (error) {
         providerError = error instanceof Error ? error.message : 'Unknown error forwarding to provider';
-        console.error('Error forwarding refill order to provider:', error);
+        console.error('Error forwarding refill request to provider:', error);
         
         try {
           await db.providerOrderLogs.create({
@@ -396,13 +383,13 @@ export async function POST(
       refillQuantity,
       refillPrice,
       reason: reason || 'No reason provided',
-      providerForwarded: !!providerForwardResult,
+      providerRefillForwarded: !!providerRefillResult,
       providerError: providerError || null,
       timestamp: new Date().toISOString()
     });
     
     let updatedRefillOrder = result;
-    if (providerForwardResult) {
+    if (providerRefillResult) {
       updatedRefillOrder = await db.newOrders.findUnique({
         where: { id: result.id },
         include: {
@@ -433,7 +420,7 @@ export async function POST(
     
     return NextResponse.json({
       success: true,
-      message: providerForwardResult 
+      message: providerRefillResult 
         ? `Refill order created successfully and forwarded to provider`
         : providerError
         ? `Refill order created, but provider forwarding failed: ${providerError}`
@@ -443,7 +430,8 @@ export async function POST(
           id: originalOrder.id,
           status: originalOrder.status,
           qty: Number(originalOrder.qty),
-          remains: Number(originalOrder.remains)
+          remains: Number(originalOrder.remains),
+          providerOrderId: originalOrder.providerOrderId
         },
         refillOrder: updatedRefillOrder,
         refillDetails: {
@@ -452,7 +440,7 @@ export async function POST(
           cost: refillPrice,
           reason: reason || 'Admin initiated refill'
         },
-        providerForward: providerForwardResult || null,
+        providerRefill: providerRefillResult || null,
         providerError: providerError || null
       },
       error: null

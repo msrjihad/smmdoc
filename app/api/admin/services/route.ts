@@ -40,14 +40,6 @@ export async function GET(request: Request) {
     if (limit >= 500) {
       const whereClause = {
         ...(deletedAtFilter !== undefined && { deletedAt: deletedAtFilter }),
-        ...(serviceTypeFilter && serviceTypeFilter.trim() && {
-          serviceType: {
-            name: {
-              contains: serviceTypeFilter.trim(),
-              mode: 'insensitive',
-            },
-          },
-        }),
         ...(packageTypeFilter && packageTypeFilter.trim() && !isNaN(Number(packageTypeFilter.trim())) && {
           packageType: Number(packageTypeFilter.trim()),
         }),
@@ -89,6 +81,8 @@ export async function GET(request: Request) {
           : {})
       };
 
+      console.log('Fetching all services (limit >= 500) with whereClause:', JSON.stringify(whereClause, null, 2));
+      
       const services = await db.services.findMany({
         where: whereClause,
         orderBy: {
@@ -96,9 +90,10 @@ export async function GET(request: Request) {
         },
         include: {
           category: true,
-          serviceType: true,
         },
       });
+
+      console.log(`Found ${services.length} services (limit >= 500)`);
 
       const allCategories = await db.categories.findMany({
         where: {
@@ -150,14 +145,6 @@ export async function GET(request: Request) {
       categoryId: {
         in: categoryIds,
       },
-      ...(serviceTypeFilter && serviceTypeFilter.trim() && {
-        serviceType: {
-          name: {
-            contains: serviceTypeFilter.trim(),
-            mode: 'insensitive',
-          },
-        },
-      }),
       ...(packageTypeFilter && packageTypeFilter.trim() && !isNaN(Number(packageTypeFilter.trim())) && {
         packageType: Number(packageTypeFilter.trim()),
       }),
@@ -205,6 +192,8 @@ export async function GET(request: Request) {
         : {})
     };
 
+    console.log('Fetching services with whereClause:', JSON.stringify(whereClause, null, 2));
+    
     const services = await db.services.findMany({
       where: whereClause,
       orderBy: {
@@ -212,9 +201,10 @@ export async function GET(request: Request) {
       },
       include: {
         category: true,
-        serviceType: true,
       },
     });
+
+    console.log(`Found ${services.length} services`);
 
     return NextResponse.json(
       {
@@ -230,6 +220,7 @@ export async function GET(request: Request) {
     );
   } catch (error) {
     console.error("Error in services API:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
       {
         data: [],
@@ -238,8 +229,9 @@ export async function GET(request: Request) {
         totalPages: 1,
         message: 'Error fetching services',
         error: error instanceof Error ? error.message : 'Unknown error',
+        success: false,
       },
-      { status: 200 }
+      { status: 500 }
     );
   }
 }
@@ -306,6 +298,7 @@ export async function POST(request: Request) {
       refillDays,
       refillDisplay,
       serviceSpeed,
+      exampleLink,
       mode,
       orderLink,
       packageType,
@@ -378,6 +371,7 @@ export async function POST(request: Request) {
       refillDays: toRefillValue(refillDays),
       refillDisplay: toRefillValue(refillDisplay),
       serviceSpeed: serviceSpeed || 'medium',
+      exampleLink: (exampleLink !== undefined && exampleLink !== null && exampleLink !== '') ? exampleLink : null,
       mode: mode || 'manual',
       orderLink: orderLink || 'link',
       userId: session.user.id,
@@ -426,29 +420,33 @@ export async function POST(request: Request) {
 
     createData.categoryId = categoryIdInt;
 
-    const serviceTypeIdInt = toInt(serviceTypeId);
-    if (serviceTypeIdInt !== undefined) {
-      const serviceTypeExists = await db.serviceTypes.findUnique({
-        where: { id: serviceTypeIdInt }
-      });
+    // Automatically determine serviceTypeId from packageType using predefined SERVICE_TYPE_CONFIGS
+    // Since service types are predefined, we use packageType directly as serviceTypeId
+    const finalPackageType = createData.packageType || 1;
+    
+    // Map packageType to serviceTypeId based on predefined mapping:
+    // packageType 1-4, 11-15 map to serviceTypeId 1-9
+    const packageTypeToServiceTypeId: Record<number, number> = {
+      1: 1,   // Default
+      2: 2,   // Package
+      3: 3,   // Special Comments
+      4: 4,   // Package Comments
+      11: 5,  // Auto Likes
+      12: 6,  // Auto Views
+      13: 7,  // Auto Comments
+      14: 8,  // Subscription
+      15: 9,  // Limited Auto Likes
+    };
 
-      if (serviceTypeExists) {
-        createData.serviceTypeId = serviceTypeIdInt;
-      } else {
-        console.warn(`Service type with ID ${serviceTypeIdInt} does not exist. Setting serviceTypeId to null.`);
-        createData.serviceTypeId = null;
-      }
+    const mappedServiceTypeId = packageTypeToServiceTypeId[finalPackageType];
+
+    if (mappedServiceTypeId) {
+      createData.serviceTypeId = mappedServiceTypeId;
+      console.log(`Mapped packageType ${finalPackageType} to serviceTypeId ${mappedServiceTypeId}`);
     } else {
-      const defaultServiceType = await db.serviceTypes.findFirst({
-        where: { name: 'Default' }
-      });
-      
-      if (defaultServiceType) {
-        createData.serviceTypeId = defaultServiceType.id;
-      } else {
-        console.warn('Default service type not found. Setting serviceTypeId to null.');
-        createData.serviceTypeId = null;
-      }
+      // Default to serviceTypeId 1 (Default) if packageType doesn't match
+      createData.serviceTypeId = 1;
+      console.warn(`No mapping found for packageType ${finalPackageType}. Defaulting to serviceTypeId 1.`);
     }
 
     if (createData.providerId !== null && createData.providerId !== undefined) {

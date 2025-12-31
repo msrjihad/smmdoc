@@ -63,6 +63,7 @@ export async function PUT(request: Request) {
       refillDays,
       refillDisplay,
       serviceSpeed,
+      exampleLink,
       mode,
       orderLink,
       packageType,
@@ -88,8 +89,7 @@ export async function PUT(request: Request) {
     const currentService = await db.services.findUnique({
       where: { id: parseInt(id) },
       include: {
-        category: { select: { category_name: true } },
-        serviceType: { select: { name: true } }
+        category: { select: { category_name: true } }
       }
     });
     
@@ -176,64 +176,39 @@ export async function PUT(request: Request) {
     if (updateText !== undefined && updateText !== null && updateText !== '') {
       updateData.updateText = updateText;
     }
-    if (serviceTypeId !== undefined && serviceTypeId !== null && serviceTypeId !== '') {
-      const serviceTypeIdInt = toInt(serviceTypeId);
-      if (serviceTypeIdInt !== undefined && serviceTypeIdInt !== null) {
-        const currentServiceTypeId = currentService.serviceTypeId;
-        
-        const currentIdStr = currentServiceTypeId !== null && currentServiceTypeId !== undefined 
-          ? String(currentServiceTypeId) 
-          : '';
-        const newIdStr = String(serviceTypeIdInt);
-        
-        let currentIdNum: number | null = null;
-        if (currentIdStr !== '') {
-          const num = Number(currentServiceTypeId);
-          currentIdNum = isNaN(num) ? null : num;
-        }
-        const newIdNum = Number(serviceTypeIdInt);
-        
-        console.log(`[ServiceTypeId Debug] Service ID: ${id}`);
-        console.log(`[ServiceTypeId Debug] Current from DB: ${currentServiceTypeId} (type: ${typeof currentServiceTypeId})`);
-        console.log(`[ServiceTypeId Debug] Submitted: ${serviceTypeId} (type: ${typeof serviceTypeId})`);
-        console.log(`[ServiceTypeId Debug] Current as string: "${currentIdStr}"`);
-        console.log(`[ServiceTypeId Debug] New as string: "${newIdStr}"`);
-        console.log(`[ServiceTypeId Debug] Current as number: ${currentIdNum}`);
-        console.log(`[ServiceTypeId Debug] New as number: ${newIdNum}`);
-        console.log(`[ServiceTypeId Debug] String match: ${currentIdStr === newIdStr}`);
-        console.log(`[ServiceTypeId Debug] Number match: ${currentIdNum !== null && !isNaN(newIdNum) && currentIdNum === newIdNum}`);
-        
-        const valuesMatch = (currentIdStr === newIdStr) || 
-                           (currentIdNum !== null && !isNaN(newIdNum) && currentIdNum === newIdNum);
-        
-        if (valuesMatch) {
-          const serviceTypeExists = await db.serviceTypes.findUnique({
-            where: { id: serviceTypeIdInt }
-          });
-          
-          if (serviceTypeExists) {
-            console.log(`[ServiceTypeId] ✅ Values match (${currentIdStr}/${currentIdNum}) and service type exists - skipping update`);
-          } else {
-            console.log(`[ServiceTypeId] ✅ Values match (${currentIdStr}/${currentIdNum}) but service type doesn't exist - skipping update (not changing invalid ID)`);
-          }
-        } else {
-          console.log(`[ServiceTypeId] ⚠️ Values differ ("${currentIdStr}"/${currentIdNum} !== "${newIdStr}"/${newIdNum}) - validating new service type...`);
-          const serviceTypeExists = await db.serviceTypes.findUnique({
-            where: { id: serviceTypeIdInt }
-          });
+    // Automatically determine serviceTypeId from packageType using predefined mapping
+    // Since service types are predefined, we use packageType directly as serviceTypeId
+    const finalPackageType = packageType !== undefined && packageType !== null && packageType !== '' 
+      ? toNumber(packageType, 1) 
+      : (currentService.packageType || 1);
+    
+    // Map packageType to serviceTypeId based on predefined mapping:
+    // packageType 1-4, 11-15 map to serviceTypeId 1-9
+    const packageTypeToServiceTypeId: Record<number, number> = {
+      1: 1,   // Default
+      2: 2,   // Package
+      3: 3,   // Special Comments
+      4: 4,   // Package Comments
+      11: 5,  // Auto Likes
+      12: 6,  // Auto Views
+      13: 7,  // Auto Comments
+      14: 8,  // Subscription
+      15: 9,  // Limited Auto Likes
+    };
 
-          if (serviceTypeExists) {
-            updateData.serviceTypeId = serviceTypeIdInt;
-            console.log(`[ServiceTypeId] ✅ Service type ${serviceTypeIdInt} exists, will update`);
-          } else {
-            console.log(`[ServiceTypeId] ❌ Service type ${serviceTypeIdInt} does not exist, returning error`);
-            return NextResponse.json({
-              error: `Service type with ID ${serviceTypeIdInt} does not exist. Please select a valid service type from the dropdown.`,
-              data: null,
-              success: false,
-            }, { status: 400 });
-          }
-        }
+    const mappedServiceTypeId = packageTypeToServiceTypeId[finalPackageType];
+
+    if (mappedServiceTypeId) {
+      // Only update if it's different from current value
+      if (currentService.serviceTypeId !== mappedServiceTypeId) {
+        updateData.serviceTypeId = mappedServiceTypeId;
+        console.log(`Mapped packageType ${finalPackageType} to serviceTypeId ${mappedServiceTypeId}`);
+      }
+    } else {
+      // Default to serviceTypeId 1 (Default) if packageType doesn't match
+      if (currentService.serviceTypeId !== 1) {
+        updateData.serviceTypeId = 1;
+        console.warn(`No mapping found for packageType ${finalPackageType}. Defaulting to serviceTypeId 1.`);
       }
     }
     if (refill !== undefined && refill !== null) {
@@ -250,6 +225,9 @@ export async function PUT(request: Request) {
     }
     if (serviceSpeed !== undefined && serviceSpeed !== null && serviceSpeed !== '') {
       updateData.serviceSpeed = serviceSpeed;
+    }
+    if (exampleLink !== undefined && exampleLink !== null) {
+      updateData.exampleLink = exampleLink === '' ? null : exampleLink;
     }
     if (mode !== undefined && mode !== null && mode !== '') {
       updateData.mode = mode;
@@ -434,7 +412,6 @@ export async function GET(request: Request) {
       },
       include: {
         category: true,
-        serviceType: true,
       },
     });
 

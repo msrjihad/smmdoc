@@ -1,4 +1,4 @@
-﻿import { auth } from '@/auth';
+import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { convertToUSD } from '@/lib/currency-utils';
 import { NextRequest, NextResponse } from 'next/server';
@@ -39,7 +39,7 @@ const retryApiCall = async <T>(
       return await apiCall();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      console.log(`âŒ Attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+      console.log(`❌ Attempt ${attempt}/${maxRetries} failed:`, lastError.message);
       
       if (attempt === maxRetries) {
         throw lastError;
@@ -84,36 +84,36 @@ export async function POST(req: NextRequest) {
 
     if (action === 'services' && providerId && categories) {
       try {
-        console.log('ðŸ”¥ Services request via POST:', { providerId, categories, page, limit });
+        console.log('🔥 Services request via POST:', { providerId, categories, page, limit });
 
         const provider = await db.apiProviders.findUnique({
           where: { id: parseInt(providerId) }
         });
 
         if (!provider) {
-          console.log('âŒ Provider not found:', providerId);
+          console.log('❌ Provider not found:', providerId);
           return NextResponse.json(
             { error: 'Provider not found', success: false, data: null },
             { status: 404 }
           );
         }
 
-        console.log('âœ… Provider found:', provider.name);
+        console.log('✅ Provider found:', provider.name);
 
         const providerConfig = createProviderConfig(provider);
-        console.log('ðŸ”§ Using dynamic config for provider:', provider.name);
+        console.log('🔧 Using dynamic config for provider:', provider.name);
 
         let providerServices = null;
         const categoriesArray = Array.isArray(categories) ? categories : categories.split(',').map((c: string) => c.trim());
-        console.log('ðŸ“‹ Requested categories:', categoriesArray);
+        console.log('📋 Requested categories:', categoriesArray);
 
         const httpMethod = provider.http_method || 'POST';
         const baseUrl = providerConfig.baseUrl;
         
-        console.log(`ðŸŒ Using HTTP method: ${httpMethod} for provider: ${provider.name}`);
+        console.log(`🌐 Using HTTP method: ${httpMethod} for provider: ${provider.name}`);
 
         try {
-          console.log(`ðŸŒ Fetching services using ${httpMethod} method`);
+          console.log(`🌐 Fetching services using ${httpMethod} method`);
           
           const response = await retryApiCall(async () => {
             if (httpMethod.toUpperCase() === 'POST') {
@@ -140,16 +140,16 @@ export async function POST(req: NextRequest) {
           if (response.ok) {
             const data = await response.json();
             providerServices = Array.isArray(data) ? data : (data.services || data.data || data);
-            console.log(`âœ… ${httpMethod} method successful, got ${Array.isArray(providerServices) ? providerServices.length : 'unknown'} services`);
+            console.log(`✅ ${httpMethod} method successful, got ${Array.isArray(providerServices) ? providerServices.length : 'unknown'} services`);
           }
         } catch (error) {
-          console.error(`âŒ ${httpMethod} method failed for ${baseUrl}:`, error);
+          console.error(`❌ ${httpMethod} method failed for ${baseUrl}:`, error);
         }
 
         if (!providerServices) {
           const alternativeMethod = httpMethod.toUpperCase() === 'POST' ? 'GET' : 'POST';
           try {
-            console.log(`ðŸŒ Trying alternative ${alternativeMethod} method`);
+            console.log(`🌐 Trying alternative ${alternativeMethod} method`);
             
             const response = await retryApiCall(async () => {
               if (alternativeMethod === 'POST') {
@@ -175,15 +175,15 @@ export async function POST(req: NextRequest) {
             if (response.ok) {
               const data = await response.json();
               providerServices = Array.isArray(data) ? data : (data.services || data.data || data);
-              console.log(`âœ… ${alternativeMethod} method successful, got ${Array.isArray(providerServices) ? providerServices.length : 'unknown'} services`);
+              console.log(`✅ ${alternativeMethod} method successful, got ${Array.isArray(providerServices) ? providerServices.length : 'unknown'} services`);
             }
           } catch (error) {
-            console.error(`âŒ ${alternativeMethod} method failed for ${baseUrl}:`, error);
+            console.error(`❌ ${alternativeMethod} method failed for ${baseUrl}:`, error);
           }
         }
 
         if (!providerServices || !Array.isArray(providerServices)) {
-          console.log('âŒ No services fetched from provider:', {
+          console.log('❌ No services fetched from provider:', {
             providerServices: providerServices ? 'exists but not array' : 'null/undefined',
             type: typeof providerServices,
             isArray: Array.isArray(providerServices)
@@ -194,18 +194,18 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        console.log(`âœ… Fetched ${providerServices.length} services from ${provider.name}`);
+        console.log(`✅ Fetched ${providerServices.length} services from ${provider.name}`);
         
-        console.log('ðŸ” Sample services structure:', JSON.stringify(providerServices.slice(0, 3), null, 2));
+        console.log('🔍 Sample services structure:', JSON.stringify(providerServices.slice(0, 3), null, 2));
         
         if (providerServices.length > 0) {
           const firstService = providerServices[0];
-          console.log('ðŸ” All fields in first service:', Object.keys(firstService));
-          console.log('ðŸ” RAW PROVIDER SERVICE DATA:');
-          console.log('ðŸ” First service all fields:', firstService);
-          console.log('ðŸ” First service complete data:', JSON.stringify(firstService, null, 2));
+          console.log('🔍 All fields in first service:', Object.keys(firstService));
+          console.log('🔍 RAW PROVIDER SERVICE DATA:');
+          console.log('🔍 First service all fields:', firstService);
+          console.log('🔍 First service complete data:', JSON.stringify(firstService, null, 2));
           
-          console.log('ðŸ” FIELD ANALYSIS:');
+          console.log('🔍 FIELD ANALYSIS:');
           console.log('  - description:', firstService.description);
           console.log('  - desc:', firstService.desc);
           console.log('  - details:', firstService.details);
@@ -220,7 +220,7 @@ export async function POST(req: NextRequest) {
           const serviceName = firstService.name || '';
           const hasRefillInName = serviceName.toLowerCase().includes('refill');
           const hasCancelInName = serviceName.toLowerCase().includes('cancel');
-          console.log('ðŸ” NAME ANALYSIS:');
+          console.log('🔍 NAME ANALYSIS:');
           console.log('  - Service name:', serviceName);
           console.log('  - Has REFILL in name:', hasRefillInName);
           console.log('  - Has CANCEL in name:', hasCancelInName);
@@ -233,9 +233,9 @@ export async function POST(req: NextRequest) {
         let parsedServices;
         try {
           parsedServices = responseParser.parseServicesResponse(providerServices);
-          console.log(`âœ… Successfully parsed ${parsedServices.length} services using API specification`);
+          console.log(`✅ Successfully parsed ${parsedServices.length} services using API specification`);
         } catch (parseError) {
-          console.warn('âš ï¸ API specification parsing failed, falling back to manual parsing:', parseError);
+          console.warn('⚠️ API specification parsing failed, falling back to manual parsing:', parseError);
           parsedServices = providerServices.map((service: any) => ({
             serviceId: service.service || service.id,
             name: service.name,
@@ -264,10 +264,10 @@ export async function POST(req: NextRequest) {
           );
         });
 
-        console.log(`ðŸ” Filtered to ${filteredServices.length} services for categories: ${categoriesArray.join(', ')}`);
+        console.log(`🔍 Filtered to ${filteredServices.length} services for categories: ${categoriesArray.join(', ')}`);
 
         const formattedServices = filteredServices.map((service: any) => {
-          console.log(`ðŸ” FORMATTING SERVICE: ${service.name}`);
+          console.log(`🔍 FORMATTING SERVICE: ${service.name}`);
           console.log('  - Raw service data:', service);
           console.log('  - Description field:', service.description);
           console.log('  - Refill field:', service.refill);
@@ -316,7 +316,7 @@ export async function POST(req: NextRequest) {
           return formatted;
         });
 
-        console.log(`âœ… Returning ${formattedServices.length} formatted services`);
+        console.log(`✅ Returning ${formattedServices.length} formatted services`);
 
         return NextResponse.json({
           success: true,
@@ -334,7 +334,7 @@ export async function POST(req: NextRequest) {
         });
 
       } catch (error) {
-        console.error('âŒ Error in services request:', error);
+        console.error('❌ Error in services request:', error);
         return NextResponse.json(
           {
             error: `Failed to fetch services: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -359,7 +359,7 @@ export async function POST(req: NextRequest) {
     );
 
   } catch (error) {
-    console.error('âŒ Import error:', error);
+    console.error('❌ Import error:', error);
     return NextResponse.json(
       { error: 'Import failed: ' + (error instanceof Error ? error.message : 'Unknown error') },
       { status: 500 }
@@ -369,10 +369,10 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    console.log('ðŸ”¥ Import API GET called');
+    console.log('🔥 Import API GET called');
     
     const session = await auth();
-    console.log('ðŸ”¥ Session check:', {
+    console.log('🔥 Session check:', {
       hasSession: !!session,
       hasUser: !!session?.user,
       userId: session?.user?.id,
@@ -381,7 +381,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!session?.user || session.user.role !== 'admin') {
-      console.log('âŒ Unauthorized access - no session or not admin');
+      console.log('❌ Unauthorized access - no session or not admin');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -392,23 +392,23 @@ export async function GET(req: NextRequest) {
 
     if (action === 'categories' && providerId) {
       try {
-        console.log('ðŸ”¥ Categories request for provider:', providerId);
-        console.log('ðŸ”¥ Session user:', session?.user?.email, 'Role:', session?.user?.role);
+        console.log('🔥 Categories request for provider:', providerId);
+        console.log('🔥 Session user:', session?.user?.email, 'Role:', session?.user?.role);
 
         const provider = await db.apiProviders.findUnique({
           where: { id: parseInt(providerId) }
         });
 
         if (!provider) {
-          console.log('âŒ Provider not found:', providerId);
+          console.log('❌ Provider not found:', providerId);
           return NextResponse.json(
             { error: 'Provider not found', success: false, data: null },
             { status: 404 }
           );
         }
 
-        console.log('âœ… Provider found:', provider.name);
-        console.log('ðŸ”§ Provider details:', {
+        console.log('✅ Provider found:', provider.name);
+        console.log('🔧 Provider details:', {
           id: provider.id,
           name: provider.name,
           api_url: provider.api_url,
@@ -419,21 +419,21 @@ export async function GET(req: NextRequest) {
         });
 
         const providerConfig = createProviderConfig(provider);
-        console.log('ðŸ”§ Using dynamic config for provider:', provider.name);
+        console.log('🔧 Using dynamic config for provider:', provider.name);
 
         let providerServices = null;
         const endpoints = providerConfig.endpoints;
         const baseUrl = providerConfig.baseUrl;
         const httpMethod = provider.http_method || 'POST';
 
-        console.log('ðŸ” Available endpoints:', endpoints);
-        console.log('ðŸŒ Base URL:', baseUrl);
-        console.log(`ðŸŒ Using HTTP method: ${httpMethod} for provider: ${provider.name}`);
+        console.log('🔍 Available endpoints:', endpoints);
+        console.log('🌐 Base URL:', baseUrl);
+        console.log(`🌐 Using HTTP method: ${httpMethod} for provider: ${provider.name}`);
 
         if (endpoints.categories) {
           try {
             const categoriesUrl = `${baseUrl}${endpoints.categories}`;
-            console.log(`ðŸŒ Fetching from categories endpoint: ${categoriesUrl}`);
+            console.log(`🌐 Fetching from categories endpoint: ${categoriesUrl}`);
             
             const response = await retryApiCall(async () => {
               if (httpMethod.toUpperCase() === 'POST') {
@@ -462,7 +462,7 @@ export async function GET(req: NextRequest) {
               const categories = data.categories || data.data || data;
               
               if (Array.isArray(categories)) {
-                console.log(`âœ… Categories endpoint successful, got ${categories.length} categories`);
+                console.log(`✅ Categories endpoint successful, got ${categories.length} categories`);
                 
                 const formattedCategories = categories.map((cat, index) => {
                   if (typeof cat === 'string') {
@@ -494,13 +494,13 @@ export async function GET(req: NextRequest) {
               }
             }
           } catch (error) {
-            console.error(`âŒ Categories endpoint failed for ${baseUrl}:`, error);
+            console.error(`❌ Categories endpoint failed for ${baseUrl}:`, error);
           }
         }
 
         if (!providerServices) {
           try {
-            console.log(`ðŸŒ Trying standard SMM panel API format with ${httpMethod} method`);
+            console.log(`🌐 Trying standard SMM panel API format with ${httpMethod} method`);
             
             const response = await retryApiCall(async () => {
               if (httpMethod.toUpperCase() === 'POST') {
@@ -527,15 +527,15 @@ export async function GET(req: NextRequest) {
             if (response.ok) {
               const data = await response.json();
               providerServices = Array.isArray(data) ? data : (data.services || data.data || data);
-              console.log(`âœ… Standard ${httpMethod} method successful, got ${Array.isArray(providerServices) ? providerServices.length : 'unknown'} services`);
+              console.log(`✅ Standard ${httpMethod} method successful, got ${Array.isArray(providerServices) ? providerServices.length : 'unknown'} services`);
             }
           } catch (error) {
-            console.error(`âŒ Standard ${httpMethod} method failed for ${baseUrl}:`, error);
+            console.error(`❌ Standard ${httpMethod} method failed for ${baseUrl}:`, error);
           }
         }
 
         if (!providerServices || !Array.isArray(providerServices)) {
-          console.log('âŒ No services fetched from provider:', {
+          console.log('❌ No services fetched from provider:', {
             providerServices: providerServices ? 'exists but not array' : 'null/undefined',
             type: typeof providerServices,
             isArray: Array.isArray(providerServices)
@@ -573,7 +573,7 @@ export async function GET(req: NextRequest) {
           }))
           .sort((a, b) => a.name.localeCompare(b.name));
 
-        console.log(`ðŸ” Extracted ${categories.length} unique categories from services with service counts`);
+        console.log(`🔍 Extracted ${categories.length} unique categories from services with service counts`);
 
         return NextResponse.json({
           success: true,
@@ -594,33 +594,33 @@ export async function GET(req: NextRequest) {
     }
     if (action === 'services' && providerId && categories) {
       try {
-        console.log('ðŸ”¥ Services request:', { providerId, categories });
+        console.log('🔥 Services request:', { providerId, categories });
 
         const provider = await db.apiProviders.findUnique({
           where: { id: parseInt(providerId) }
         });
 
         if (!provider) {
-          console.log('âŒ Provider not found:', providerId);
+          console.log('❌ Provider not found:', providerId);
           return NextResponse.json(
             { error: 'Provider not found', success: false, data: null },
             { status: 404 }
           );
         }
 
-        console.log('âœ… Provider found:', provider.name);
+        console.log('✅ Provider found:', provider.name);
 
         const providerConfig = createProviderConfig(provider);
-        console.log('ðŸ”§ Using dynamic config for provider:', provider.name);
+        console.log('🔧 Using dynamic config for provider:', provider.name);
 
         let providerServices = null;
         const categoriesArray = categories.split(',').map(c => c.trim());
-        console.log('ðŸ“‹ Requested categories:', categoriesArray);
+        console.log('📋 Requested categories:', categoriesArray);
 
         const baseUrl = providerConfig.baseUrl;
         
         try {
-          console.log(`ðŸŒ Fetching services using POST method with standard SMM panel format`);
+          console.log(`🌐 Fetching services using POST method with standard SMM panel format`);
           
           const formData = new FormData();
           formData.append('key', providerConfig.apiKey);
@@ -636,16 +636,16 @@ export async function GET(req: NextRequest) {
           if (response.ok) {
             const data = await response.json();
             providerServices = Array.isArray(data) ? data : (data.services || data.data || data);
-            console.log(`âœ… POST method successful, got ${Array.isArray(providerServices) ? providerServices.length : 'unknown'} services`);
+            console.log(`✅ POST method successful, got ${Array.isArray(providerServices) ? providerServices.length : 'unknown'} services`);
           }
         } catch (error) {
-          console.error(`âŒ POST method failed for ${baseUrl}:`, error);
+          console.error(`❌ POST method failed for ${baseUrl}:`, error);
         }
 
         if (!providerServices) {
           try {
             const servicesUrl = `${baseUrl}?key=${encodeURIComponent(providerConfig.apiKey)}&action=services`;
-            console.log(`ðŸŒ Trying GET method with query parameters: ${servicesUrl}`);
+            console.log(`🌐 Trying GET method with query parameters: ${servicesUrl}`);
             
             const response = await retryApiCall(async () => {
               return await fetchWithTimeout(servicesUrl, {
@@ -659,15 +659,15 @@ export async function GET(req: NextRequest) {
             if (response.ok) {
               const data = await response.json();
               providerServices = Array.isArray(data) ? data : (data.services || data.data || data);
-              console.log(`âœ… GET method successful, got ${Array.isArray(providerServices) ? providerServices.length : 'unknown'} services`);
+              console.log(`✅ GET method successful, got ${Array.isArray(providerServices) ? providerServices.length : 'unknown'} services`);
             }
           } catch (error) {
-            console.error(`âŒ GET method failed for ${baseUrl}:`, error);
+            console.error(`❌ GET method failed for ${baseUrl}:`, error);
           }
         }
 
         if (!providerServices || !Array.isArray(providerServices)) {
-          console.log('âŒ No services fetched from provider:', {
+          console.log('❌ No services fetched from provider:', {
             providerServices: providerServices ? 'exists but not array' : 'null/undefined',
             type: typeof providerServices,
             isArray: Array.isArray(providerServices)
@@ -678,7 +678,7 @@ export async function GET(req: NextRequest) {
           );
         }
 
-        console.log(`âœ… Fetched ${providerServices.length} services from ${provider.name}`);
+        console.log(`✅ Fetched ${providerServices.length} services from ${provider.name}`);
 
         const filteredServices = providerServices.filter((service: any) => {
           const serviceCategory = service.category?.toLowerCase() || '';
@@ -688,7 +688,7 @@ export async function GET(req: NextRequest) {
           );
         });
 
-        console.log(`ðŸ” Filtered to ${filteredServices.length} services for categories: ${categoriesArray.join(', ')}`);
+        console.log(`🔍 Filtered to ${filteredServices.length} services for categories: ${categoriesArray.join(', ')}`);
 
         const formattedServices = filteredServices.map((service: any) => ({
           id: service.service || service.id,
@@ -704,7 +704,7 @@ export async function GET(req: NextRequest) {
           cancel: service.cancel || false
         }));
 
-        console.log(`âœ… Returning ${formattedServices.length} formatted services`);
+        console.log(`✅ Returning ${formattedServices.length} formatted services`);
 
         return NextResponse.json({
           success: true,
@@ -717,7 +717,7 @@ export async function GET(req: NextRequest) {
         });
 
       } catch (error) {
-        console.error('âŒ Error in services request:', error);
+        console.error('❌ Error in services request:', error);
         return NextResponse.json(
           {
             error: `Failed to fetch services: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -884,7 +884,7 @@ export async function PUT(req: NextRequest) {
     const { providerId, services, profitMargin } = body;
 
     if (services && Array.isArray(services) && providerId) {
-      console.log('ðŸ”¥ Import request:', { providerId, servicesCount: services.length });
+      console.log('🔥 Import request:', { providerId, servicesCount: services.length });
 
       const provider = await db.apiProviders.findUnique({
         where: { id: parseInt(providerId) }
@@ -897,7 +897,7 @@ export async function PUT(req: NextRequest) {
         );
       }
 
-      console.log('âœ… Provider found:', provider.name);
+      console.log('✅ Provider found:', provider.name);
 
       const currencies = await db.currencies.findMany({
         where: { enabled: true },
@@ -925,7 +925,7 @@ export async function PUT(req: NextRequest) {
 
       for (const service of services) {
         try {
-          console.log(`ðŸ“ Processing service: ${service.name} (ID: ${service.id})`);
+          console.log(`📝 Processing service: ${service.name} (ID: ${service.id})`);
 
           const existingService = await db.services.findFirst({
             where: {
@@ -937,7 +937,7 @@ export async function PUT(req: NextRequest) {
           });
 
           if (existingService) {
-            console.log(`âš ï¸ Service already exists: ${service.name}`);
+            console.log(`⚠️ Service already exists: ${service.name}`);
             skippedCount++;
             continue;
           }
@@ -952,86 +952,61 @@ export async function PUT(req: NextRequest) {
           if (service.currency && service.currency !== 'USD') {
             try {
               baseProviderPrice = convertToUSD(baseProviderPrice, service.currency, formattedCurrencies);
-              console.log(`ðŸ’± Converted ${originalProviderPrice} ${service.currency} to ${baseProviderPrice} USD`);
+              console.log(`💱 Converted ${originalProviderPrice} ${service.currency} to ${baseProviderPrice} USD`);
             } catch (conversionError) {
-              console.warn(`âš ï¸ Currency conversion failed for ${service.name}:`, conversionError);
+              console.warn(`⚠️ Currency conversion failed for ${service.name}:`, conversionError);
             }
           }
 
           const servicePercentage = service.percent || profitMargin || 0;
           const finalRate = parseFloat((baseProviderPrice * (1 + servicePercentage / 100)).toFixed(2));
-          console.log(`ðŸ’° Calculating rate: Base Provider $${baseProviderPrice} + ${servicePercentage}% = $${finalRate}`);
+          console.log(`💰 Calculating rate: Base Provider $${baseProviderPrice} + ${servicePercentage}% = $${finalRate}`);
 
-          let serviceTypeId = null;
-          
-          const mapServiceTypeToPreferredName = (typeName: string): string => {
-            const normalizedType = typeName.toLowerCase().trim();
-            
-            const typeMapping: Record<string, string> = {
-              'default': 'Default',
-              'standard': 'Default',
-              'basic': 'Default',
-              'normal': 'Default',
-              'package': 'Default',
-              'bulk': 'Default',
-              'bundle': 'Default',
-              'custom comments': 'Custom comments',
-              'special comments': 'Custom comments',
-              'comments': 'Custom comments',
-              'package comments': 'Custom comments',
-              'bulk comments': 'Custom comments',
-              'auto likes': 'Default',
-              'auto views': 'Default',
-              'auto comments': 'Custom comments',
-              'limited auto likes': 'Default',
-              'limited auto views': 'Default',
-              'subscription': 'Default',
-              'subscriptions': 'Default',
-              'auto': 'Default',
-              'new': 'Default'
-            };
-            
-            return typeMapping[normalizedType] || 'Default';
+          // Map service type to serviceTypeId using predefined mapping
+          // Since service types are predefined, we determine serviceTypeId from packageType
+          const packageTypeToServiceTypeId: Record<number, number> = {
+            1: 1,   // Default
+            2: 2,   // Package
+            3: 3,   // Special Comments
+            4: 4,   // Package Comments
+            11: 5,  // Auto Likes
+            12: 6,  // Auto Views
+            13: 7,  // Auto Comments
+            14: 8,  // Subscription
+            15: 9,  // Limited Auto Likes
           };
 
-          const preferredServiceTypeName = service.type ? mapServiceTypeToPreferredName(service.type) : 'Default';
+          // Try to determine packageType from service type name or use default
+          const mapServiceTypeToPackageType = (typeName: string): number => {
+            if (!typeName) return 1;
+            
+            const normalizedType = typeName.toLowerCase().trim();
+            
+            const typeMapping: Record<string, number> = {
+              'default': 1,
+              'standard': 1,
+              'basic': 1,
+              'normal': 1,
+              'package': 2,
+              'special comments': 3,
+              'custom comments': 3,
+              'comments': 3,
+              'package comments': 4,
+              'auto likes': 11,
+              'auto views': 12,
+              'auto comments': 13,
+              'subscription': 14,
+              'subscriptions': 14,
+              'limited auto likes': 15,
+            };
+            
+            return typeMapping[normalizedType] || 1;
+          };
+
+          const packageType = service.type ? mapServiceTypeToPackageType(service.type) : 1;
+          let serviceTypeId = packageTypeToServiceTypeId[packageType] || 1;
           
-          let serviceType = await db.serviceTypes.findFirst({
-            where: { 
-              name: preferredServiceTypeName,
-              status: 'active'
-            }
-          });
-          
-          if (!serviceType && preferredServiceTypeName !== 'Default') {
-            serviceType = await db.serviceTypes.findFirst({
-              where: { 
-                name: 'Default',
-                status: 'active'
-              }
-            });
-            console.log(`âš ï¸ Service type "${preferredServiceTypeName}" not found, falling back to "Default"`);
-          }
-          
-          if (!serviceType) {
-            serviceType = await db.serviceTypes.findFirst({
-              where: { 
-                packageType: 1,
-                status: 'active'
-              },
-              orderBy: { 
-                name: 'asc'
-              }
-            });
-            console.log(`âš ï¸ "Default" service type not found, using first available service type with packageType 1`);
-          }
-          
-          if (serviceType) {
-            serviceTypeId = serviceType.id;
-            console.log(`ðŸ“ Mapped service type "${service.type || 'undefined'}" to existing service type "${serviceType.name}" (ID: ${serviceTypeId})`);
-          } else {
-            throw new Error('No service types found in database. Please ensure service types are properly configured.');
-          }
+          console.log(`Mapped service type "${service.type || 'undefined'}" to packageType ${packageType} -> serviceTypeId ${serviceTypeId}`);
 
           const categoryName = service.category && service.category.trim() !== '' 
             ? service.category.trim() 
@@ -1049,7 +1024,7 @@ export async function PUT(req: NextRequest) {
                 userId: session.user.id
               }
             });
-            console.log(`ðŸ“ Created new category: ${categoryName}`);
+            console.log(`Created new category: ${categoryName}`);
           }
 
           const newService = await db.services.create({
@@ -1081,24 +1056,21 @@ export async function PUT(req: NextRequest) {
                 importedAt: new Date().toISOString(),
                 type: service.type,
                 mode: 'auto',
-                percentage: service.percent || profitMargin || 0,
-                refill: service.refill || false,
-                cancel: service.cancel || false
-              })
-            }
+              }),
+              packageType: packageType,
+            },
           });
 
-          console.log(`âœ… Service imported: ${newService.name} (ID: ${newService.id})`);
           importedCount++;
-
         } catch (serviceError) {
+          skippedCount++;
           const errorMsg = `Failed to import ${service.name}: ${serviceError instanceof Error ? serviceError.message : 'Unknown error'}`;
-          console.error('âŒ', errorMsg);
+          console.error('?', errorMsg);
           errors.push(errorMsg);
         }
       }
 
-      console.log(`ðŸŽ‰ Import completed: ${importedCount} imported, ${skippedCount} skipped, ${errors.length} errors`);
+      console.log(`?? Import completed: ${importedCount} imported, ${skippedCount} skipped, ${errors.length} errors`);
 
       return NextResponse.json({
         success: true,
@@ -1111,7 +1083,7 @@ export async function PUT(req: NextRequest) {
         }
       });
     }
-
+    
     const { action } = body;
 
     if (!providerId) {
