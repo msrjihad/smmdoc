@@ -615,10 +615,10 @@ export const CreateServiceForm: React.FC<{
       })
     );
 
-    if (values.refillDays === '' || values.refillDays === null || values.refillDays === undefined) {
+    if (values.refillDays === null || values.refillDays === undefined) {
       filteredValues.refillDays = null;
     }
-    if (values.refillDisplay === '' || values.refillDisplay === null || values.refillDisplay === undefined) {
+    if (values.refillDisplay === null || values.refillDisplay === undefined) {
       filteredValues.refillDisplay = null;
     }
 
