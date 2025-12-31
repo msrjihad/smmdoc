@@ -4,6 +4,7 @@ import Header from '@/components/header/page';
 import SideBar from '@/components/dashboard/sidebar';
 import Announcements from '@/components/dashboard/announcements';
 import { AuthGuard } from '@/components/protected/auth-guard';
+import { RouteGuard } from '@/components/admin/route-guard';
 import { useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -16,6 +17,7 @@ export default function ProtectedLayout({
   const { data: session } = useSession();
   const isDashboard = pathname === '/dashboard';
   const isAdminPage = pathname?.startsWith('/admin');
+  const isAdminDashboard = pathname === '/admin';
 
   return (
     <div className="flex min-h-screen">
@@ -54,14 +56,24 @@ export default function ProtectedLayout({
                 : 'px-4 sm:px-8 py-4 sm:py-8 bg-[var(--page-bg)] dark:bg-[var(--page-bg)]'
             }
           >
-            <AuthGuard>
-              {/* Show announcements for non-admin, non-dashboard pages */}
-              {!isAdminPage && !isDashboard && (
-                <Announcements visibility="all_pages" />
-              )}
-              {/* Render children - admin pages will be handled by admin/layout.tsx */}
-              {children}
-            </AuthGuard>
+            {isAdminPage ? (
+              <RouteGuard>
+                {!isAdminDashboard && (
+                  <Announcements visibility="all_pages" />
+                )}
+                <div className="admin-page-wrapper">
+                  {children}
+                </div>
+              </RouteGuard>
+            ) : (
+              <AuthGuard>
+                {/* Show announcements for non-admin, non-dashboard pages */}
+                {!isDashboard && (
+                  <Announcements visibility="all_pages" />
+                )}
+                {children}
+              </AuthGuard>
+            )}
           </div>
         </main>
       </div>
