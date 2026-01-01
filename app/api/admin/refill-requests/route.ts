@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status') || 'all';
+    const orderStatus = searchParams.get('orderStatus') || 'all';
     const search = searchParams.get('search') || '';
 
     const whereClause: any = {};
@@ -95,6 +96,7 @@ export async function GET(req: NextRequest) {
                 status: true,
                 createdAt: true,
                 serviceId: true,
+                providerOrderId: true,
               }
             });
 
@@ -119,7 +121,11 @@ export async function GET(req: NextRequest) {
               }
             }
 
-            (request as any).order = order;
+            if (orderStatus !== 'all' && order?.status !== orderStatus) {
+              (request as any).order = null;
+            } else {
+              (request as any).order = order;
+            }
           } catch (error) {
             console.warn(`Order not found for refill request ${request.id}`);
             (request as any).order = null;
@@ -166,7 +172,14 @@ export async function GET(req: NextRequest) {
       refillRequests = [];
     }
 
-    const uniqueRefillRequests = refillRequests.filter((request, index, self) =>
+    let filteredRequests = refillRequests;
+    if (orderStatus !== 'all') {
+      filteredRequests = refillRequests.filter((request: any) => request.order && request.order.status === orderStatus);
+    } else {
+      filteredRequests = refillRequests.filter((request: any) => request.order);
+    }
+    
+    const uniqueRefillRequests = filteredRequests.filter((request, index, self) =>
       index === self.findIndex(r => r.orderId === request.orderId)
     );
 

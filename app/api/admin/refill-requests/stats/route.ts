@@ -20,9 +20,12 @@ export async function GET(req: NextRequest) {
     const [
       totalRequests,
       pendingRequests,
+      refillingRequests,
+      completedRequests,
+      rejectedRequests,
+      errorRequests,
       approvedRequests,
-      declinedRequests,
-      completedRequests
+      declinedRequests
     ] = await Promise.all([
       db.refillRequests.count(),
       
@@ -31,15 +34,27 @@ export async function GET(req: NextRequest) {
       }),
       
       db.refillRequests.count({
+        where: { status: 'refilling' }
+      }),
+      
+      db.refillRequests.count({
+        where: { status: 'completed' }
+      }),
+      
+      db.refillRequests.count({
+        where: { status: 'rejected' }
+      }),
+      
+      db.refillRequests.count({
+        where: { status: 'error' }
+      }),
+      
+      db.refillRequests.count({
         where: { status: 'approved' }
       }),
       
       db.refillRequests.count({
         where: { status: 'declined' }
-      }),
-      
-      db.refillRequests.count({
-        where: { status: 'completed' }
       })
     ]);
 
@@ -75,9 +90,12 @@ export async function GET(req: NextRequest) {
     const stats = {
       totalRequests,
       pendingRequests,
+      refillingRequests,
+      completedRequests,
+      rejectedRequests,
+      errorRequests,
       approvedRequests,
       declinedRequests,
-      completedRequests,
       eligibleOrdersCount,
       partialOrdersCount,
       completedOrdersCount

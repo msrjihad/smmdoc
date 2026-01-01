@@ -1,6 +1,78 @@
 ﻿import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { ApiRequestBuilder, ApiResponseParser, createApiSpecFromProvider } from '@/lib/provider-api-specification';
+
+/**
+ * Check if an order is eligible for refill according to the provider
+ * This syncs the order status with the provider and checks if refill is available
+ */
+async function checkProviderRefillEligibility(
+  provider: any,
+  providerOrderId: string
+): Promise<{ eligible: boolean; reason?: string }> {
+  try {
+    const apiSpec = createApiSpecFromProvider(provider);
+    const requestBuilder = new ApiRequestBuilder(
+      apiSpec,
+      provider.api_url,
+      provider.api_key,
+      (provider as any).http_method || (provider as any).httpMethod || 'POST'
+    );
+
+    const statusRequest = requestBuilder.buildOrderStatusRequest(providerOrderId);
+
+    const response = await fetch(statusRequest.url, {
+      method: statusRequest.method,
+      headers: statusRequest.headers || {},
+      body: statusRequest.data,
+      signal: AbortSignal.timeout((apiSpec.timeoutSeconds || 30) * 1000)
+    });
+
+    if (!response.ok) {
+      console.warn(`Provider API error when checking refill eligibility: ${response.status}`);
+      return { eligible: true };
+    }
+
+    const result = await response.json();
+
+    if (result.error) {
+      console.warn(`Provider error when checking refill eligibility: ${result.error}`);
+      return { eligible: true };
+    }
+
+    const responseParser = new ApiResponseParser(apiSpec);
+    const parsedStatus = responseParser.parseOrderStatusResponse(result);
+
+    const eligibleStatuses = ['completed', 'partial'];
+    if (!eligibleStatuses.includes(parsedStatus.status?.toLowerCase())) {
+      return {
+        eligible: false,
+        reason: `Order status from provider is "${parsedStatus.status}", which is not eligible for refill. Only completed or partial orders can be refilled.`
+      };
+    }
+
+    const refillAvailable = 
+      result.refill_available !== undefined ? result.refill_available :
+      result.refillAvailable !== undefined ? result.refillAvailable :
+      result.can_refill !== undefined ? result.can_refill :
+      result.canRefill !== undefined ? result.canRefill :
+      null;
+
+    if (refillAvailable === false || refillAvailable === 0 || refillAvailable === '0' || refillAvailable === 'false') {
+      return {
+        eligible: false,
+        reason: 'Provider indicates this order is not eligible for refill at this time.'
+      };
+    }
+
+    return { eligible: true };
+
+  } catch (error) {
+    console.error('Error checking provider refill eligibility:', error);
+    return { eligible: true };
+  }
+}
 
 export async function POST(
   req: NextRequest,
@@ -37,13 +109,19 @@ export async function POST(
 
     const order = await db.newOrders.findUnique({
       where: { id: parseInt(id) },
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        status: true,
+        updatedAt: true,
+        providerOrderId: true,
         service: {
           select: {
             id: true,
             name: true,
             refill: true,
             refillDays: true,
+            providerId: true,
           }
         },
         user: {
@@ -100,21 +178,8 @@ export async function POST(
       );
     }
 
-    // Check if 24 hours have passed since order completion
     const completionTime = new Date(order.updatedAt).getTime();
     const currentTime = new Date().getTime();
-    const hoursSinceCompletion = (currentTime - completionTime) / (1000 * 60 * 60);
-    
-    if (hoursSinceCompletion < 24) {
-      return NextResponse.json(
-        { 
-          error: 'The refill request will be eligible after 24 hours of order completion',
-          success: false,
-          data: null 
-        },
-        { status: 400 }
-      );
-    }
 
     const refillDays = order.service.refillDays || 30;
     const daysDifference = Math.floor((currentTime - completionTime) / (1000 * 60 * 60 * 24));
@@ -128,6 +193,34 @@ export async function POST(
         },
         { status: 400 }
       );
+    }
+
+    if (order.service.providerId && order.providerOrderId) {
+      try {
+        const provider = await db.apiProviders.findUnique({
+          where: { id: order.service.providerId }
+        });
+
+        if (provider && provider.status === 'active') {
+          const providerEligibility = await checkProviderRefillEligibility(
+            provider,
+            order.providerOrderId
+          );
+
+          if (!providerEligibility.eligible) {
+            return NextResponse.json(
+              {
+                error: providerEligibility.reason || 'Provider indicates this order is not eligible for refill',
+                success: false,
+                data: null
+              },
+              { status: 400 }
+            );
+          }
+        }
+      } catch (error) {
+        console.error(`Error checking provider refill eligibility for order ${id}:`, error);
+      }
     }
 
     const existingRequest = await db.refillRequests.findFirst({

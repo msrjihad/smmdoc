@@ -112,6 +112,16 @@ export async function GET(request: Request) {
           orderBy: {
             createdAt: 'desc'
           }
+        },
+        refillRequests: {
+          select: {
+            id: true,
+            status: true,
+            createdAt: true
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
         }
       },
       orderBy: {
@@ -121,20 +131,23 @@ export async function GET(request: Request) {
       take: limit
     });
 
-    const transformedOrders = orders.map(order => ({
-      ...order,
-      status: order.status === 'failed' ? 'pending' : order.status,
-      qty: typeof order.qty === 'bigint' ? order.qty.toString() : order.qty,
-      remains: typeof order.remains === 'bigint' ? order.remains.toString() : order.remains,
-      startCount: typeof order.startCount === 'bigint' ? order.startCount.toString() : order.startCount,
-      minQty: order.minQty && typeof order.minQty === 'bigint' ? order.minQty.toString() : order.minQty,
-      maxQty: order.maxQty && typeof order.maxQty === 'bigint' ? order.maxQty.toString() : order.maxQty,
-      service: order.service ? {
-        ...order.service,
-        min_order: typeof order.service.min_order === 'bigint' ? order.service.min_order.toString() : order.service.min_order,
-        max_order: typeof order.service.max_order === 'bigint' ? order.service.max_order.toString() : order.service.max_order,
-      } : order.service,
-    }));
+    const transformedOrders = orders.map(order => {
+      return {
+        ...order,
+        status: order.status === 'failed' ? 'pending' : order.status,
+        qty: typeof order.qty === 'bigint' ? order.qty.toString() : order.qty,
+        remains: typeof order.remains === 'bigint' ? order.remains.toString() : order.remains,
+        startCount: typeof order.startCount === 'bigint' ? order.startCount.toString() : order.startCount,
+        minQty: order.minQty && typeof order.minQty === 'bigint' ? order.minQty.toString() : order.minQty,
+        maxQty: order.maxQty && typeof order.maxQty === 'bigint' ? order.maxQty.toString() : order.maxQty,
+        service: order.service ? {
+          ...order.service,
+          min_order: typeof order.service.min_order === 'bigint' ? order.service.min_order.toString() : order.service.min_order,
+          max_order: typeof order.service.max_order === 'bigint' ? order.service.max_order.toString() : order.service.max_order,
+        } : order.service,
+        completedAt: order.updatedAt.toISOString(),
+      };
+    });
 
     const stats = await db.newOrders.aggregate({
       where: { userId: parseInt(session.user.id) },

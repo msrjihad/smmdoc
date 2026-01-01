@@ -644,12 +644,25 @@ export default function OrdersList() {
 
       const result = await response.json();
 
-      if (result.success) {
-        setToastMessage({
-          message: result.data.message || 'Refill request submitted successfully',
-          type: 'success'
-        });
+      if (response.ok && result.success) {
+        if (result.data?.providerRefillError) {
+          setToastMessage({
+            message: result.message || `Refill request saved, but provider submission failed: ${result.data.providerRefillError}`,
+            type: 'info'
+          });
+        } else if (result.data?.providerRefillSubmitted) {
+          setToastMessage({
+            message: result.message || 'Refill request submitted successfully and forwarded to provider',
+            type: 'success'
+          });
+        } else {
+          setToastMessage({
+            message: result.message || 'Refill request submitted successfully',
+            type: 'success'
+          });
+        }
         handleRefillClose();
+        refetch();
       } else {
         setToastMessage({
           message: result.error || 'Failed to submit refill request',
@@ -660,7 +673,7 @@ export default function OrdersList() {
     } catch (error) {
       console.error('Error submitting refill request:', error);
       setToastMessage({
-        message: 'Failed to submit refill request',
+        message: 'Failed to submit refill request. Please try again.',
         type: 'error'
       });
       setRefillModal(prev => ({ ...prev, isLoading: false }));
@@ -1095,8 +1108,6 @@ export default function OrdersList() {
                                   const refillDays = order.service?.refillDays;
                                   const completionTime = new Date(order.updatedAt).getTime();
                                   const currentTime = new Date().getTime();
-                                  const hoursSinceCompletion = (currentTime - completionTime) / (1000 * 60 * 60);
-                                  const is24HoursPassed = hoursSinceCompletion >= 24;
                                   
                                   let isRefillTimeValid = true;
 
@@ -1107,7 +1118,12 @@ export default function OrdersList() {
                                     isRefillTimeValid = daysSinceCompletion <= refillDays;
                                   }
 
-                                  const canRefill = is24HoursPassed && isRefillTimeValid;
+                                  const refillRequests = (order as any).refillRequests || [];
+                                  const hasRefillRequest = refillRequests.some((req: any) => 
+                                    req.status === 'pending' || req.status === 'approved'
+                                  );
+
+                                  const canRefill = isRefillTimeValid && !hasRefillRequest;
 
                                   return (
                                     <button
@@ -1128,14 +1144,14 @@ export default function OrdersList() {
                                           : 'text-gray-400 border-gray-300 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60'
                                       }`}
                                       title={
-                                        !is24HoursPassed
-                                          ? 'The refill request will be eligible after 24 hours of order completion'
+                                        hasRefillRequest
+                                          ? 'A refill request has already been submitted for this order'
                                           : !isRefillTimeValid
                                           ? `Refill period has expired. Refill is only available for ${refillDays} days after order completion.`
                                           : 'Refill Order'
                                       }
                                     >
-                                      Refill
+                                      {hasRefillRequest ? 'Refill Requested' : 'Refill'}
                                     </button>
                                   );
                                 })()}

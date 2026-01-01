@@ -11,7 +11,9 @@ import {
     FaSearch,
     FaSync,
     FaTimes,
-    FaTimesCircle
+    FaTimesCircle,
+    FaEllipsisV,
+    FaExclamationTriangle
 } from 'react-icons/fa';
 
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
@@ -62,6 +64,7 @@ interface Order {
     max_order: number;
     status: string;
     provider?: string;
+    providerId?: number | null;
   };
   category: {
     id: number;
@@ -79,6 +82,7 @@ interface Order {
   startCount: number;
   remains: number;
   avg_time: string;
+  providerOrderId?: string | null;
   refillRequest?: {
     id: string;
     reason: string;
@@ -176,7 +180,7 @@ const RefillOrdersPage = () => {
   });
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [refillStatusFilter, setRefillStatusFilter] = useState('all');
   const [toast, setToast] = useState<{
     message: string;
     type: 'success' | 'error' | 'info' | 'pending';
@@ -203,21 +207,6 @@ const RefillOrdersPage = () => {
     order: null,
   });
 
-  const calculateStatusCounts = (ordersData: Order[]) => {
-    const counts = {
-      partial: 0,
-      completed: 0,
-    };
-
-    ordersData.forEach((order) => {
-      if (order.status && counts.hasOwnProperty(order.status)) {
-        counts[order.status as keyof typeof counts]++;
-      }
-    });
-
-    return counts;
-  };
-
   const fetchEligibleOrders = async () => {
     try {
       setOrdersLoading(true);
@@ -225,7 +214,7 @@ const RefillOrdersPage = () => {
       const queryParams = new URLSearchParams({
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(refillStatusFilter !== 'all' && { status: refillStatusFilter }),
         ...(searchTerm && { search: searchTerm }),
       });
 
@@ -259,6 +248,7 @@ const RefillOrdersPage = () => {
             link: request.order?.link || '',
             status: request.order?.status || 'unknown',
             createdAt: request.order?.createdAt || new Date(),
+            providerOrderId: request.order?.providerOrderId || null,
             user: request.user || {},
             service: {
               id: service?.id || 0,
@@ -268,7 +258,8 @@ const RefillOrdersPage = () => {
               min_order: 0,
               max_order: 0,
               status: 'active',
-              provider: providerName
+              provider: providerName,
+              providerId: service?.providerId || null
             },
             category: { category_name: 'Refill Request' },
             refillRequest: request
@@ -338,9 +329,12 @@ const RefillOrdersPage = () => {
         totalRefillAmount: 0,
         statusBreakdown: {
           pending: result.data?.pendingRequests || 0,
+          refilling: result.data?.refillingRequests || 0,
+          completed: result.data?.completedRequests || 0,
+          rejected: result.data?.rejectedRequests || 0,
+          error: result.data?.errorRequests || 0,
           approved: result.data?.approvedRequests || 0,
           declined: result.data?.declinedRequests || 0,
-          completed: result.data?.completedRequests || 0,
         },
       });
     } catch (error) {
@@ -353,9 +347,12 @@ const RefillOrdersPage = () => {
         totalRefillAmount: 0,
         statusBreakdown: {
           pending: 0,
+          refilling: 0,
+          completed: 0,
+          rejected: 0,
+          error: 0,
           approved: 0,
           declined: 0,
-          completed: 0,
         },
       });
       showToast('Error fetching statistics. Please refresh the page.', 'error');
@@ -372,7 +369,7 @@ const RefillOrdersPage = () => {
 
   useEffect(() => {
     fetchEligibleOrders();
-  }, [pagination.page, pagination.limit, statusFilter]);
+  }, [pagination.page, pagination.limit, refillStatusFilter]);
 
   useEffect(() => {
     setStatsLoading(true);
@@ -383,6 +380,22 @@ const RefillOrdersPage = () => {
     };
 
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.relative.inline-block') && !target.closest('[id^="status-menu-"]')) {
+        document.querySelectorAll('[id^="status-menu-"]').forEach((menu) => {
+          menu.classList.add('hidden');
+        });
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
   }, []);
 
   useEffect(() => {
@@ -421,12 +434,18 @@ const RefillOrdersPage = () => {
     switch (status?.toLowerCase()) {
       case 'pending':
         return <FaClock className="h-3 w-3 text-yellow-500 dark:text-yellow-400" />;
+      case 'refilling':
+        return <FaSync className="h-3 w-3 text-blue-500 dark:text-blue-400 animate-spin" />;
+      case 'completed':
+        return <FaCheckCircle className="h-3 w-3 text-green-500 dark:text-green-400" />;
+      case 'rejected':
+        return <FaTimesCircle className="h-3 w-3 text-red-500 dark:text-red-400" />;
+      case 'error':
+        return <FaExclamationTriangle className="h-3 w-3 text-orange-500 dark:text-orange-400" />;
       case 'approved':
         return <FaCheckCircle className="h-3 w-3 text-green-500 dark:text-green-400" />;
       case 'declined':
         return <FaTimesCircle className="h-3 w-3 text-red-500 dark:text-red-400" />;
-      case 'completed':
-        return <FaCheckCircle className="h-3 w-3 text-green-500 dark:text-green-400" />;
       default:
         return <FaClock className="h-3 w-3 text-gray-500 dark:text-gray-400" />;
     }
@@ -488,6 +507,64 @@ const RefillOrdersPage = () => {
       open: true,
       order: order,
     });
+  };
+
+  const handleResendRefillToProvider = async (order: Order) => {
+    if (!order.refillRequest?.id) {
+      showToast('Refill request ID not found', 'error');
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      const response = await fetch(`/api/admin/refill-requests/${order.refillRequest.id}/resend-provider`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showToast(result.message || 'Refill request resent to provider successfully', 'success');
+        await fetchEligibleOrders();
+      } else {
+        showToast(result.error || 'Failed to resend refill request to provider', 'error');
+      }
+    } catch (error) {
+      console.error('Error resending refill request to provider:', error);
+      showToast('Error resending refill request to provider', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleUpdateRefillStatus = async (refillRequestId: string, newStatus: string) => {
+    try {
+      setProcessing(true);
+      const response = await fetch(`/api/admin/refill-requests/${refillRequestId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showToast(`Refill request status updated to ${newStatus}`, 'success');
+        await fetchEligibleOrders();
+      } else {
+        showToast(result.error || 'Failed to update refill request status', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating refill request status:', error);
+      showToast('Error updating refill request status', 'error');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const handleCreateRefill = async () => {
@@ -578,7 +655,7 @@ const RefillOrdersPage = () => {
                 />
                 <input
                   type="text"
-                  placeholder={`Search ${statusFilter === 'all' ? 'all' : statusFilter} orders...`}
+                  placeholder={`Search ${refillStatusFilter === 'all' ? 'all' : refillStatusFilter} refill requests...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full md:w-80 pl-10 pr-4 py-2.5 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
@@ -590,45 +667,62 @@ const RefillOrdersPage = () => {
         <div className="card">
           <div className="card-header" style={{ padding: '24px 24px 0 24px' }}>
             <div className="mb-4">
-              <div className="block space-y-2">
+              <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => setStatusFilter('all')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
-                    statusFilter === 'all'
-                      ? 'bg-gradient-to-r from-purple-700 to-purple-500 text-white shadow-lg'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                  >
-                    All
-                  <span
-                    className={`ml-2 text-xs px-2 py-1 rounded-full ${
-                      statusFilter === 'all' ? 'bg-white/20' : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
-                    }`}
-                  >
-                    {statsLoading ? 0 : stats.totalEligible}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setStatusFilter('partial')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
-                    statusFilter === 'partial'
-                      ? 'bg-gradient-to-r from-orange-600 to-orange-400 text-white shadow-lg'
+                  onClick={() => setRefillStatusFilter('all')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                    refillStatusFilter === 'all'
+                      ? 'bg-gradient-to-r from-purple-600 to-purple-400 text-white shadow-lg'
                       : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
-                  Partial
+                  All
                   <span
                     className={`ml-2 text-xs px-2 py-1 rounded-full ${
-                      statusFilter === 'partial' ? 'bg-white/20' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+                      refillStatusFilter === 'all' ? 'bg-white/20' : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
                     }`}
                   >
-                    {statsLoading ? 0 : stats.partialOrders}
+                    {statsLoading ? 0 : (stats.statusBreakdown?.pending || 0) + (stats.statusBreakdown?.refilling || 0) + (stats.statusBreakdown?.completed || 0) + (stats.statusBreakdown?.rejected || 0) + (stats.statusBreakdown?.error || 0)}
                   </span>
                 </button>
                 <button
-                  onClick={() => setStatusFilter('completed')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
-                    statusFilter === 'completed'
+                  onClick={() => setRefillStatusFilter('pending')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                    refillStatusFilter === 'pending'
+                      ? 'bg-gradient-to-r from-yellow-600 to-yellow-400 text-white shadow-lg'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  Pending
+                  <span
+                    className={`ml-2 text-xs px-2 py-1 rounded-full ${
+                      refillStatusFilter === 'pending' ? 'bg-white/20' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                    }`}
+                  >
+                    {statsLoading ? 0 : stats.statusBreakdown?.pending || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setRefillStatusFilter('refilling')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                    refillStatusFilter === 'refilling'
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-lg'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  Refilling
+                  <span
+                    className={`ml-2 text-xs px-2 py-1 rounded-full ${
+                      refillStatusFilter === 'refilling' ? 'bg-white/20' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                    }`}
+                  >
+                    {statsLoading ? 0 : stats.statusBreakdown?.refilling || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setRefillStatusFilter('completed')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                    refillStatusFilter === 'completed'
                       ? 'bg-gradient-to-r from-green-600 to-green-400 text-white shadow-lg'
                       : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
@@ -636,12 +730,44 @@ const RefillOrdersPage = () => {
                   Completed
                   <span
                     className={`ml-2 text-xs px-2 py-1 rounded-full ${
-                      statusFilter === 'completed'
-                        ? 'bg-white/20'
-                        : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                      refillStatusFilter === 'completed' ? 'bg-white/20' : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                     }`}
                   >
-                    {statsLoading ? 0 : stats.completedOrders}
+                    {statsLoading ? 0 : stats.statusBreakdown?.completed || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setRefillStatusFilter('rejected')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                    refillStatusFilter === 'rejected'
+                      ? 'bg-gradient-to-r from-red-600 to-red-400 text-white shadow-lg'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  Rejected
+                  <span
+                    className={`ml-2 text-xs px-2 py-1 rounded-full ${
+                      refillStatusFilter === 'rejected' ? 'bg-white/20' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                    }`}
+                  >
+                    {statsLoading ? 0 : stats.statusBreakdown?.rejected || 0}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setRefillStatusFilter('error')}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                    refillStatusFilter === 'error'
+                      ? 'bg-gradient-to-r from-orange-600 to-orange-400 text-white shadow-lg'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  Error
+                  <span
+                    className={`ml-2 text-xs px-2 py-1 rounded-full ${
+                      refillStatusFilter === 'error' ? 'bg-white/20' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+                    }`}
+                  >
+                    {statsLoading ? 0 : stats.statusBreakdown?.error || 0}
                   </span>
                 </button>
               </div>
@@ -824,7 +950,10 @@ const RefillOrdersPage = () => {
                           Amount
                         </th>
                         <th className="text-center p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Status
+                          Order Status
+                        </th>
+                        <th className="text-center p-3 font-semibold text-gray-900 dark:text-gray-100">
+                          Refill Status
                         </th>
                         <th className="text-center p-3 font-semibold text-gray-900 dark:text-gray-100">
                           Progress
@@ -943,6 +1072,18 @@ const RefillOrdersPage = () => {
                             </div>
                           </td>
                           <td className="p-3 text-center">
+                            {order.refillRequest ? (
+                              <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full w-fit mx-auto">
+                                {getRefillRequestStatusIcon(order.refillRequest.status)}
+                                <span className="text-xs font-medium capitalize text-gray-900 dark:text-gray-100">
+                                  {order.refillRequest.status}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
                             <div className="space-y-1">
                               <div
                                 className="text-xs font-medium"
@@ -965,20 +1106,168 @@ const RefillOrdersPage = () => {
                           </td>
                           <td className="p-3 text-center">
                             <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => handleOpenRefillDialog(order)}
-                                className="btn btn-primary p-2"
-                                title="Create Refill"
-                              >
-                                <FaRedo className="h-3 w-3" />
-                              </button>
-                              <button
-                                onClick={() => handleViewRefillRequestDetails(order)}
-                                className="btn btn-secondary p-2"
-                                title="View Refill Request Details"
-                              >
-                                <FaEye className="h-3 w-3" />
-                              </button>
+                              {order.service?.providerId ? (
+                                <>
+                                  <button
+                                    onClick={() => handleViewRefillRequestDetails(order)}
+                                    className="btn btn-secondary p-2"
+                                    title="View"
+                                  >
+                                    <FaEye className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleResendRefillToProvider(order)}
+                                    className="btn btn-primary p-2"
+                                    title="Resend Refill Request to Provider"
+                                    disabled={processing}
+                                  >
+                                    <FaRedo className="h-3 w-3" />
+                                  </button>
+                                  {order.refillRequest && (
+                                    <div className="relative inline-block">
+                                      <button
+                                        className="btn btn-secondary p-2"
+                                        title="Update Refill Status"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const menu = document.getElementById(`status-menu-${order.refillRequest?.id}`);
+                                          if (menu) {
+                                            menu.classList.toggle('hidden');
+                                          }
+                                        }}
+                                      >
+                                        <FaEllipsisV className="h-3 w-3" />
+                                      </button>
+                                      <div
+                                        id={`status-menu-${order.refillRequest.id}`}
+                                        className="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700"
+                                      >
+                                        <div className="py-1">
+                                          <div className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
+                                            Update Refill Status
+                                          </div>
+                                          <button
+                                            onClick={() => {
+                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'refilling');
+                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          >
+                                            Refilling
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'completed');
+                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          >
+                                            Refill Complete
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'rejected');
+                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          >
+                                            Refill Reject
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'error');
+                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          >
+                                            Refill Error
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleOpenRefillDialog(order)}
+                                    className="btn btn-primary p-2"
+                                    title="Create Refill"
+                                  >
+                                    <FaRedo className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleViewRefillRequestDetails(order)}
+                                    className="btn btn-secondary p-2"
+                                    title="View Refill Request Details"
+                                  >
+                                    <FaEye className="h-3 w-3" />
+                                  </button>
+                                  {order.refillRequest && (
+                                    <div className="relative inline-block">
+                                      <button
+                                        className="btn btn-secondary p-2"
+                                        title="Update Refill Status"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const menu = document.getElementById(`status-menu-${order.refillRequest?.id}`);
+                                          if (menu) {
+                                            menu.classList.toggle('hidden');
+                                          }
+                                        }}
+                                      >
+                                        <FaEllipsisV className="h-3 w-3" />
+                                      </button>
+                                      <div
+                                        id={`status-menu-${order.refillRequest.id}`}
+                                        className="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700"
+                                      >
+                                        <div className="py-1">
+                                          <div className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
+                                            Update Refill Status
+                                          </div>
+                                          <button
+                                            onClick={() => {
+                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'refilling');
+                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          >
+                                            Refilling
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'completed');
+                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          >
+                                            Refill Complete
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'rejected');
+                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          >
+                                            Refill Reject
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'error');
+                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          >
+                                            Refill Error
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1002,15 +1291,178 @@ const RefillOrdersPage = () => {
                               {getStatusIcon(order.status)}
                               <span className="text-xs font-medium capitalize text-gray-900 dark:text-gray-100">{order.status}</span>
                             </div>
+                            {order.refillRequest && (
+                              <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full">
+                                {getRefillRequestStatusIcon(order.refillRequest.status)}
+                                <span className="text-xs font-medium capitalize text-gray-900 dark:text-gray-100">
+                                  {order.refillRequest.status}
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleViewRefillRequestDetails(order)}
-                              className="btn btn-secondary p-2"
-                              title="View Refill Request Details"
-                            >
-                              <FaEye className="h-3 w-3" />
-                            </button>
+                            {order.service?.providerId ? (
+                              <>
+                                <button
+                                  onClick={() => handleViewRefillRequestDetails(order)}
+                                  className="btn btn-secondary p-2"
+                                  title="View"
+                                >
+                                  <FaEye className="h-3 w-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleResendRefillToProvider(order)}
+                                  className="btn btn-primary p-2"
+                                  title="Resend Refill Request to Provider"
+                                  disabled={processing}
+                                >
+                                  <FaRedo className="h-3 w-3" />
+                                </button>
+                                {order.refillRequest && (
+                                  <div className="relative inline-block">
+                                    <button
+                                      className="btn btn-secondary p-2"
+                                      title="Update Refill Status"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const menu = document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`);
+                                        if (menu) {
+                                          menu.classList.toggle('hidden');
+                                        }
+                                      }}
+                                    >
+                                      <FaEllipsisV className="h-3 w-3" />
+                                    </button>
+                                    <div
+                                      id={`status-menu-mobile-${order.refillRequest.id}`}
+                                      className="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700"
+                                    >
+                                      <div className="py-1">
+                                        <div className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
+                                          Update Refill Status
+                                        </div>
+                                        <button
+                                          onClick={() => {
+                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'refilling');
+                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                          Refilling
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'completed');
+                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                          Refill Complete
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'rejected');
+                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                          Refill Reject
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'error');
+                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                          Refill Error
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleOpenRefillDialog(order)}
+                                  className="btn btn-primary p-2"
+                                  title="Create Refill"
+                                >
+                                  <FaRedo className="h-3 w-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleViewRefillRequestDetails(order)}
+                                  className="btn btn-secondary p-2"
+                                  title="View Refill Request Details"
+                                >
+                                  <FaEye className="h-3 w-3" />
+                                </button>
+                                {order.refillRequest && (
+                                  <div className="relative inline-block">
+                                    <button
+                                      className="btn btn-secondary p-2"
+                                      title="Update Refill Status"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const menu = document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`);
+                                        if (menu) {
+                                          menu.classList.toggle('hidden');
+                                        }
+                                      }}
+                                    >
+                                      <FaEllipsisV className="h-3 w-3" />
+                                    </button>
+                                    <div
+                                      id={`status-menu-mobile-${order.refillRequest.id}`}
+                                      className="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700"
+                                    >
+                                      <div className="py-1">
+                                        <div className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
+                                          Update Refill Status
+                                        </div>
+                                        <button
+                                          onClick={() => {
+                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'refilling');
+                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                          Refilling
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'completed');
+                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                          Refill Complete
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'rejected');
+                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                          Refill Reject
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'error');
+                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
+                                          }}
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                          Refill Error
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="mb-4 pb-4 border-b dark:border-gray-700">
