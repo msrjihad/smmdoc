@@ -1108,7 +1108,7 @@ export default function OrdersList() {
                                   const refillDays = order.service?.refillDays;
                                   const completionTime = new Date(order.updatedAt).getTime();
                                   const currentTime = new Date().getTime();
-                                  
+
                                   let isRefillTimeValid = true;
 
                                   if (refillDays) {
@@ -1119,11 +1119,39 @@ export default function OrdersList() {
                                   }
 
                                   const refillRequests = (order as any).refillRequests || [];
-                                  const hasRefillRequest = refillRequests.some((req: any) => 
+                                  const hasPendingOrApprovedRefillRequest = refillRequests.some((req: any) => 
                                     req.status === 'pending' || req.status === 'approved'
                                   );
+                                  const hasRejectedRefillRequest = refillRequests.some((req: any) => 
+                                    req.status === 'rejected'
+                                  );
+                                  const hasRefillingRefillRequest = refillRequests.some((req: any) => 
+                                    req.status === 'refilling'
+                                  );
+                                  const hasCompletedRefillRequest = refillRequests.some((req: any) => 
+                                    req.status === 'completed'
+                                  );
 
-                                  const canRefill = isRefillTimeValid && !hasRefillRequest;
+                                  const canRefill = isRefillTimeValid && !hasPendingOrApprovedRefillRequest && !hasRejectedRefillRequest && !hasRefillingRefillRequest && !hasCompletedRefillRequest;
+
+                                  let buttonText = 'Refill';
+                                  let buttonTitle = 'Refill Order';
+                                  
+                                  if (hasRejectedRefillRequest) {
+                                    buttonText = 'Refill Rejected';
+                                    buttonTitle = 'This refill request has been rejected';
+                                  } else if (hasRefillingRefillRequest) {
+                                    buttonText = 'Refilling';
+                                    buttonTitle = 'Refill is currently being processed';
+                                  } else if (hasCompletedRefillRequest) {
+                                    buttonText = 'Refill';
+                                    buttonTitle = 'Previous Refill Request is already completed';
+                                  } else if (hasPendingOrApprovedRefillRequest) {
+                                    buttonText = 'Refill Requested';
+                                    buttonTitle = 'A refill request has already been submitted for this order';
+                                  } else if (!isRefillTimeValid) {
+                                    buttonTitle = `Refill period has expired. Refill is only available for ${refillDays} days after order completion.`;
+                                  }
 
                                   return (
                                     <button
@@ -1141,17 +1169,15 @@ export default function OrdersList() {
                                       className={`text-xs px-2 py-1 border rounded transition-colors ${
                                         canRefill
                                           ? 'text-green-600 hover:text-green-800 border-green-300 hover:bg-green-50 cursor-pointer'
+                                          : hasRejectedRefillRequest
+                                          ? 'text-red-600 border-red-300 bg-red-50/50 dark:bg-red-900/10 cursor-not-allowed opacity-60'
+                                          : hasRefillingRefillRequest
+                                          ? 'text-blue-600 border-blue-300 bg-blue-50/50 dark:bg-blue-900/10 cursor-not-allowed opacity-60'
                                           : 'text-gray-400 border-gray-300 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60'
                                       }`}
-                                      title={
-                                        hasRefillRequest
-                                          ? 'A refill request has already been submitted for this order'
-                                          : !isRefillTimeValid
-                                          ? `Refill period has expired. Refill is only available for ${refillDays} days after order completion.`
-                                          : 'Refill Order'
-                                      }
+                                      title={buttonTitle}
                                     >
-                                      {hasRefillRequest ? 'Refill Requested' : 'Refill'}
+                                      {buttonText}
                                     </button>
                                   );
                                 })()}

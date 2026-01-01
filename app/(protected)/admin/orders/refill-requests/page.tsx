@@ -104,6 +104,7 @@ interface RefillInfo {
     totalQuantity: number;
     remainingQuantity: number;
     deliveredQuantity: number;
+    startCount: number;
   };
   service: {
     id: number;
@@ -193,9 +194,8 @@ const RefillOrdersPage = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [refillInfo, setRefillInfo] = useState<RefillInfo | null>(null);
   const [refillForm, setRefillForm] = useState({
-    type: 'full',
-    customQuantity: '',
-    reason: '',
+    quantity: '',
+    startCount: '',
   });
   const [processing, setProcessing] = useState(false);
 
@@ -424,7 +424,7 @@ const RefillOrdersPage = () => {
       case 'pending':
         return <FaClock className="h-3 w-3 text-yellow-500 dark:text-yellow-400" />;
       case 'refilling':
-        return <FaSync className="h-3 w-3 text-blue-500 dark:text-blue-400 animate-spin" />;
+        return <FaSync className="h-3 w-3 text-blue-500 dark:text-blue-400" />;
       case 'completed':
         return <FaCheckCircle className="h-3 w-3 text-green-500 dark:text-green-400" />;
       case 'rejected':
@@ -586,6 +586,17 @@ const RefillOrdersPage = () => {
 
   const handleCreateRefill = async () => {
     if (!selectedOrder || !refillInfo) return;
+    
+    if (!refillForm.startCount || parseInt(refillForm.startCount) < refillInfo.order.startCount || parseInt(refillForm.startCount) > refillInfo.order.startCount + refillInfo.order.totalQuantity) {
+      showToast(`Start count must be between ${formatNumber(refillInfo.order.startCount)} and ${formatNumber(refillInfo.order.startCount + refillInfo.order.totalQuantity)}`, 'error');
+      return;
+    }
+    
+    const calculatedQuantity = (refillInfo.order.startCount + refillInfo.order.totalQuantity) - parseInt(refillForm.startCount);
+    if (!calculatedQuantity || calculatedQuantity <= 0) {
+      showToast('Calculated refill quantity is invalid', 'error');
+      return;
+    }
 
     try {
       setProcessing(true);
@@ -595,24 +606,22 @@ const RefillOrdersPage = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          refillType: refillForm.type,
-          customQuantity:
-            refillForm.type === 'custom' ? parseInt(refillForm.customQuantity) : undefined,
-          reason: refillForm.reason || 'Admin initiated refill',
+          quantity: calculatedQuantity,
+          startCount: parseInt(refillForm.startCount),
         }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        showToast('Refill order created successfully', 'success');
+        showToast('Refill data stored successfully', 'success');
         setRefillDialogOpen(false);
         setSelectedOrder(null);
         setRefillInfo(null);
-        setRefillForm({ type: 'full', customQuantity: '', reason: '' });
+        setRefillForm({ quantity: '', startCount: '' });
         fetchEligibleOrders();
       } else {
-        showToast(result.error || 'Failed to create refill order', 'error');
+        showToast(result.error || 'Failed to store refill data', 'error');
       }
     } catch (error) {
       console.error('Error creating refill:', error);
@@ -1168,13 +1177,15 @@ const RefillOrdersPage = () => {
                                 </>
                               ) : (
                                 <>
-                                  <button
-                                    onClick={() => handleOpenRefillDialog(order)}
-                                    className="btn btn-primary p-2"
-                                    title="Create Refill"
-                                  >
-                                    <FaSync className="h-3 w-3" />
-                                  </button>
+                                  {order.refillRequest && order.refillRequest.status !== 'completed' && order.refillRequest.status !== 'rejected' && (
+                                    <button
+                                      onClick={() => handleOpenRefillDialog(order)}
+                                      className="btn btn-primary p-2"
+                                      title="Create Refill"
+                                    >
+                                      <FaSync className="h-3 w-3" />
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => handleViewRefillRequestDetails(order)}
                                     className="btn btn-secondary p-2"
@@ -1182,7 +1193,7 @@ const RefillOrdersPage = () => {
                                   >
                                     <FaEye className="h-3 w-3" />
                                   </button>
-                                  {order.refillRequest && (
+                                  {order.refillRequest && order.refillRequest.status !== 'completed' && order.refillRequest.status !== 'rejected' && (
                                     <div className="relative inline-block">
                                       <button
                                         className="btn btn-secondary p-2"
@@ -1292,13 +1303,15 @@ const RefillOrdersPage = () => {
                               </>
                             ) : (
                               <>
-                                <button
-                                  onClick={() => handleOpenRefillDialog(order)}
-                                  className="btn btn-primary p-2"
-                                  title="Create Refill"
-                                >
-                                  <FaRedo className="h-3 w-3" />
-                                </button>
+                                {order.refillRequest && order.refillRequest.status !== 'completed' && order.refillRequest.status !== 'rejected' && (
+                                  <button
+                                    onClick={() => handleOpenRefillDialog(order)}
+                                    className="btn btn-primary p-2"
+                                    title="Create Refill"
+                                  >
+                                    <FaSync className="h-3 w-3" />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => handleViewRefillRequestDetails(order)}
                                   className="btn btn-secondary p-2"
@@ -1306,7 +1319,7 @@ const RefillOrdersPage = () => {
                                 >
                                   <FaEye className="h-3 w-3" />
                                 </button>
-                                {order.refillRequest && (
+                                {order.refillRequest && order.refillRequest.status !== 'completed' && order.refillRequest.status !== 'rejected' && (
                                   <div className="relative inline-block">
                                     <button
                                       className="btn btn-secondary p-2"
@@ -1536,15 +1549,17 @@ const RefillOrdersPage = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="flex justify-center">
-                          <button
-                            onClick={() => handleOpenRefillDialog(order)}
-                            className="btn btn-primary flex items-center gap-2"
-                          >
-                            <FaSync className="h-4 w-4" />
-                            Create Refill
-                          </button>
-                        </div>
+                        {!order.service?.providerId && (!order.refillRequest || (order.refillRequest.status !== 'completed' && order.refillRequest.status !== 'rejected')) && (
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => handleOpenRefillDialog(order)}
+                              className="btn btn-primary flex items-center gap-2"
+                            >
+                              <FaSync className="h-4 w-4" />
+                              Create Refill
+                            </button>
+                          </div>
+                        )}
                         <div className="mt-4 pt-4 border-t dark:border-gray-700">
                           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
                             Date: {new Date(order.createdAt).toLocaleDateString()}
@@ -1621,7 +1636,7 @@ const RefillOrdersPage = () => {
       </div>
       {refillDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Create Refill Order</h3>
               <button
@@ -1632,140 +1647,62 @@ const RefillOrdersPage = () => {
               </button>
             </div>
 
-            <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
-              Create a refill order for #{safeFormatOrderId(selectedOrder?.id)}. This will create a
-              new order to replace any lost engagement.
-            </p>
-
             {refillInfo && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                  <div>
-                    <div
-                      className="text-xs font-medium mb-1"
-                      style={{ color: 'var(--text-muted)' }}
-                    >
-                      Original Quantity
-                    </div>
-                    <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      {formatNumber(refillInfo.order.totalQuantity)}
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      className="text-xs font-medium mb-1"
-                      style={{ color: 'var(--text-muted)' }}
-                    >
-                      Remaining
-                    </div>
-                    <div className="font-semibold text-orange-600 dark:text-orange-400">
-                      {formatNumber(refillInfo.order.remainingQuantity)}
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      className="text-xs font-medium mb-1"
-                      style={{ color: 'var(--text-muted)' }}
-                    >
-                      User Balance
-                    </div>
-                    <div className="font-semibold text-green-600 dark:text-green-400">
-                      ${formatPrice(refillInfo.user.balance, 2)} {refillInfo.user.currency}
-                    </div>
-                  </div>
-                  <div>
-                    <div
-                      className="text-xs font-medium mb-1"
-                      style={{ color: 'var(--text-muted)' }}
-                    >
-                      Service Status
-                    </div>
-                    <div className="font-semibold text-blue-600 dark:text-blue-400 capitalize">
-                      {refillInfo.service.status}
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    Refill Type
+                    Start Count
                   </div>
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="flex items-center space-x-3 p-3 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <input
-                        type="radio"
-                        id="full-refill"
-                        name="refillType"
-                        value="full"
-                        checked={refillForm.type === 'full'}
-                        onChange={(e) =>
-                          setRefillForm((prev) => ({
-                            ...prev,
-                            type: e.target.value,
-                          }))
-                        }
-                        className="text-green-600 dark:text-green-400"
-                      />
-                      <label htmlFor="full-refill" className="flex-1 cursor-pointer">
-                        <div className="font-medium text-gray-900 dark:text-gray-100">
-                          Full Refill ({formatNumber(refillInfo.refillOptions.full.quantity)})
-                        </div>
-                        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                          Cost: ${formatPrice(refillInfo.refillOptions.full.cost, 2)}
-                          {refillInfo.refillOptions.full.affordable ? (
-                            <span className="text-green-600 dark:text-green-400 ml-2">✓ Affordable</span>
-                          ) : (
-                            <span className="text-red-600 dark:text-red-400 ml-2">✗ Insufficient balance</span>
-                          )}
-                        </div>
-                      </label>
+                  <input
+                    type="number"
+                    placeholder="Enter start count..."
+                    value={refillForm.startCount}
+                    onChange={(e) => {
+                      const newStartCount = e.target.value;
+                      setRefillForm((prev) => {
+                        const calculatedQuantity = newStartCount && !isNaN(parseInt(newStartCount))
+                          ? (refillInfo.order.startCount + refillInfo.order.totalQuantity) - parseInt(newStartCount)
+                          : '';
+                        return {
+                          ...prev,
+                          startCount: newStartCount,
+                          quantity: calculatedQuantity.toString(),
+                        };
+                      });
+                    }}
+                    className={`form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                      refillForm.startCount && (
+                        parseInt(refillForm.startCount) < refillInfo.order.startCount || 
+                        parseInt(refillForm.startCount) > refillInfo.order.startCount + refillInfo.order.totalQuantity
+                      )
+                        ? 'border-red-500 dark:border-red-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                    min={refillInfo.order.startCount}
+                    max={refillInfo.order.startCount + refillInfo.order.totalQuantity}
+                    required
+                  />
+                  {refillForm.startCount && (
+                    parseInt(refillForm.startCount) < refillInfo.order.startCount || 
+                    parseInt(refillForm.startCount) > refillInfo.order.startCount + refillInfo.order.totalQuantity
+                  ) && (
+                    <div className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                      <FaExclamationTriangle className="h-3 w-3" />
+                      Start count must be between {formatNumber(refillInfo.order.startCount)} and {formatNumber(refillInfo.order.startCount + refillInfo.order.totalQuantity)}
                     </div>
-
-                    <div className="flex items-center space-x-3 p-3 border dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <input
-                        type="radio"
-                        id="remaining-refill"
-                        name="refillType"
-                        value="remaining"
-                        checked={refillForm.type === 'remaining'}
-                        onChange={(e) =>
-                          setRefillForm((prev) => ({
-                            ...prev,
-                            type: e.target.value,
-                          }))
-                        }
-                        className="text-green-600 dark:text-green-400"
-                      />
-                      <label htmlFor="remaining-refill" className="flex-1 cursor-pointer">
-                        <div className="font-medium text-gray-900 dark:text-gray-100">
-                          Remaining Only ({formatNumber(refillInfo.refillOptions.remaining.quantity)})
-                        </div>
-                        <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                          Cost: ${formatPrice(refillInfo.refillOptions.remaining.cost, 2)}
-                          {refillInfo.refillOptions.remaining.affordable ? (
-                            <span className="text-green-600 dark:text-green-400 ml-2">✓ Affordable</span>
-                          ) : (
-                            <span className="text-red-600 dark:text-red-400 ml-2">✗ Insufficient balance</span>
-                          )}
-                        </div>
-                      </label>
-                    </div>
-                  </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                    Reason (Optional)
+                    Refill Quantity
                   </div>
                   <input
-                    type="text"
-                    placeholder="Enter reason for refill..."
-                    value={refillForm.reason}
-                    onChange={(e) =>
-                      setRefillForm((prev) => ({
-                        ...prev,
-                        reason: e.target.value,
-                      }))
-                    }
-                    className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
+                    type="number"
+                    placeholder="Auto-calculated..."
+                    value={refillForm.quantity}
+                    readOnly
+                    className="form-field w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-not-allowed"
+                    required
                   />
                 </div>
               </div>
@@ -1870,21 +1807,22 @@ const RefillOrdersPage = () => {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Quantity</label>
-                    <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
-                      {(viewDialog.order.qty || 0).toString()}
+                {viewDialog.order.refillRequest.status === 'completed' && (
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Start Count</label>
+                      <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
+                        {formatNumber(viewDialog.order.startCount || 0)}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Refill Quantity</label>
+                      <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
+                        {formatNumber(viewDialog.order.qty || 0)}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Amount</label>
-                    <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
-                      ${formatPrice(viewDialog.order.charge || viewDialog.order.price || 0, 2)}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{viewDialog.order.currency || 'USD'}</div>
-                  </div>
-                </div>
+                )}
                 <div>
                   <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Order Link</label>
                   <div className="text-sm mt-1">
@@ -1930,7 +1868,25 @@ const RefillOrdersPage = () => {
                 <h4 className="text-md font-semibold mb-3 text-gray-800 dark:text-gray-100">Admin Notes</h4>
                 <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 dark:border-blue-500 p-4 rounded">
                   <div className="text-sm text-gray-900 dark:text-gray-100">
-                    {viewDialog.order.refillRequest.adminNotes}
+                    {(() => {
+                      try {
+                        const notes = viewDialog.order.refillRequest.adminNotes;
+                        const parsed = JSON.parse(notes);
+                        if (typeof parsed === 'object' && parsed !== null) {
+                          const parts: string[] = [];
+                          if (parsed.startCount !== undefined) {
+                            parts.push(`Start Count: ${formatNumber(parsed.startCount)}`);
+                          }
+                          if (parsed.quantity !== undefined) {
+                            parts.push(`Quantity: ${formatNumber(parsed.quantity)}`);
+                          }
+                          return parts.length > 0 ? parts.join(', ') : notes;
+                        }
+                        return notes;
+                      } catch (e) {
+                        return viewDialog.order.refillRequest.adminNotes;
+                      }
+                    })()}
                   </div>
                   {viewDialog.order.refillRequest.processedAt && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
