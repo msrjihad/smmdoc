@@ -23,12 +23,14 @@ interface TransactionsListProps {
   transactions: Transaction[];
   page: number;
   limit: number;
+  formatDateTime?: (dateString: string | Date) => string;
 }
 
 export function TransactionsList({
   transactions,
   page,
   limit,
+  formatDateTime,
 }: TransactionsListProps) {
 
   const formatTransactionCurrency = (amount: number, transactionCurrency?: string) => {
@@ -121,12 +123,14 @@ export function TransactionsList({
                 </td>
                 <td className="py-3 px-4">
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {new Intl.DateTimeFormat('en', {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                      hour12: false,
-                      timeZone: 'Asia/Dhaka',
-                    }).format(new Date(transaction.createdAt))}
+                    {formatDateTime 
+                      ? formatDateTime(transaction.createdAt)
+                      : new Intl.DateTimeFormat('en', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                          hour12: false,
+                          timeZone: 'Asia/Dhaka',
+                        }).format(new Date(transaction.createdAt))}
                   </span>
                 </td>
                 <td className="py-3 px-4">

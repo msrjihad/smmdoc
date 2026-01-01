@@ -5,6 +5,8 @@ import { setPageTitle } from '@/lib/utils/set-page-title';
 import moment from 'moment';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 import {
     FaBan,
     FaCheckCircle,
@@ -69,6 +71,8 @@ const Toast = ({
 
 export default function TicketsHistory() {
   const { appName } = useAppNameWithFallback();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
@@ -92,6 +96,73 @@ export default function TicketsHistory() {
   useEffect(() => {
     setPageTitle('Tickets History', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return '-';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = (dateString: string): string => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
+
+  const formatDateShort = (dateString: string): string => {
+    if (!dateString) return '-';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+    });
+  };
 
   const fetchTickets = async () => {
     try {
@@ -518,7 +589,7 @@ export default function TicketsHistory() {
                           </div>
                         </div>
                         <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-                          {moment(ticket.createdAt).format('DD/MM')}
+                          {formatDateShort(ticket.createdAt)}
                         </span>
                       </div>
                     </div>
@@ -674,21 +745,21 @@ export default function TicketsHistory() {
                         </td>
                         <td className="py-3 px-4 whitespace-nowrap">
                           <span className="text-sm text-gray-700 dark:text-gray-300">
-                            {moment(ticket.createdAt).format('DD/MM/YYYY')}
+                            {formatDate(ticket.createdAt)}
                           </span>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {moment(ticket.createdAt).format('HH:mm')}
+                            {formatTime(ticket.createdAt)}
                           </div>
                         </td>
                         <td className="py-3 px-4 whitespace-nowrap">
                           <span className="text-sm text-gray-700 dark:text-gray-300">
                             {ticket.lastUpdated
-                              ? moment(ticket.lastUpdated).format('DD/MM/YYYY')
+                              ? formatDate(ticket.lastUpdated)
                               : '-'}
                           </span>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {ticket.lastUpdated
-                              ? moment(ticket.lastUpdated).format('HH:mm')
+                              ? formatTime(ticket.lastUpdated)
                               : ''}
                           </div>
                         </td>

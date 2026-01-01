@@ -24,6 +24,7 @@ interface WithdrawalsListProps {
   page: number;
   limit: number;
   onViewCancelReason?: (reason: string) => void;
+  formatDateTime?: (dateString: string | Date) => string;
 }
 
 export function WithdrawalsList({
@@ -31,6 +32,7 @@ export function WithdrawalsList({
   page,
   limit,
   onViewCancelReason,
+  formatDateTime,
 }: WithdrawalsListProps) {
 
   const formatAmount = (amount: number) => {
@@ -115,11 +117,13 @@ export function WithdrawalsList({
                 </td>
                 <td className="py-3 px-4">
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {new Intl.DateTimeFormat('en', {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                      hour12: false,
-                    }).format(new Date(withdrawal.createdAt))}
+                    {formatDateTime 
+                      ? formatDateTime(withdrawal.createdAt)
+                      : new Intl.DateTimeFormat('en', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                          hour12: false,
+                        }).format(new Date(withdrawal.createdAt))}
                   </span>
                 </td>
                 <td className="py-3 px-4">

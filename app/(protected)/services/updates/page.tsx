@@ -7,6 +7,9 @@ import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axiosInstance from '@/lib/axios-instance';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
+import moment from 'moment';
 import {
   FaBell,
   FaCheckCircle,
@@ -55,6 +58,8 @@ interface Service {
 export default function UpdateServiceTable() {
   const { appName } = useAppNameWithFallback();
   const router = useRouter();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   const user = useCurrentUser();
   const [services, setServices] = useState<Service[]>([]);
@@ -75,6 +80,56 @@ export default function UpdateServiceTable() {
   useEffect(() => {
     setPageTitle('Service Updates', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
 
   useEffect(() => {
     const checkServiceUpdateLogsStatus = async () => {
@@ -386,8 +441,13 @@ export default function UpdateServiceTable() {
                         }
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(service.updatedAt).toLocaleString()}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {moment(service.updatedAt).format('DD/MM/YYYY')}
+                        </span>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {formatTime(service.updatedAt)}
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -5,6 +5,8 @@ import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 import {
   FaCheckCircle,
   FaClock,
@@ -105,6 +107,8 @@ export default function TransactionsPage() {
   const { appName } = useAppNameWithFallback();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   const { currency, rate } = useCurrency();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -145,6 +149,64 @@ export default function TransactionsPage() {
   useEffect(() => {
     setPageTitle('Transactions', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatDateTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    const dateStr = date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    if (timeFormat === '12') {
+      const timeStr = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      return `${dateStr} ${timeStr}`;
+    } else {
+      const timeStr = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      return `${dateStr} ${timeStr}`;
+    }
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined' || hasShownPaymentToast) return;
@@ -762,6 +824,7 @@ export default function TransactionsPage() {
                     transactions={filteredTransactions}
                     page={page}
                     limit={limit}
+                    formatDateTime={formatDateTime}
                   />
                   {pagination.totalPages > 1 && (
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
