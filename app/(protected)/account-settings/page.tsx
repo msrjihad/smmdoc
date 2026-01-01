@@ -119,6 +119,7 @@ const ProfilePage = () => {
   const [isUserDataLoading, setIsUserDataLoading] = useState(true);
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [selectedTimezone, setSelectedTimezone] = useState('21600');
+  const [selectedTimeFormat, setSelectedTimeFormat] = useState<'12' | '24'>('24');
   const [showApiKey, setShowApiKey] = useState(false);
 
   const [toast, setToast] = useState<{
@@ -143,6 +144,7 @@ const ProfilePage = () => {
   const [isEmailVerificationPending, setIsEmailVerificationPending] = useState(false);
   const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
   const [isSavingTimezone, setIsSavingTimezone] = useState(false);
+  const [isSavingTimeFormat, setIsSavingTimeFormat] = useState(false);
   const [isSavingLanguage, setIsSavingLanguage] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
 
@@ -248,8 +250,10 @@ const ProfilePage = () => {
           setSelectedLanguage((userData as any).language || 'en');
 
           const userTimezone = (userData as any).timezone;
+          const userTimeFormat = (userData as any).timeFormat || '24';
 
           setSelectedTimezone(userTimezone || 'Asia/Dhaka');
+          setSelectedTimeFormat((userTimeFormat === '12' || userTimeFormat === '24') ? userTimeFormat : '24');
 
           setProfileData({
             fullName: userData.name || '',
@@ -464,6 +468,7 @@ const ProfilePage = () => {
 
   const handleTimezoneSave = async () => {
     setIsSavingTimezone(true);
+    setIsSavingTimeFormat(true);
     try {
       const response = await fetch('/api/user/update-timezone', {
         method: 'POST',
@@ -472,6 +477,7 @@ const ProfilePage = () => {
         },
         body: JSON.stringify({
           timezone: selectedTimezone,
+          timeFormat: selectedTimeFormat,
         }),
       });
 
@@ -482,18 +488,20 @@ const ProfilePage = () => {
           setUserDetails({
             ...userDetails,
             timezone: selectedTimezone,
+            timeFormat: selectedTimeFormat,
           })
         );
 
-        showToast('Timezone updated successfully!', 'success');
+        showToast('Timezone and time format updated successfully!', 'success');
       } else {
-        showToast(result.message || 'Failed to update timezone', 'error');
+        showToast(result.message || 'Failed to update timezone and time format', 'error');
       }
     } catch (error) {
-      console.error('Timezone update error:', error);
-      showToast('Error updating timezone', 'error');
+      console.error('Timezone and time format update error:', error);
+      showToast('Error updating timezone and time format', 'error');
     } finally {
       setIsSavingTimezone(false);
+      setIsSavingTimeFormat(false);
     }
   };
 
@@ -1408,12 +1416,23 @@ const ProfilePage = () => {
                     ))}
                   </select>
                 </div>
+                <div className="form-group">
+                  <label className="form-label">Time Format</label>
+                  <select
+                    value={selectedTimeFormat}
+                    onChange={(e) => setSelectedTimeFormat(e.target.value as '12' | '24')}
+                    className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
+                  >
+                    <option value="12">12 Hours</option>
+                    <option value="24">24 Hours</option>
+                  </select>
+                </div>
                 <button
                   onClick={handleTimezoneSave}
-                  disabled={isSavingTimezone}
+                  disabled={isSavingTimezone || isSavingTimeFormat}
                   className="btn btn-primary"
                 >
-                  {isSavingTimezone ? 'Saving...' : 'Save Timezone'}
+                  {(isSavingTimezone || isSavingTimeFormat) ? 'Saving...' : 'Save Timezone'}
                 </button>
               </div>
             </div>

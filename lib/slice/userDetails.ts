@@ -12,6 +12,9 @@ const initialState = {
   total_deposit: 0,
   total_spent: 0,
   image: '',
+  timeFormat: '24',
+  timezone: '',
+  language: '',
 };
 
 const userDetailsSlice = createSlice({
@@ -30,6 +33,9 @@ const userDetailsSlice = createSlice({
       state.total_deposit = action.payload.total_deposit || 0;
       state.total_spent = action.payload.total_spent || 0;
       state.image = action.payload.image || '';
+      state.timeFormat = action.payload.timeFormat || '24';
+      state.timezone = action.payload.timezone || '';
+      state.language = action.payload.language || '';
     },
   },
 });

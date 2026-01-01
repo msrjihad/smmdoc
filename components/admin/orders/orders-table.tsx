@@ -10,6 +10,9 @@ import {
   FaEdit,
 } from 'react-icons/fa';
 import { formatID, formatNumber, formatPrice, formatCount } from '@/lib/utils';
+import { useSelector } from 'react-redux';
+import { useEffect, useState } from 'react';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const cleanLinkDisplay = (link: string): string => {
   if (!link) return link;
@@ -115,6 +118,51 @@ const OrdersTableContent: React.FC<OrdersTableContentProps> = ({
   getStatusIcon: getStatusIconProp,
   calculateProgress: calculateProgressProp,
 }) => {
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string): string => {
+    if (!dateString) return 'null';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'null';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm min-w-[1200px]">
@@ -424,11 +472,7 @@ const OrdersTableContent: React.FC<OrdersTableContentProps> = ({
                       : 'null'}
                   </div>
                   <div className="text-xs text-gray-900 dark:text-gray-300">
-                    {order.createdAt
-                      ? new Date(
-                          order.createdAt
-                        ).toLocaleTimeString()
-                      : 'null'}
+                    {formatTime(order.createdAt)}
                   </div>
                 </div>
               </td>
