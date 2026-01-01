@@ -17,6 +17,8 @@ import {
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { formatID, formatNumber, formatPrice } from '@/lib/utils';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const cleanLinkDisplay = (link: string): string => {
   if (!link) return link;
@@ -122,10 +124,62 @@ interface PaginationInfo {
 
 const CancelRequestsPage = () => {
   const { appName } = useAppNameWithFallback();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   useEffect(() => {
     setPageTitle('Order Cancel Requests', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
 
   const [cancelRequests, setCancelRequests] = useState<CancelRequest[]>([]);
   const [stats, setStats] = useState<CancelRequestStats>({
@@ -1011,9 +1065,6 @@ const CancelRequestsPage = () => {
                                   request.user?.name ||
                                   'Unknown'}
                               </div>
-                              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                {request.user?.email || 'No email'}
-                              </div>
                             </div>
                           </td>
                           <td className="p-3">
@@ -1455,9 +1506,7 @@ const CancelRequestsPage = () => {
                                       viewDialog.request.requestedAt
                                     ).toLocaleDateString()}{' '}
                                     at{' '}
-                                    {new Date(
-                                      viewDialog.request.requestedAt
-                                    ).toLocaleTimeString()}
+                                    {formatTime(viewDialog.request.requestedAt)}
                                   </>
                                 ) : (
                                   'Unknown'
@@ -1575,9 +1624,7 @@ const CancelRequestsPage = () => {
                                       viewDialog.request.order.createdAt
                                     ).toLocaleDateString()}{' '}
                                     at{' '}
-                                    {new Date(
-                                      viewDialog.request.order.createdAt
-                                    ).toLocaleTimeString()}
+                                    {formatTime(viewDialog.request.order.createdAt)}
                                   </>
                                 ) : (
                                   'Unknown'
@@ -1613,9 +1660,7 @@ const CancelRequestsPage = () => {
                                     viewDialog.request.processedAt
                                   ).toLocaleDateString()}{' '}
                                   at{' '}
-                                  {new Date(
-                                    viewDialog.request.processedAt
-                                  ).toLocaleTimeString()}
+                                  {formatTime(viewDialog.request.processedAt)}
                                   {viewDialog.request.processedBy &&
                                     ` by ${viewDialog.request.processedBy}`}
                                 </div>

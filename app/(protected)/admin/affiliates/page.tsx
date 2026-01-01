@@ -18,6 +18,8 @@ import {
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { formatID, formatNumber, formatPrice } from '@/lib/utils';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const AffiliatesTableSkeleton = () => {
   const rows = Array.from({ length: 10 });
@@ -193,10 +195,62 @@ interface PaginationInfo {
 
 const AffiliateReferralsPage = () => {
   const { appName } = useAppNameWithFallback();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   useEffect(() => {
     setPageTitle('Affiliate Referrals', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
 
   const [affiliates, setAffiliates] = useState<AffiliateReferral[]>([]);
   const [stats, setStats] = useState<AffiliateStats>({
@@ -1452,7 +1506,7 @@ const AffiliateReferralsPage = () => {
                                       ${formatPrice(payout.amount, 2)}
                                     </div>
                                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                                      {payout.method} • {new Date(payout.requestedAt).toLocaleDateString()}
+                                      {payout.method} • {new Date(payout.requestedAt).toLocaleDateString()} at {formatTime(payout.requestedAt)}
                                     </div>
                                   </div>
                                   <div className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(payout.status)}`}>

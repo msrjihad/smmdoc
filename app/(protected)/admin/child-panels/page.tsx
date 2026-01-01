@@ -19,6 +19,8 @@ import {
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { formatID, formatNumber, formatPrice } from '@/lib/utils';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const FormField = ({ children }: { children: React.ReactNode }) => (
   <div className="space-y-2">{children}</div>
@@ -188,10 +190,62 @@ interface PaginationInfo {
 
 const ChildPanelsPage = () => {
   const { appName } = useAppNameWithFallback();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   useEffect(() => {
     setPageTitle('Child Panels', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
 
   const [childPanels, setChildPanels] = useState<ChildPanel[]>([]);
   const [stats, setStats] = useState<ChildPanelStats>({
@@ -951,7 +1005,7 @@ const ChildPanelsPage = () => {
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">
                                 {panel.createdAt
-                                  ? new Date(panel.createdAt).toLocaleTimeString()
+                                  ? formatTime(panel.createdAt)
                                   : ''}
                               </div>
                             </div>
@@ -1827,7 +1881,7 @@ const ChildPanelsPage = () => {
                               Created
                             </label>
                             <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
-                              {new Date(viewDialog.panel.createdAt).toLocaleDateString()}
+                              {new Date(viewDialog.panel.createdAt).toLocaleDateString()} at {formatTime(viewDialog.panel.createdAt)}
                             </div>
                           </div>
                           <div>
@@ -1835,7 +1889,7 @@ const ChildPanelsPage = () => {
                               Last Activity
                             </label>
                             <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
-                              {new Date(viewDialog.panel.lastActivity).toLocaleDateString()}
+                              {new Date(viewDialog.panel.lastActivity).toLocaleDateString()} at {formatTime(viewDialog.panel.lastActivity)}
                             </div>
                           </div>
                           <div>
@@ -1844,7 +1898,7 @@ const ChildPanelsPage = () => {
                             </label>
                             <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
                               {viewDialog.panel.expiryDate 
-                                ? new Date(viewDialog.panel.expiryDate).toLocaleDateString()
+                                ? `${new Date(viewDialog.panel.expiryDate).toLocaleDateString()} at ${formatTime(viewDialog.panel.expiryDate)}`
                                 : 'Never'
                               }
                             </div>

@@ -15,6 +15,8 @@ import { useTheme } from 'next-themes';
 
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   <div className={`${size} ${className} relative`}>
@@ -81,10 +83,62 @@ const EditBlogPostPage = () => {
   const params = useParams();
   const postId = params.id as string;
   const [mounted, setMounted] = useState(false);
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
 
   const isDarkMode = mounted && (theme === 'dark' || (theme === 'system' && systemTheme === 'dark'));
 
@@ -479,7 +533,7 @@ const EditBlogPostPage = () => {
                     </span>
                   )}
                   {!hasUnsavedChanges && (
-                    <span>Last updated: {new Date(formData.updatedAt).toLocaleDateString()}</span>
+                    <span>Last updated: {new Date(formData.updatedAt).toLocaleDateString()} at {formatTime(formData.updatedAt)}</span>
                   )}
                 </p>
               </div>
@@ -663,13 +717,13 @@ const EditBlogPostPage = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Created:</span>
                   <span className="font-medium">
-                    {new Date(formData.createdAt).toLocaleDateString()}
+                    {new Date(formData.createdAt).toLocaleDateString()} at {formatTime(formData.createdAt)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Updated:</span>
                   <span className="font-medium">
-                    {new Date(formData.updatedAt).toLocaleDateString()}
+                    {new Date(formData.updatedAt).toLocaleDateString()} at {formatTime(formData.updatedAt)}
                   </span>
                 </div>
               </div>

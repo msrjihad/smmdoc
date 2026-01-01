@@ -29,6 +29,8 @@ import { invalidateUserSessions } from '@/lib/session-invalidation';
 import { convertCurrency, formatCurrencyAmount } from '@/lib/currency-utils';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const ChangeRoleModal = dynamic(
   () => import('@/components/admin/users/role-modal'),
@@ -225,6 +227,7 @@ interface UserCardProps {
   onUpdateStatus: (userId: number, currentStatus: string) => void;
   onDelete: (userId: number) => void;
   formatCurrency: (amount: number, currency: string) => string;
+  formatTime: (dateString: string | Date) => string;
   isLoading: boolean;
   isModerator?: boolean;
 }
@@ -341,10 +344,62 @@ const UsersListPage = () => {
   const { appName } = useAppNameWithFallback();
   const { data: session, update: updateSession } = useSession();
   const router = useRouter();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   useEffect(() => {
     setPageTitle('All Users', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
 
   const isModerator = session?.user?.role === 'moderator';
 
@@ -1479,9 +1534,7 @@ const UsersListPage = () => {
                                 className="text-xs text-gray-600 dark:text-gray-400"
                               >
                                 {user.createdAt
-                                  ? new Date(
-                                      user.createdAt
-                                    ).toLocaleTimeString()
+                                  ? formatTime(user.createdAt)
                                   : 'null'}
                               </div>
                             </div>
@@ -1530,6 +1583,7 @@ const UsersListPage = () => {
                           setDeleteDialogOpen(true);
                         }}
                         formatCurrency={formatCurrency}
+                        formatTime={formatTime}
                         isLoading={actionLoading === user.id.toString()}
                       />
                     ))}
@@ -1878,6 +1932,7 @@ const UserCard: React.FC<UserCardProps> = ({
   onUpdateStatus,
   onDelete,
   formatCurrency,
+  formatTime,
   isLoading,
   isModerator = false,
 }) => (
@@ -2069,7 +2124,7 @@ const UserCard: React.FC<UserCardProps> = ({
         <div className="text-sm text-gray-900 dark:text-gray-100">
           Time:{' '}
           {user.createdAt
-            ? new Date(user.createdAt).toLocaleTimeString()
+            ? formatTime(user.createdAt)
             : 'null'}
         </div>
         {user.lastLoginAt && (

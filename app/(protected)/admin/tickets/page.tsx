@@ -17,6 +17,8 @@ import {
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import TicketSystemGuard from '@/components/ticket-system-guard';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const TicketsTableSkeleton = () => {
   const rows = Array.from({ length: 10 });
@@ -143,10 +145,62 @@ interface PaginationInfo {
 
 const SupportTicketsPage = () => {
   const { appName } = useAppNameWithFallback();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   useEffect(() => {
     setPageTitle('Support Tickets', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
 
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -839,7 +893,7 @@ const SupportTicketsPage = () => {
                                 {new Date(ticket.createdAt).toLocaleDateString()}
                               </div>
                               <div className="text-xs text-gray-600 dark:text-gray-400">
-                                {new Date(ticket.createdAt).toLocaleTimeString()}
+                                {formatTime(ticket.createdAt)}
                               </div>
                             </div>
                           </td>
@@ -851,7 +905,7 @@ const SupportTicketsPage = () => {
                                     {new Date(ticket.lastUpdated).toLocaleDateString()}
                                   </div>
                                   <div className="text-xs text-gray-600 dark:text-gray-400">
-                                    {new Date(ticket.lastUpdated).toLocaleTimeString()}
+                                    {formatTime(ticket.lastUpdated)}
                                   </div>
                                 </>
                               ) : (

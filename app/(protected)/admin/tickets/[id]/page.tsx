@@ -30,6 +30,8 @@ import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import useTicketPolling from '@/hooks/useTicketPolling';
 import TicketSystemGuard from '@/components/ticket-system-guard';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   <div className={`${size} ${className} relative`}>
@@ -148,6 +150,8 @@ interface SupportTicketDetails {
 const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> }) => {
   const router = useRouter();
   const { appName } = useAppNameWithFallback();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
   const [ticketId, setTicketId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -167,6 +171,56 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
       setPageTitle(`Ticket #${ticketId}`, appName);
     }
   }, [appName, ticketId]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
 
   const [ticketDetails, setTicketDetails] = useState<SupportTicketDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -635,14 +689,14 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
                   <label className="form-label">Created</label>
                   <p className="mt-1 text-gray-900 dark:text-gray-100">
                     {new Date(ticketDetails.createdAt).toLocaleDateString()} at{' '}
-                    {new Date(ticketDetails.createdAt).toLocaleTimeString()}
+                    {formatTime(ticketDetails.createdAt)}
                   </p>
                 </div>
                 <div>
                   <label className="form-label">Last Updated</label>
                   <p className="mt-1 text-gray-900 dark:text-gray-100">
                     {new Date(ticketDetails.lastUpdated).toLocaleDateString()} at{' '}
-                    {new Date(ticketDetails.lastUpdated).toLocaleTimeString()}
+                    {formatTime(ticketDetails.lastUpdated)}
                   </p>
                 </div>
                 <div>
@@ -749,7 +803,7 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
                         )}
                         <span className="text-xs text-gray-600 dark:text-gray-400">
                           {new Date(message.createdAt).toLocaleDateString()} at{' '}
-                          {new Date(message.createdAt).toLocaleTimeString()}
+                          {formatTime(message.createdAt)}
                         </span>
                         {message.isEdited && (
                           <span className="text-xs text-gray-600 dark:text-gray-400">(edited)</span>

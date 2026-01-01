@@ -47,6 +47,7 @@ interface TransactionsTableProps {
   handleCancel: (transactionId: string) => void;
   openViewDetailsDialog: (transaction: any) => void;
   openUpdateStatusDialog: (transactionId: number, currentStatus: string) => void;
+  formatTime: (dateString: string | Date) => string;
 }
 
 const TransactionsTable: React.FC<TransactionsTableProps> = ({
@@ -58,6 +59,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
   handleCancel,
   openViewDetailsDialog,
   openUpdateStatusDialog,
+  formatTime,
 }) => {
   return (
     <div className="overflow-x-auto">
@@ -162,7 +164,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                   </div>
                   <div className="text-xs text-gray-600 dark:text-gray-400">
                     {transaction.createdAt
-                      ? new Date(transaction.createdAt).toLocaleTimeString()
+                      ? formatTime(transaction.createdAt)
                       : 'null'}
                   </div>
                 </div>

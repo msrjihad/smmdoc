@@ -21,6 +21,8 @@ import { PriceDisplay } from '@/components/price-display';
 import { useCurrency } from '@/contexts/currency-context';
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const ApproveTransactionModal = dynamic(
   () => import('@/components/admin/transactions/modals/approve-transaction'),
@@ -193,10 +195,99 @@ interface PaginationInfo {
 
 const AdminAllTransactionsPage = () => {
   const { appName } = useAppNameWithFallback();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   useEffect(() => {
     setPageTitle('All Transactions', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
+
+  const formatDateTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    const dateStr = date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    if (timeFormat === '12') {
+      const timeStr = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      return `${dateStr} ${timeStr}`;
+    } else {
+      const timeStr = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      return `${dateStr} ${timeStr}`;
+    }
+  };
 
   const { currency, currentCurrencyData, availableCurrencies } = useCurrency();
 
@@ -1094,6 +1185,7 @@ const AdminAllTransactionsPage = () => {
                   handleCancel={handleCancel}
                   openViewDetailsDialog={openViewDetailsDialog}
                   openUpdateStatusDialog={openUpdateStatusDialog}
+                  formatTime={formatTime}
                 />
 
                 <div className="flex flex-col md:flex-row items-center justify-between pt-4 pb-6 border-t dark:border-gray-700">
@@ -1261,9 +1353,9 @@ const AdminAllTransactionsPage = () => {
                               Created
                             </label>
                             <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {new Date(
+                              {formatDateTime(
                                 viewDetailsDialog.transaction.createdAt
-                              ).toLocaleString()}
+                              )}
                             </div>
                           </div>
                           <div>
@@ -1271,9 +1363,9 @@ const AdminAllTransactionsPage = () => {
                               Updated
                             </label>
                             <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {new Date(
+                              {formatDateTime(
                                 viewDetailsDialog.transaction.updatedAt
-                              ).toLocaleString()}
+                              )}
                             </div>
                           </div>
                         </div>

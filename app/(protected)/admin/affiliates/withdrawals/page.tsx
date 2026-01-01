@@ -21,6 +21,8 @@ import { PriceDisplay } from '@/components/price-display';
 import { useCurrency } from '@/contexts/currency-context';
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const formatID = (id: any) => id;
 const formatNumber = (num: number) => num.toLocaleString();
@@ -169,10 +171,99 @@ interface PaginationInfo {
 
 const AdminWithdrawalsPage = () => {
   const { appName } = useAppNameWithFallback();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   useEffect(() => {
     setPageTitle('Affiliate Withdrawals', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
+
+  const formatDateTime = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    const dateStr = date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    if (timeFormat === '12') {
+      const timeStr = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      return `${dateStr} ${timeStr}`;
+    } else {
+      const timeStr = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      return `${dateStr} ${timeStr}`;
+    }
+  };
 
   const { currency } = useCurrency();
 
@@ -833,7 +924,7 @@ const AdminWithdrawalsPage = () => {
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400">
                                 {withdrawal.createdAt
-                                  ? new Date(withdrawal.createdAt).toLocaleTimeString()
+                                  ? formatTime(withdrawal.createdAt)
                                   : 'null'}
                               </div>
                             </div>
@@ -1065,9 +1156,9 @@ const AdminWithdrawalsPage = () => {
                               Created
                             </label>
                             <div className="text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {new Date(
+                              {formatDateTime(
                                 viewDetailsDialog.withdrawal.createdAt
-                              ).toLocaleString()}
+                              )}
                             </div>
                           </div>
                           {viewDetailsDialog.withdrawal.processedAt && (
@@ -1076,9 +1167,9 @@ const AdminWithdrawalsPage = () => {
                                 Processed
                               </label>
                               <div className="text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                                {new Date(
+                                {formatDateTime(
                                   viewDetailsDialog.withdrawal.processedAt
-                                ).toLocaleString()}
+                                )}
                               </div>
                             </div>
                           )}

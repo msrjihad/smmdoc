@@ -28,6 +28,8 @@ import {
 
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   <div className={`${size} ${className} relative`}>
@@ -149,6 +151,8 @@ const ContactDetailsPage = () => {
   const router = useRouter();
   const { appName } = useAppNameWithFallback();
   const currentUser = useCurrentUser();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
 
   const messageId: string = typeof window !== 'undefined'
     ? (window.location.pathname.split('/').pop() ?? '1')
@@ -157,6 +161,56 @@ const ContactDetailsPage = () => {
   useEffect(() => {
     setPageTitle(`Message Details ${formatMessageID(messageId)}`, appName);
   }, [messageId]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return 'Unknown';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'Unknown';
+    }
+    
+    if (isNaN(date.getTime())) return 'Unknown';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+  };
 
   const [contactDetails, setContactDetails] = useState<ContactMessageDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -686,14 +740,14 @@ const ContactDetailsPage = () => {
                   <label className="form-label">Created</label>
                   <p className="mt-1 text-gray-900 dark:text-gray-100">
                     {contactDetails?.createdAt ? new Date(contactDetails.createdAt).toLocaleDateString() : 'Unknown'} at{' '}
-                    {contactDetails?.createdAt ? new Date(contactDetails.createdAt).toLocaleTimeString() : 'Unknown'}
+                    {contactDetails?.createdAt ? formatTime(contactDetails.createdAt) : 'Unknown'}
                   </p>
                 </div>
                 <div>
                   <label className="form-label">Last Updated</label>
                   <p className="mt-1 text-gray-900 dark:text-gray-100">
                     {contactDetails?.lastUpdated ? new Date(contactDetails.lastUpdated).toLocaleDateString() : 'Unknown'} at{' '}
-                    {contactDetails?.lastUpdated ? new Date(contactDetails.lastUpdated).toLocaleTimeString() : 'Unknown'}
+                    {contactDetails?.lastUpdated ? formatTime(contactDetails.lastUpdated) : 'Unknown'}
                   </p>
                 </div>
               </div>
@@ -774,7 +828,7 @@ const ContactDetailsPage = () => {
                     <div key={message.id}>
                       <div className="mb-2">
                         <span className="text-xs text-gray-600 dark:text-gray-400">
-                          {message.author} • {new Date(message.createdAt).toLocaleDateString()} at {new Date(message.createdAt).toLocaleTimeString()}
+                          {message.author} • {new Date(message.createdAt).toLocaleDateString()} at {formatTime(message.createdAt)}
                         </span>
                       </div>
 
