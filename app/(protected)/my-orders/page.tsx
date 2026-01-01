@@ -638,24 +638,41 @@ export default function OrdersList() {
         },
         body: JSON.stringify({
           orderId: refillModal.orderId,
-          reason: refillModal.reason.trim() || 'Customer requested refill due to drop in count'
+          reason: (refillModal.reason || '').trim() || 'Customer requested refill due to drop in count'
         })
       });
 
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+        console.log('Refill request response:', { status: response.status, ok: response.ok, result });
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        setToastMessage({
+          message: 'Failed to parse server response. Please try again.',
+          type: 'error'
+        });
+        setRefillModal(prev => ({ ...prev, isLoading: false }));
+        return;
+      }
 
+      // Check if the request was successful (HTTP 200-299 and success: true)
       if (response.ok && result.success) {
+        // Refill request was created successfully
         if (result.data?.providerRefillError) {
+          // Saved but provider submission failed
           setToastMessage({
             message: result.message || `Refill request saved, but provider submission failed: ${result.data.providerRefillError}`,
             type: 'info'
           });
         } else if (result.data?.providerRefillSubmitted) {
+          // Successfully submitted to provider
           setToastMessage({
             message: result.message || 'Refill request submitted successfully and forwarded to provider',
             type: 'success'
           });
         } else {
+          // Successfully saved (no provider or provider not needed)
           setToastMessage({
             message: result.message || 'Refill request submitted successfully',
             type: 'success'
@@ -664,8 +681,10 @@ export default function OrdersList() {
         handleRefillClose();
         refetch();
       } else {
+        // Request failed - show error message
+        const errorMessage = result?.error || result?.message || 'Failed to submit refill request';
         setToastMessage({
-          message: result.error || 'Failed to submit refill request',
+          message: errorMessage,
           type: 'error'
         });
         setRefillModal(prev => ({ ...prev, isLoading: false }));

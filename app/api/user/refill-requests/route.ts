@@ -245,18 +245,6 @@ export async function POST(req: NextRequest) {
         userId: parseInt(session.user.id),
         reason: reason.trim(),
         status: 'pending'
-      },
-      include: {
-        order: {
-          include: {
-            service: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
-          }
-        }
       }
     });
 
@@ -351,10 +339,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Serialize the refill request to avoid BigInt/Date serialization issues
+    const serializedRefillRequest = {
+      id: Number(refillRequest.id),
+      orderId: Number(refillRequest.orderId),
+      userId: Number(refillRequest.userId),
+      reason: refillRequest.reason,
+      status: refillRequest.status,
+      createdAt: refillRequest.createdAt instanceof Date ? refillRequest.createdAt.toISOString() : refillRequest.createdAt,
+      updatedAt: refillRequest.updatedAt instanceof Date ? refillRequest.updatedAt.toISOString() : refillRequest.updatedAt,
+      processedBy: refillRequest.processedBy ? Number(refillRequest.processedBy) : null,
+      processedAt: refillRequest.processedAt instanceof Date ? refillRequest.processedAt.toISOString() : refillRequest.processedAt,
+      adminNotes: refillRequest.adminNotes
+    };
+
     return NextResponse.json({
       success: true,
       data: {
-        ...refillRequest,
+        ...serializedRefillRequest,
         providerRefillSubmitted,
         providerRefillError: providerRefillError || null
       },

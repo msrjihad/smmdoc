@@ -468,30 +468,60 @@ const RefillOrdersPage = () => {
     setStatsLoading(true);
 
     try {
-      try {
-        const syncResponse = await fetch('/api/admin/refill-requests/sync-provider', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
+      showToast('Refreshing refill requests...', 'pending');
+      
+      await Promise.all([fetchEligibleOrders(), fetchStats()]);
 
-        const syncResult = await syncResponse.json();
-        
-        if (syncResult.success) {
-          console.log('Provider status synced:', syncResult.data);
+      showToast('Syncing provider orders...', 'pending');
+
+      const syncPromise = fetch('/api/admin/provider-sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ syncAll: true }),
+      }).then(res => res.json()).catch(err => {
+        console.error('Error syncing provider orders on refresh:', err);
+        return { success: false, error: err.message };
+      });
+
+      const syncTimeout = new Promise((resolve) => {
+        setTimeout(() => resolve({ success: false, timeout: true }), 30000);
+      });
+
+      const syncResult: any = await Promise.race([syncPromise, syncTimeout]);
+
+      if (syncResult.timeout) {
+        showToast('Sync is taking longer than expected, refreshing refill requests...', 'info');
+      } else if (syncResult.success) {
+        const syncedCount = syncResult.data?.syncedCount || 0;
+        const totalProcessed = syncResult.data?.totalProcessed || 0;
+        if (syncedCount > 0) {
+          showToast(`Synced ${syncedCount} of ${totalProcessed} provider order(s)`, 'success');
+        } else if (totalProcessed > 0) {
+          // All up to date, no need to show message
         } else {
-          console.warn('Provider sync had issues:', syncResult.error);
+          // No provider orders to sync
         }
-      } catch (syncError) {
-        console.error('Error syncing provider status:', syncError);
+      } else {
+        console.warn('Provider sync had issues:', syncResult.error);
+        showToast('Some provider orders may not have synced', 'info');
       }
 
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       await Promise.all([fetchEligibleOrders(), fetchStats()]);
-      showToast('Refill orders refreshed and provider status synced successfully!', 'success');
+
+      showToast('All refill requests synced and refreshed successfully', 'success');
     } catch (error) {
-      console.error('Error refreshing data:', error);
-      showToast('Error refreshing data. Please try again.', 'error');
+      console.error('Error refreshing refill requests:', error);
+      showToast('Error refreshing refill requests', 'error');
+      
+      try {
+        await Promise.all([fetchEligibleOrders(), fetchStats()]);
+      } catch (refreshError) {
+        console.error('Error refreshing after sync failure:', refreshError);
+      }
     } finally {
       setOrdersLoading(false);
       setStatsLoading(false);
