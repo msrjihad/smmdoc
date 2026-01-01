@@ -12,7 +12,7 @@ import {
     FaSync,
     FaTimes,
     FaTimesCircle,
-    FaEllipsisV,
+    FaEllipsisH,
     FaExclamationTriangle
 } from 'react-icons/fa';
 
@@ -261,7 +261,7 @@ const RefillOrdersPage = () => {
               provider: providerName,
               providerId: service?.providerId || null
             },
-            category: { category_name: 'Refill Request' },
+            category: request.order?.category || { category_name: 'Unknown Category' },
             refillRequest: request
           };
         });
@@ -419,17 +419,6 @@ const RefillOrdersPage = () => {
     return formatID(String(id || 'null'));
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <FaCheckCircle className="h-3 w-3 text-green-500 dark:text-green-400" />;
-      case 'partial':
-        return <FaExclamationCircle className="h-3 w-3 text-orange-500 dark:text-orange-400" />;
-      default:
-        return <FaClock className="h-3 w-3 text-gray-500 dark:text-gray-400" />;
-    }
-  };
-
   const getRefillRequestStatusIcon = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'pending':
@@ -441,6 +430,7 @@ const RefillOrdersPage = () => {
       case 'rejected':
         return <FaTimesCircle className="h-3 w-3 text-red-500 dark:text-red-400" />;
       case 'error':
+      case 'failed':
         return <FaExclamationTriangle className="h-3 w-3 text-orange-500 dark:text-orange-400" />;
       case 'approved':
         return <FaCheckCircle className="h-3 w-3 text-green-500 dark:text-green-400" />;
@@ -449,6 +439,13 @@ const RefillOrdersPage = () => {
       default:
         return <FaClock className="h-3 w-3 text-gray-500 dark:text-gray-400" />;
     }
+  };
+
+  const formatRefillRequestStatus = (status: string) => {
+    if (status?.toLowerCase() === 'error') {
+      return 'Failed';
+    }
+    return status?.charAt(0).toUpperCase() + status?.slice(1).toLowerCase() || status;
   };
 
   const calculateProgress = (qty: number, remains: number) => {
@@ -471,12 +468,32 @@ const RefillOrdersPage = () => {
     setStatsLoading(true);
 
     try {
+      try {
+        const syncResponse = await fetch('/api/admin/refill-requests/sync-provider', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        const syncResult = await syncResponse.json();
+        
+        if (syncResult.success) {
+          console.log('Provider status synced:', syncResult.data);
+        } else {
+          console.warn('Provider sync had issues:', syncResult.error);
+        }
+      } catch (syncError) {
+        console.error('Error syncing provider status:', syncError);
+      }
+
       await Promise.all([fetchEligibleOrders(), fetchStats()]);
-      showToast('Refill orders refreshed successfully!', 'success');
+      showToast('Refill orders refreshed and provider status synced successfully!', 'success');
     } catch (error) {
       console.error('Error refreshing data:', error);
       showToast('Error refreshing data. Please try again.', 'error');
     } finally {
+      setOrdersLoading(false);
       setStatsLoading(false);
     }
   };
@@ -761,7 +778,7 @@ const RefillOrdersPage = () => {
                       : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
-                  Error
+                  Failed
                   <span
                     className={`ml-2 text-xs px-2 py-1 rounded-full ${
                       refillStatusFilter === 'error' ? 'bg-white/20' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
@@ -949,16 +966,13 @@ const RefillOrdersPage = () => {
                         <th className="text-right p-3 font-semibold text-gray-900 dark:text-gray-100">
                           Amount
                         </th>
-                        <th className="text-center p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Order Status
+                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
+                          Request Date
                         </th>
                         <th className="text-center p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Refill Status
+                          Status
                         </th>
-                        <th className="text-center p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Progress
-                        </th>
-                        <th className="text-center p-3 font-semibold text-gray-900 dark:text-gray-100">
+                        <th className="text-right p-3 font-semibold text-gray-900 dark:text-gray-100">
                           Actions
                         </th>
                       </tr>
@@ -985,20 +999,28 @@ const RefillOrdersPage = () => {
                                   order.user?.name ||
                                   'Unknown'}
                               </div>
-                              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                {order.user?.email || 'No email'}
-                              </div>
                             </div>
                           </td>
                           <td className="p-3">
                             <div>
+                              <div
+                                className="font-mono text-xs"
+                                style={{ color: 'var(--text-muted)' }}
+                              >
+                                {order.service?.id
+                                  ? safeFormatOrderId(order.service.id)
+                                  : 'null'}
+                              </div>
                               <div
                                 className="font-medium text-sm truncate max-w-44"
                                 style={{ color: 'var(--text-primary)' }}
                               >
                                 {order.service?.name || 'Unknown Service'}
                               </div>
-                              <div className="text-xs truncate max-w-44" style={{ color: 'var(--text-muted)' }}>
+                              <div
+                                className="text-xs truncate max-w-44"
+                                style={{ color: 'var(--text-muted)' }}
+                              >
                                 {order.category?.category_name || 'Unknown Category'}
                               </div>
                             </div>
@@ -1047,9 +1069,6 @@ const RefillOrdersPage = () => {
                               >
                                 {order.qty.toString()}
                               </div>
-                              <div className="text-xs text-green-600 dark:text-green-400">
-                                {(order.qty - order.remains).toString()} delivered
-                              </div>
                             </div>
                           </td>
                           <td className="p-3 text-right">
@@ -1065,10 +1084,52 @@ const RefillOrdersPage = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="p-3 text-center">
-                            <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full w-fit mx-auto">
-                              {getStatusIcon(order.status)}
-                              <span className="text-xs font-medium capitalize text-gray-900 dark:text-gray-100">{order.status}</span>
+                          <td className="p-3 text-left">
+                            <div>
+                              {order.refillRequest?.createdAt ? (() => {
+                                try {
+                                  let dateStr: any = order.refillRequest.createdAt;
+                                  
+                                  if (typeof dateStr === 'object' && dateStr !== null) {
+                                    if (dateStr instanceof Date) {
+                                      dateStr = dateStr.toISOString();
+                                    } else if (typeof (dateStr as any).toISOString === 'function') {
+                                      dateStr = (dateStr as any).toISOString();
+                                    } else {
+                                      console.error('Invalid date object:', dateStr);
+                                      return <div className="text-xs text-gray-400">Invalid date</div>;
+                                    }
+                                  }
+                                  
+                                  if (typeof dateStr !== 'string') {
+                                    console.error('Date value is not a string:', dateStr, typeof dateStr);
+                                    return <div className="text-xs text-gray-400">Invalid date</div>;
+                                  }
+                                  
+                                  const date = new Date(dateStr);
+                                  
+                                  if (isNaN(date.getTime())) {
+                                    console.error('Invalid date value:', dateStr, typeof dateStr);
+                                    return <div className="text-xs text-gray-400">Invalid date</div>;
+                                  }
+                                  
+                                  return (
+                                    <>
+                                      <div className="text-xs text-gray-900 dark:text-gray-300">
+                                        {date.toLocaleDateString()}
+                                      </div>
+                                      <div className="text-xs text-gray-900 dark:text-gray-300">
+                                        {date.toLocaleTimeString()}
+                                      </div>
+                                    </>
+                                  );
+                                } catch (error) {
+                                  console.error('Error parsing date:', error, order.refillRequest.createdAt);
+                                  return <div className="text-xs text-gray-400">Invalid date</div>;
+                                }
+                              })() : (
+                                <div className="text-xs text-gray-400">-</div>
+                              )}
                             </div>
                           </td>
                           <td className="p-3 text-center">
@@ -1076,36 +1137,15 @@ const RefillOrdersPage = () => {
                               <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full w-fit mx-auto">
                                 {getRefillRequestStatusIcon(order.refillRequest.status)}
                                 <span className="text-xs font-medium capitalize text-gray-900 dark:text-gray-100">
-                                  {order.refillRequest.status}
+                                  {formatRefillRequestStatus(order.refillRequest.status)}
                                 </span>
                               </div>
                             ) : (
                               <span className="text-xs text-gray-400">-</span>
                             )}
                           </td>
-                          <td className="p-3 text-center">
-                            <div className="space-y-1">
-                              <div
-                                className="text-xs font-medium"
-                                style={{ color: 'var(--text-primary)' }}
-                              >
-                                {calculateProgress(order.qty, order.remains)}%
-                              </div>
-                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                                <div
-                                  className="bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)] h-1.5 rounded-full transition-all duration-300"
-                                  style={{
-                                    width: `${calculateProgress(order.qty, order.remains)}%`,
-                                  }}
-                                />
-                              </div>
-                              <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                {order.remains} remaining
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3 text-center">
-                            <div className="flex items-center justify-center gap-1">
+                          <td className="p-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
                               {order.service?.providerId ? (
                                 <>
                                   <button
@@ -1115,76 +1155,15 @@ const RefillOrdersPage = () => {
                                   >
                                     <FaEye className="h-3 w-3" />
                                   </button>
-                                  <button
-                                    onClick={() => handleResendRefillToProvider(order)}
-                                    className="btn btn-primary p-2"
-                                    title="Resend Refill Request to Provider"
-                                    disabled={processing}
-                                  >
-                                    <FaRedo className="h-3 w-3" />
-                                  </button>
-                                  {order.refillRequest && (
-                                    <div className="relative inline-block">
-                                      <button
-                                        className="btn btn-secondary p-2"
-                                        title="Update Refill Status"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const menu = document.getElementById(`status-menu-${order.refillRequest?.id}`);
-                                          if (menu) {
-                                            menu.classList.toggle('hidden');
-                                          }
-                                        }}
-                                      >
-                                        <FaEllipsisV className="h-3 w-3" />
-                                      </button>
-                                      <div
-                                        id={`status-menu-${order.refillRequest.id}`}
-                                        className="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700"
-                                      >
-                                        <div className="py-1">
-                                          <div className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
-                                            Update Refill Status
-                                          </div>
-                                          <button
-                                            onClick={() => {
-                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'refilling');
-                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                          >
-                                            Refilling
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'completed');
-                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                          >
-                                            Refill Complete
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'rejected');
-                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                          >
-                                            Refill Reject
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'error');
-                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                          >
-                                            Refill Error
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
+                                  {order.refillRequest && (order.refillRequest.status === 'error' || order.refillRequest.status === 'failed') && (
+                                    <button
+                                      onClick={() => handleResendRefillToProvider(order)}
+                                      className="btn btn-primary p-2"
+                                      title="Resend Refill Request to Provider"
+                                      disabled={processing}
+                                    >
+                                      <FaRedo className="h-3 w-3" />
+                                    </button>
                                   )}
                                 </>
                               ) : (
@@ -1194,7 +1173,7 @@ const RefillOrdersPage = () => {
                                     className="btn btn-primary p-2"
                                     title="Create Refill"
                                   >
-                                    <FaRedo className="h-3 w-3" />
+                                    <FaSync className="h-3 w-3" />
                                   </button>
                                   <button
                                     onClick={() => handleViewRefillRequestDetails(order)}
@@ -1216,14 +1195,14 @@ const RefillOrdersPage = () => {
                                           }
                                         }}
                                       >
-                                        <FaEllipsisV className="h-3 w-3" />
+                                        <FaEllipsisH className="h-3 w-3" />
                                       </button>
                                       <div
                                         id={`status-menu-${order.refillRequest.id}`}
-                                        className="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700"
+                                        className="hidden absolute right-0 top-8 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-50 border border-gray-200 dark:border-gray-700"
                                       >
                                         <div className="py-1">
-                                          <div className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
+                                          <div className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-gray-700 text-center">
                                             Update Refill Status
                                           </div>
                                           <button
@@ -1231,8 +1210,9 @@ const RefillOrdersPage = () => {
                                               handleUpdateRefillStatus(String(order.refillRequest?.id), 'refilling');
                                               document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
                                             }}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                                           >
+                                            <FaSync className="h-3 w-3" />
                                             Refilling
                                           </button>
                                           <button
@@ -1240,27 +1220,20 @@ const RefillOrdersPage = () => {
                                               handleUpdateRefillStatus(String(order.refillRequest?.id), 'completed');
                                               document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
                                             }}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                                           >
-                                            Refill Complete
+                                            <FaCheckCircle className="h-3 w-3" />
+                                            Complete
                                           </button>
                                           <button
                                             onClick={() => {
                                               handleUpdateRefillStatus(String(order.refillRequest?.id), 'rejected');
                                               document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
                                             }}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                                           >
-                                            Refill Reject
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              handleUpdateRefillStatus(String(order.refillRequest?.id), 'error');
-                                              document.getElementById(`status-menu-${order.refillRequest?.id}`)?.classList.add('hidden');
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                          >
-                                            Refill Error
+                                            <FaTimesCircle className="h-3 w-3" />
+                                            Reject
                                           </button>
                                         </div>
                                       </div>
@@ -1287,15 +1260,11 @@ const RefillOrdersPage = () => {
                             <div className="font-mono text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded">
                               {safeFormatOrderId(order.id)}
                             </div>
-                            <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full">
-                              {getStatusIcon(order.status)}
-                              <span className="text-xs font-medium capitalize text-gray-900 dark:text-gray-100">{order.status}</span>
-                            </div>
                             {order.refillRequest && (
                               <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full">
                                 {getRefillRequestStatusIcon(order.refillRequest.status)}
                                 <span className="text-xs font-medium capitalize text-gray-900 dark:text-gray-100">
-                                  {order.refillRequest.status}
+                                  {formatRefillRequestStatus(order.refillRequest.status)}
                                 </span>
                               </div>
                             )}
@@ -1310,76 +1279,15 @@ const RefillOrdersPage = () => {
                                 >
                                   <FaEye className="h-3 w-3" />
                                 </button>
-                                <button
-                                  onClick={() => handleResendRefillToProvider(order)}
-                                  className="btn btn-primary p-2"
-                                  title="Resend Refill Request to Provider"
-                                  disabled={processing}
-                                >
-                                  <FaRedo className="h-3 w-3" />
-                                </button>
-                                {order.refillRequest && (
-                                  <div className="relative inline-block">
-                                    <button
-                                      className="btn btn-secondary p-2"
-                                      title="Update Refill Status"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const menu = document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`);
-                                        if (menu) {
-                                          menu.classList.toggle('hidden');
-                                        }
-                                      }}
-                                    >
-                                      <FaEllipsisV className="h-3 w-3" />
-                                    </button>
-                                    <div
-                                      id={`status-menu-mobile-${order.refillRequest.id}`}
-                                      className="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700"
-                                    >
-                                      <div className="py-1">
-                                        <div className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
-                                          Update Refill Status
-                                        </div>
-                                        <button
-                                          onClick={() => {
-                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'refilling');
-                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
-                                          }}
-                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                        >
-                                          Refilling
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'completed');
-                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
-                                          }}
-                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                        >
-                                          Refill Complete
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'rejected');
-                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
-                                          }}
-                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                        >
-                                          Refill Reject
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'error');
-                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
-                                          }}
-                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                        >
-                                          Refill Error
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
+                                {order.refillRequest && (order.refillRequest.status === 'error' || order.refillRequest.status === 'failed') && (
+                                  <button
+                                    onClick={() => handleResendRefillToProvider(order)}
+                                    className="btn btn-primary p-2"
+                                    title="Resend Refill Request to Provider"
+                                    disabled={processing}
+                                  >
+                                    <FaRedo className="h-3 w-3" />
+                                  </button>
                                 )}
                               </>
                             ) : (
@@ -1411,14 +1319,14 @@ const RefillOrdersPage = () => {
                                         }
                                       }}
                                     >
-                                      <FaEllipsisV className="h-3 w-3" />
+                                      <FaEllipsisH className="h-3 w-3" />
                                     </button>
                                     <div
                                       id={`status-menu-mobile-${order.refillRequest.id}`}
-                                      className="hidden absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg z-50 border border-gray-200 dark:border-gray-700"
+                                      className="hidden absolute right-0 top-8 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-50 border border-gray-200 dark:border-gray-700"
                                     >
                                       <div className="py-1">
-                                        <div className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-gray-700">
+                                        <div className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b dark:border-gray-700 text-center">
                                           Update Refill Status
                                         </div>
                                         <button
@@ -1426,8 +1334,9 @@ const RefillOrdersPage = () => {
                                             handleUpdateRefillStatus(String(order.refillRequest?.id), 'refilling');
                                             document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
                                           }}
-                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                                         >
+                                          <FaSync className="h-3 w-3" />
                                           Refilling
                                         </button>
                                         <button
@@ -1435,8 +1344,9 @@ const RefillOrdersPage = () => {
                                             handleUpdateRefillStatus(String(order.refillRequest?.id), 'completed');
                                             document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
                                           }}
-                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                                         >
+                                          <FaCheckCircle className="h-3 w-3" />
                                           Refill Complete
                                         </button>
                                         <button
@@ -1444,18 +1354,10 @@ const RefillOrdersPage = () => {
                                             handleUpdateRefillStatus(String(order.refillRequest?.id), 'rejected');
                                             document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
                                           }}
-                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                          className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                                         >
-                                          Refill Reject
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            handleUpdateRefillStatus(String(order.refillRequest?.id), 'error');
-                                            document.getElementById(`status-menu-mobile-${order.refillRequest?.id}`)?.classList.add('hidden');
-                                          }}
-                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                        >
-                                          Refill Error
+                                          <FaTimesCircle className="h-3 w-3" />
+                                          Reject
                                         </button>
                                       </div>
                                     </div>
@@ -1475,11 +1377,16 @@ const RefillOrdersPage = () => {
                               order.user?.name ||
                               'Unknown'}
                           </div>
-                          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                            {order.user?.email || 'No email'}
-                          </div>
                         </div>
                         <div className="mb-4">
+                          <div
+                            className="font-mono text-xs mb-1"
+                            style={{ color: 'var(--text-muted)' }}
+                          >
+                            {order.service?.id
+                              ? safeFormatOrderId(order.service.id)
+                              : 'null'}
+                          </div>
                           <div
                             className="font-medium text-sm mb-1"
                             style={{ color: 'var(--text-primary)' }}
@@ -1538,6 +1445,60 @@ const RefillOrdersPage = () => {
                               className="text-xs font-medium mb-1"
                               style={{ color: 'var(--text-muted)' }}
                             >
+                              Request Date
+                            </div>
+                            {order.refillRequest?.createdAt ? (() => {
+                              try {
+                                let dateStr: any = order.refillRequest.createdAt;
+                                
+                                if (typeof dateStr === 'object' && dateStr !== null) {
+                                  if (dateStr instanceof Date) {
+                                    dateStr = dateStr.toISOString();
+                                  } else if (typeof (dateStr as any).toISOString === 'function') {
+                                    dateStr = (dateStr as any).toISOString();
+                                  } else {
+                                    console.error('Invalid date object:', dateStr);
+                                    return <div className="text-xs text-gray-400">Invalid date</div>;
+                                  }
+                                }
+                                
+                                if (typeof dateStr !== 'string') {
+                                  console.error('Date value is not a string:', dateStr, typeof dateStr);
+                                  return <div className="text-xs text-gray-400">Invalid date</div>;
+                                }
+                                
+                                const date = new Date(dateStr);
+                                
+                                if (isNaN(date.getTime())) {
+                                  console.error('Invalid date value:', dateStr, typeof dateStr);
+                                  return <div className="text-xs text-gray-400">Invalid date</div>;
+                                }
+                                
+                                return (
+                                  <>
+                                    <div className="text-xs text-gray-900 dark:text-gray-300">
+                                      {date.toLocaleDateString()}
+                                    </div>
+                                    <div className="text-xs text-gray-900 dark:text-gray-300">
+                                      {date.toLocaleTimeString()}
+                                    </div>
+                                  </>
+                                );
+                              } catch (error) {
+                                console.error('Error parsing date:', error, order.refillRequest.createdAt);
+                                return <div className="text-xs text-gray-400">Invalid date</div>;
+                              }
+                            })() : (
+                              <div className="text-xs text-gray-400">-</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <div
+                              className="text-xs font-medium mb-1"
+                              style={{ color: 'var(--text-muted)' }}
+                            >
                               User Balance
                             </div>
                             <div className="font-semibold text-sm text-green-600 dark:text-green-400">
@@ -1559,9 +1520,6 @@ const RefillOrdersPage = () => {
                             >
                               {order.qty.toString()}
                             </div>
-                            <div className="text-xs text-green-600 dark:text-green-400">
-                              {(order.qty - order.remains).toString()} delivered
-                            </div>
                           </div>
                           <div>
                             <div
@@ -1578,39 +1536,12 @@ const RefillOrdersPage = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="mb-4">
-                          <div className="flex justify-between items-center mb-2">
-                            <span
-                              className="text-xs font-medium"
-                              style={{ color: 'var(--text-muted)' }}
-                            >
-                              Progress
-                            </span>
-                            <span
-                              className="text-xs font-medium"
-                              style={{ color: 'var(--text-primary)' }}
-                            >
-                              {calculateProgress(order.qty, order.remains)}%
-                            </span>
-                          </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div
-                              className="bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)] h-2 rounded-full transition-all duration-300"
-                              style={{
-                                width: `${calculateProgress(order.qty, order.remains)}%`,
-                              }}
-                            />
-                          </div>
-                          <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                            {order.remains} remaining
-                          </div>
-                        </div>
                         <div className="flex justify-center">
                           <button
                             onClick={() => handleOpenRefillDialog(order)}
                             className="btn btn-primary flex items-center gap-2"
                           >
-                            <FaRedo className="h-4 w-4" />
+                            <FaSync className="h-4 w-4" />
                             Create Refill
                           </button>
                         </div>
@@ -1856,7 +1787,7 @@ const RefillOrdersPage = () => {
                   </>
                 ) : (
                   <>
-                    <FaRedo className="h-4 w-4" />
+                    <FaSync className="h-4 w-4" />
                     Create Refill
                   </>
                 )}
@@ -1884,7 +1815,7 @@ const RefillOrdersPage = () => {
                   <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full w-fit mt-1">
                     {getRefillRequestStatusIcon(viewDialog.order.refillRequest.status)}
                     <span className="text-xs font-medium capitalize text-gray-900 dark:text-gray-100">
-                      {viewDialog.order.refillRequest.status}
+                      {formatRefillRequestStatus(viewDialog.order.refillRequest.status)}
                     </span>
                   </div>
                 </div>
@@ -1924,12 +1855,6 @@ const RefillOrdersPage = () => {
                       {safeFormatOrderId(viewDialog.order.id)}
                     </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Order Status</label>
-                    <div className="text-sm text-gray-900 dark:text-gray-100 mt-1 capitalize">
-                      {viewDialog.order.status || 'Unknown'}
-                    </div>
-                  </div>
                 </div>
                 <div className="mb-4">
                   <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Service</label>
@@ -1951,11 +1876,6 @@ const RefillOrdersPage = () => {
                     <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
                       {(viewDialog.order.qty || 0).toString()}
                     </div>
-                    {viewDialog.order.remains !== undefined && (
-                      <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                        {(viewDialog.order.qty - viewDialog.order.remains).toString()} delivered
-                      </div>
-                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Amount</label>
@@ -1965,14 +1885,6 @@ const RefillOrdersPage = () => {
                     <div className="text-xs text-gray-500 dark:text-gray-400">{viewDialog.order.currency || 'USD'}</div>
                   </div>
                 </div>
-                {viewDialog.order.remains !== undefined && (
-                  <div className="mb-4">
-                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Remaining</label>
-                    <div className="text-sm text-orange-600 dark:text-orange-400 mt-1">
-                      {formatNumber(viewDialog.order.remains)}
-                    </div>
-                  </div>
-                )}
                 <div>
                   <label className="text-sm font-medium text-gray-600 dark:text-gray-300">Order Link</label>
                   <div className="text-sm mt-1">

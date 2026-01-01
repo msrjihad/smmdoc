@@ -11,6 +11,10 @@ function convertBigIntToNumber(obj: any): any {
     return Number(obj);
   }
   
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
+  
   if (Array.isArray(obj)) {
     return obj.map(convertBigIntToNumber);
   }
@@ -19,7 +23,12 @@ function convertBigIntToNumber(obj: any): any {
     const converted: any = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        converted[key] = convertBigIntToNumber(obj[key]);
+        const value = obj[key];
+        if (value instanceof Date) {
+          converted[key] = value.toISOString();
+        } else {
+          converted[key] = convertBigIntToNumber(value);
+        }
       }
     }
     return converted;
@@ -96,6 +105,7 @@ export async function GET(req: NextRequest) {
                 status: true,
                 createdAt: true,
                 serviceId: true,
+                categoryId: true,
                 providerOrderId: true,
               }
             });
@@ -118,6 +128,22 @@ export async function GET(req: NextRequest) {
               } catch (error) {
                 console.warn(`Service not found for order ${order.id}`);
                 (order as any).service = null;
+              }
+            }
+
+            if (order && order.categoryId) {
+              try {
+                const category = await db.categories.findUnique({
+                  where: { id: order.categoryId },
+                  select: {
+                    id: true,
+                    category_name: true,
+                  }
+                });
+                (order as any).category = category;
+              } catch (error) {
+                console.warn(`Category not found for order ${order.id}`);
+                (order as any).category = null;
               }
             }
 
@@ -186,10 +212,55 @@ export async function GET(req: NextRequest) {
     const totalPages = Math.ceil(totalRequests / limit);
 
     const serializedData = convertBigIntToNumber(uniqueRefillRequests);
+    
+    const finalData = serializedData
+      .filter((request: any) => request != null)
+      .map((request: any) => {
+        if (!request) return request;
+        
+        try {
+          if (request.createdAt !== null && request.createdAt !== undefined) {
+            if (request.createdAt instanceof Date) {
+              request.createdAt = request.createdAt.toISOString();
+            } else if (typeof request.createdAt === 'string') {
+              request.createdAt = request.createdAt;
+            } else {
+              try {
+                const date = new Date(request.createdAt);
+                if (!isNaN(date.getTime())) {
+                  request.createdAt = date.toISOString();
+                }
+              } catch (e) {
+                console.warn(`Could not convert createdAt for refill request ${request?.id}`);
+              }
+            }
+          }
+          if (request.updatedAt !== null && request.updatedAt !== undefined) {
+            if (request.updatedAt instanceof Date) {
+              request.updatedAt = request.updatedAt.toISOString();
+            } else if (typeof request.updatedAt === 'string') {
+              request.updatedAt = request.updatedAt;
+            } else {
+              try {
+                const date = new Date(request.updatedAt);
+                if (!isNaN(date.getTime())) {
+                  request.updatedAt = date.toISOString();
+                }
+              } catch (e) {
+                console.warn(`Could not convert updatedAt for refill request ${request?.id}`);
+              }
+            }
+          }
+        } catch (error) {
+          console.warn(`Error serializing dates for refill request ${request?.id}:`, error);
+        }
+        return request;
+      })
+      .filter((request: any) => request != null);
 
     return NextResponse.json({
       success: true,
-      data: serializedData,
+      data: finalData,
       pagination: {
         total: totalRequests,
         page,

@@ -4,6 +4,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { convertFromUSD, fetchCurrencyData } from '@/lib/currency-utils';
 import { ProviderOrderForwarder } from '@/lib/utils/provider-order-forwarder';
 
+function convertBigIntToNumber(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  
+  if (typeof obj === 'bigint') {
+    return Number(obj);
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(convertBigIntToNumber);
+  }
+  
+  if (typeof obj === 'object') {
+    const converted: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        converted[key] = convertBigIntToNumber(obj[key]);
+      }
+    }
+    return converted;
+  }
+  
+  return obj;
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -525,11 +551,14 @@ export async function GET(
     
     const { currencies } = await fetchCurrencyData();
     
-    const refillRate = (order as any).service?.rate || 0;
-    const fullRefillUsd = (refillRate * Number(order.qty)) / 1000;
-    const remainingRefillUsd = (refillRate * Number(order.remains)) / 1000;
+    const refillRate = Number((order as any).service?.rate || 0);
+    const orderQty = Number(order.qty);
+    const orderRemains = Number(order.remains);
+    const fullRefillUsd = (refillRate * orderQty) / 1000;
+    const remainingRefillUsd = (refillRate * orderRemains) / 1000;
     
     const userCurrency = order.user.currency || 'USD';
+    const userBalance = Number(order.user.balance);
     const fullRefillInUserCurrency = userCurrency === 'USD' || userCurrency === 'USDT' 
       ? fullRefillUsd 
       : convertFromUSD(fullRefillUsd, userCurrency, currencies);
@@ -547,41 +576,43 @@ export async function GET(
       order: {
         id: order.id,
         status: order.status,
-        totalQuantity: Number(order.qty),
-        remainingQuantity: Number(order.remains),
-        deliveredQuantity: Number(order.qty) - Number(order.remains)
+        totalQuantity: orderQty,
+        remainingQuantity: orderRemains,
+        deliveredQuantity: orderQty - orderRemains
       },
       service: {
         id: (order as any).service?.id,
         name: (order as any).service?.name,
-        rate: (order as any).service?.rate,
+        rate: refillRate,
         status: (order as any).service?.status,
-        minOrder: (order as any).service?.min_order,
-        maxOrder: (order as any).service?.max_order
+        minOrder: Number((order as any).service?.min_order || 0),
+        maxOrder: Number((order as any).service?.max_order || 0)
       },
       user: {
-        balance: order.user.balance,
+        balance: userBalance,
         currency: order.user.currency
       },
       refillOptions: {
         full: {
-          quantity: Number(order.qty),
+          quantity: orderQty,
           costUsd: fullRefillUsd,
           cost: fullRefillInUserCurrency,
-          affordable: order.user.balance >= fullRefillInUserCurrency
+          affordable: userBalance >= fullRefillInUserCurrency
         },
         remaining: {
-          quantity: Number(order.remains),
+          quantity: orderRemains,
           costUsd: remainingRefillUsd,
           cost: remainingRefillInUserCurrency,
-          affordable: order.user.balance >= remainingRefillInUserCurrency
+          affordable: userBalance >= remainingRefillInUserCurrency
         }
       }
     };
     
+    const serializedData = convertBigIntToNumber(refillInfo);
+    
     return NextResponse.json({
       success: true,
-      data: refillInfo,
+      data: serializedData,
       error: null
     });
     

@@ -390,7 +390,7 @@ const OrdersTableContent: React.FC<OrdersTableContentProps> = ({
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                     <div
-                      className="bg-gradient-to-r from-blue-500 to-purple-600 h-1.5 rounded-full transition-all duration-300"
+                      className="bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)] h-1.5 rounded-full transition-all duration-300"
                       style={{
                         width: `${
                           order.qty && order.remains !== undefined && order.remains !== null
