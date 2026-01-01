@@ -121,14 +121,11 @@ export default function TicketsHistory() {
   const formatDate = (dateString: string): string => {
     if (!dateString) return '-';
     
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '-';
-
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    try {
+      return moment(dateString).format('DD/MM/YYYY');
+    } catch (error) {
+      return '-';
+    }
   };
 
   const formatTime = (dateString: string): string => {

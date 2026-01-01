@@ -3,6 +3,7 @@
 import {
     FaSearch
 } from 'react-icons/fa';
+import moment from 'moment';
 
 type Transaction = {
   id: number;
@@ -23,14 +24,14 @@ interface TransactionsListProps {
   transactions: Transaction[];
   page: number;
   limit: number;
-  formatDateTime?: (dateString: string | Date) => string;
+  formatTime?: (dateString: string | Date) => string;
 }
 
 export function TransactionsList({
   transactions,
   page,
   limit,
-  formatDateTime,
+  formatTime,
 }: TransactionsListProps) {
 
   const formatTransactionCurrency = (amount: number, transactionCurrency?: string) => {
@@ -121,17 +122,20 @@ export function TransactionsList({
                       'UddoktaPay'}
                   </span>
                 </td>
-                <td className="py-3 px-4">
+                <td className="py-3 px-4 whitespace-nowrap">
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {formatDateTime 
-                      ? formatDateTime(transaction.createdAt)
+                    {moment(transaction.createdAt).format('DD/MM/YYYY')}
+                  </span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatTime 
+                      ? formatTime(transaction.createdAt)
                       : new Intl.DateTimeFormat('en', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
                           hour12: false,
                           timeZone: 'Asia/Dhaka',
                         }).format(new Date(transaction.createdAt))}
-                  </span>
+                  </div>
                 </td>
                 <td className="py-3 px-4">
                   <StatusBadge status={transaction.status} />

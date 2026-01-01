@@ -5,6 +5,7 @@ import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useEffect, useState, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import moment from 'moment';
 import {
     FaCheckCircle,
     FaClock,
@@ -133,7 +134,7 @@ export default function WithdrawalsPage() {
     loadTimeFormat();
   }, [userDetails]);
 
-  const formatDateTime = (dateString: string | Date): string => {
+  const formatTime = (dateString: string | Date): string => {
     if (!dateString) return 'null';
     
     let date: Date;
@@ -147,26 +148,18 @@ export default function WithdrawalsPage() {
     
     if (isNaN(date.getTime())) return 'null';
 
-    const dateStr = date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-
     if (timeFormat === '12') {
-      const timeStr = date.toLocaleTimeString('en-US', {
+      return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
       });
-      return `${dateStr} ${timeStr}`;
     } else {
-      const timeStr = date.toLocaleTimeString('en-US', {
+      return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
       });
-      return `${dateStr} ${timeStr}`;
     }
   };
 
@@ -589,7 +582,7 @@ export default function WithdrawalsPage() {
                       page={page}
                       limit={limit}
                       onViewCancelReason={handleViewCancelReason}
-                      formatDateTime={formatDateTime}
+                      formatTime={formatTime}
                     />
                   )}
                   {pagination.totalPages > 1 && (

@@ -4,6 +4,7 @@ import {
     FaSearch,
     FaEye
 } from 'react-icons/fa';
+import moment from 'moment';
 
 type Withdrawal = {
   id: number;
@@ -24,7 +25,7 @@ interface WithdrawalsListProps {
   page: number;
   limit: number;
   onViewCancelReason?: (reason: string) => void;
-  formatDateTime?: (dateString: string | Date) => string;
+  formatTime?: (dateString: string | Date) => string;
 }
 
 export function WithdrawalsList({
@@ -32,7 +33,7 @@ export function WithdrawalsList({
   page,
   limit,
   onViewCancelReason,
-  formatDateTime,
+  formatTime,
 }: WithdrawalsListProps) {
 
   const formatAmount = (amount: number) => {
@@ -115,16 +116,19 @@ export function WithdrawalsList({
                     {withdrawal.payment_method || withdrawal.method || 'N/A'}
                   </span>
                 </td>
-                <td className="py-3 px-4">
+                <td className="py-3 px-4 whitespace-nowrap">
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {formatDateTime 
-                      ? formatDateTime(withdrawal.createdAt)
+                    {moment(withdrawal.createdAt).format('DD/MM/YYYY')}
+                  </span>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatTime 
+                      ? formatTime(withdrawal.createdAt)
                       : new Intl.DateTimeFormat('en', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
                           hour12: false,
                         }).format(new Date(withdrawal.createdAt))}
-                  </span>
+                  </div>
                 </td>
                 <td className="py-3 px-4">
                   <StatusBadge status={withdrawal.status} />
