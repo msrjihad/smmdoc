@@ -167,7 +167,6 @@ export async function POST(
       );
     }
     
-    // Find existing refill request for this order
     const existingRefillRequest = await db.refillRequests.findFirst({
       where: {
         orderId: originalOrder.id
@@ -177,7 +176,6 @@ export async function POST(
       }
     });
     
-    // Update or create refill request with refill data
     const refillData = {
       startCount: refillStartCount,
       quantity: refillQuantity
@@ -185,7 +183,6 @@ export async function POST(
     
     let refillRequest;
     if (existingRefillRequest) {
-      // Update existing refill request
       refillRequest = await db.refillRequests.update({
         where: { id: existingRefillRequest.id },
         data: {
@@ -197,7 +194,6 @@ export async function POST(
         }
       });
     } else {
-      // Create new refill request
       refillRequest = await db.refillRequests.create({
         data: {
           orderId: originalOrder.id,

@@ -73,47 +73,108 @@ export async function POST(req: NextRequest) {
           (provider as any).http_method || (provider as any).httpMethod || 'POST'
         );
 
-        const statusRequest = apiBuilder.buildOrderStatusRequest(String(order.providerOrderId));
-
-        const response = await axios({
-          method: statusRequest.method,
-          url: statusRequest.url,
-          data: statusRequest.data,
-          headers: statusRequest.headers,
-          timeout: ((provider as any).timeout_seconds || 30) * 1000
-        });
-
-        const responseData = response.data;
-
-        if (!responseData) {
-          throw new Error('Empty response from provider');
-        }
-
         const responseParser = new ApiResponseParser(apiSpec);
-        const parsedStatus = responseParser.parseOrderStatusResponse(responseData);
-
-        if (parsedStatus.status) {
-          const mappedStatus = mapProviderStatus(parsedStatus.status);
-          
-          await db.newOrders.update({
-            where: { id: order.id },
-            data: {
-              providerStatus: mappedStatus,
-              status: mappedStatus,
-              ...(parsedStatus.remains !== undefined && parsedStatus.remains !== null && {
-                remains: parsedStatus.remains
-              }),
-              ...(parsedStatus.startCount !== undefined && parsedStatus.startCount !== null && {
-                startCount: parsedStatus.startCount
-              })
-            }
-          });
+        
+        let providerRefillId = '';
+        try {
+          if (refillRequest.adminNotes) {
+            const adminNotes = JSON.parse(refillRequest.adminNotes);
+            providerRefillId = adminNotes.providerRefillId || '';
+          }
+        } catch (e) {
         }
 
-        if (parsedStatus.status) {
-          const status = parsedStatus.status.toLowerCase();
+        if (providerRefillId) {
+          const refillStatusRequest = apiBuilder.buildRefillStatusRequest(providerRefillId);
+
+          const response = await axios({
+            method: refillStatusRequest.method,
+            url: refillStatusRequest.url,
+            data: refillStatusRequest.data,
+            headers: refillStatusRequest.headers,
+            timeout: ((provider as any).timeout_seconds || 30) * 1000
+          });
+
+          const responseData = response.data;
+
+          if (!responseData) {
+            throw new Error('Empty response from provider');
+          }
+
+          const parsedRefillStatus = responseParser.parseRefillStatusResponse(responseData);
+          const providerStatus = parsedRefillStatus.status || responseData.status || 'pending';
+
+          const refillStatusMap: Record<string, string> = {
+            'success': 'completed',
+            'completed': 'completed',
+            'complete': 'completed',
+            'refilling': 'refilling',
+            'in_progress': 'refilling',
+            'processing': 'refilling',
+            'pending': 'pending',
+            'rejected': 'rejected',
+            'reject': 'rejected',
+            'failed': 'error',
+            'error': 'error'
+          };
           
-          if (status === 'completed' && refillRequest.status === 'refilling') {
+          const mappedRefillStatus = refillStatusMap[providerStatus.toLowerCase()] || refillRequest.status;
+          
+          if (mappedRefillStatus !== refillRequest.status) {
+            await db.refillRequests.update({
+              where: { id: refillRequest.id },
+              data: {
+                status: mappedRefillStatus,
+                updatedAt: new Date()
+              }
+            });
+          }
+        } else {
+          const statusRequest = apiBuilder.buildOrderStatusRequest(String(order.providerOrderId));
+
+          const response = await axios({
+            method: statusRequest.method,
+            url: statusRequest.url,
+            data: statusRequest.data,
+            headers: statusRequest.headers,
+            timeout: ((provider as any).timeout_seconds || 30) * 1000
+          });
+
+          const responseData = response.data;
+
+          if (!responseData) {
+            throw new Error('Empty response from provider');
+          }
+
+          const parsedStatus = responseParser.parseOrderStatusResponse(responseData);
+
+          if (parsedStatus.status) {
+            const mappedStatus = mapProviderStatus(parsedStatus.status);
+            
+            await db.newOrders.update({
+              where: { id: order.id },
+              data: {
+                providerStatus: mappedStatus,
+                status: mappedStatus,
+                ...(parsedStatus.remains !== undefined && parsedStatus.remains !== null && {
+                  remains: parsedStatus.remains
+                }),
+                ...(parsedStatus.startCount !== undefined && parsedStatus.startCount !== null && {
+                  startCount: parsedStatus.startCount
+                })
+              }
+            });
+          }
+
+          const orderStatus = parsedStatus.status?.toLowerCase() || '';
+          if (orderStatus === 'completed' && refillRequest.status === 'refilling') {
+            await db.refillRequests.update({
+              where: { id: refillRequest.id },
+              data: {
+                status: 'completed',
+                updatedAt: new Date()
+              }
+            });
           }
         }
 

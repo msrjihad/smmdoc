@@ -302,13 +302,47 @@ export async function POST(req: NextRequest) {
                   providerResult = {};
                 }
                 
-                if (providerResult.error) {
+                const responseParser = new ApiResponseParser(apiSpec);
+                const refillMapping = apiSpec.responseMapping?.refill;
+                let providerRefillId = '';
+                
+                if (refillMapping?.refillId) {
+                  const path = refillMapping.refillId.split('.');
+                  providerRefillId = path.reduce((obj: any, key: string) => obj?.[key], providerResult) || '';
+                } else {
+                  providerRefillId = providerResult.refill || providerResult.refill_id || providerResult.refillId || providerResult.refillOrderId || '';
+                }
+                
+                let newStatus = refillRequest.status;
+                if (providerResult.error && providerResult.error.length > 0) {
+                  newStatus = 'error';
                   providerRefillError = `Provider error: ${providerResult.error}`;
                   console.error('Provider refill error:', providerRefillError);
-                } else {
+                } else if (!providerRefillId) {
+                  newStatus = 'refilling';
                   providerRefillSubmitted = true;
-                  console.log('Refill request submitted to provider successfully:', providerResult);
+                } else {
+                  newStatus = 'refilling';
+                  providerRefillSubmitted = true;
                 }
+                
+                const existingNotes = refillRequest.adminNotes ? JSON.parse(refillRequest.adminNotes) : {};
+                const updatedNotes = {
+                  ...existingNotes,
+                  providerRefillId: providerRefillId,
+                  providerResponse: providerResult
+                };
+                
+                await db.refillRequests.update({
+                  where: { id: refillRequest.id },
+                  data: {
+                    status: newStatus,
+                    adminNotes: JSON.stringify(updatedNotes),
+                    updatedAt: new Date()
+                  }
+                });
+                
+                console.log('Refill request submitted to provider successfully:', providerResult);
               } else {
                 const errorText = await providerResponse.text();
                 let errorMessage = `Provider API error: ${providerResponse.status} ${providerResponse.statusText}`;
@@ -321,6 +355,15 @@ export async function POST(req: NextRequest) {
                   }
                 }
                 providerRefillError = errorMessage;
+                
+                await db.refillRequests.update({
+                  where: { id: refillRequest.id },
+                  data: {
+                    status: 'error',
+                    updatedAt: new Date()
+                  }
+                });
+                
                 console.error('Provider refill API error:', providerRefillError);
               }
             } catch (fetchError) {
@@ -329,6 +372,15 @@ export async function POST(req: NextRequest) {
               } else {
                 providerRefillError = fetchError instanceof Error ? fetchError.message : 'Unknown error submitting to provider';
               }
+              
+              await db.refillRequests.update({
+                where: { id: refillRequest.id },
+                data: {
+                  status: 'error',
+                  updatedAt: new Date()
+                }
+              });
+              
               console.error('Error submitting refill request to provider:', fetchError);
             }
           }
@@ -339,7 +391,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Serialize the refill request to avoid BigInt/Date serialization issues
     const serializedRefillRequest = {
       id: Number(refillRequest.id),
       orderId: Number(refillRequest.orderId),

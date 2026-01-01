@@ -656,23 +656,18 @@ export default function OrdersList() {
         return;
       }
 
-      // Check if the request was successful (HTTP 200-299 and success: true)
       if (response.ok && result.success) {
-        // Refill request was created successfully
         if (result.data?.providerRefillError) {
-          // Saved but provider submission failed
           setToastMessage({
             message: result.message || `Refill request saved, but provider submission failed: ${result.data.providerRefillError}`,
             type: 'info'
           });
         } else if (result.data?.providerRefillSubmitted) {
-          // Successfully submitted to provider
           setToastMessage({
             message: result.message || 'Refill request submitted successfully and forwarded to provider',
             type: 'success'
           });
         } else {
-          // Successfully saved (no provider or provider not needed)
           setToastMessage({
             message: result.message || 'Refill request submitted successfully',
             type: 'success'
@@ -681,7 +676,6 @@ export default function OrdersList() {
         handleRefillClose();
         refetch();
       } else {
-        // Request failed - show error message
         const errorMessage = result?.error || result?.message || 'Failed to submit refill request';
         setToastMessage({
           message: errorMessage,
@@ -1150,8 +1144,11 @@ export default function OrdersList() {
                                   const hasCompletedRefillRequest = refillRequests.some((req: any) => 
                                     req.status === 'completed'
                                   );
+                                  const hasErrorRefillRequest = refillRequests.some((req: any) => 
+                                    req.status === 'error'
+                                  );
 
-                                  const canRefill = isRefillTimeValid && !hasPendingOrApprovedRefillRequest && !hasRejectedRefillRequest && !hasRefillingRefillRequest && !hasCompletedRefillRequest;
+                                  const canRefill = isRefillTimeValid && !hasPendingOrApprovedRefillRequest && !hasRejectedRefillRequest && !hasRefillingRefillRequest && !hasCompletedRefillRequest && !hasErrorRefillRequest;
 
                                   let buttonText = 'Refill';
                                   let buttonTitle = 'Refill Order';
@@ -1165,6 +1162,9 @@ export default function OrdersList() {
                                   } else if (hasCompletedRefillRequest) {
                                     buttonText = 'Refill';
                                     buttonTitle = 'Previous Refill Request is already completed';
+                                  } else if (hasErrorRefillRequest) {
+                                    buttonText = 'Pending Refill';
+                                    buttonTitle = 'Refill request is pending review';
                                   } else if (hasPendingOrApprovedRefillRequest) {
                                     buttonText = 'Refill Requested';
                                     buttonTitle = 'A refill request has already been submitted for this order';
@@ -1184,7 +1184,7 @@ export default function OrdersList() {
                                           });
                                         }
                                       }}
-                                      disabled={!canRefill}
+                                      disabled={!canRefill || hasErrorRefillRequest}
                                       className={`text-xs px-2 py-1 border rounded transition-colors ${
                                         canRefill
                                           ? 'text-green-600 hover:text-green-800 border-green-300 hover:bg-green-50 cursor-pointer'
@@ -1192,6 +1192,8 @@ export default function OrdersList() {
                                           ? 'text-red-600 border-red-300 bg-red-50/50 dark:bg-red-900/10 cursor-not-allowed opacity-60'
                                           : hasRefillingRefillRequest
                                           ? 'text-blue-600 border-blue-300 bg-blue-50/50 dark:bg-blue-900/10 cursor-not-allowed opacity-60'
+                                          : hasErrorRefillRequest
+                                          ? 'text-gray-400 border-gray-300 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60'
                                           : 'text-gray-400 border-gray-300 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60'
                                       }`}
                                       title={buttonTitle}

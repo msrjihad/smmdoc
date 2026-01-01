@@ -499,13 +499,43 @@ const RefillOrdersPage = () => {
         if (syncedCount > 0) {
           showToast(`Synced ${syncedCount} of ${totalProcessed} provider order(s)`, 'success');
         } else if (totalProcessed > 0) {
-          // All up to date, no need to show message
         } else {
-          // No provider orders to sync
         }
       } else {
         console.warn('Provider sync had issues:', syncResult.error);
         showToast('Some provider orders may not have synced', 'info');
+      }
+
+      showToast('Syncing refill request statuses from provider...', 'pending');
+
+      try {
+        const refillSyncResponse = await fetch('/api/admin/refill-requests/sync-provider', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        const refillSyncResult = await refillSyncResponse.json();
+        
+        if (refillSyncResult.success) {
+          const refillSynced = refillSyncResult.data?.synced || 0;
+          const refillFailed = refillSyncResult.data?.failed || 0;
+          const refillTotal = refillSyncResult.data?.total || 0;
+          
+          if (refillSynced > 0) {
+            showToast(`Synced ${refillSynced} refill request status(es) from provider`, 'success');
+          } else if (refillTotal > 0) {
+          }
+          
+          if (refillFailed > 0) {
+            console.warn(`Failed to sync ${refillFailed} refill request(s)`);
+          }
+        } else {
+          console.warn('Refill sync had issues:', refillSyncResult.error);
+        }
+      } catch (refillSyncError) {
+        console.error('Error syncing refill request statuses:', refillSyncError);
       }
 
       await new Promise(resolve => setTimeout(resolve, 1000));

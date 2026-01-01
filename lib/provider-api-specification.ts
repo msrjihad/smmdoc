@@ -237,6 +237,17 @@ export class ApiRequestBuilder {
     return this.buildRequest(endpoint, params);
   }
 
+  buildRefillStatusRequest(refillId: string): RequestConfig {
+    const endpoint = this.spec.refillEndpoint || this.baseUrl;
+    const params = {
+      [this.spec.apiKeyParam]: this.apiKey,
+      [this.spec.actionParam]: this.spec.refillStatusAction,
+      [this.spec.refillIdParam]: refillId
+    };
+
+    return this.buildRequest(endpoint, params);
+  }
+
   buildCancelRequest(orderIds: string[]): RequestConfig {
     const endpoint = this.spec.cancelEndpoint || this.baseUrl;
     const params = {
@@ -347,6 +358,19 @@ export class ApiResponseParser {
     return {
       balance: parseFloat(this.getNestedValue(response, mapping.balance)) || 0,
       currency: this.getNestedValue(response, mapping.currency)
+    };
+  }
+
+  parseRefillStatusResponse(response: any): { status: string } {
+    const mapping = this.spec.responseMapping?.refillStatus;
+    if (!mapping) {
+      return {
+        status: response.status || response.refill_status || 'pending'
+      };
+    }
+
+    return {
+      status: this.getNestedValue(response, mapping.status) || response.status || 'pending'
     };
   }
 
