@@ -109,9 +109,24 @@ const DashboardPage = () => {
 
   const userOrders = userStats?.recentOrders || [];
 
-  const balance = userStats?.balance || 0;
-  const totalSpend = userStats?.totalSpent || 0;
+  // Ensure we're getting the correct values from the API response
+  // Handle BigInt, Decimal, string, or number types
+  const balance = userStats?.balance != null ? Number(userStats.balance) : 0;
+  const totalSpend = userStats?.totalSpent != null ? Number(userStats.totalSpent) : 0;
   const totalOrders = userStats?.totalOrders || 0;
+
+  // Debug logging (remove in production if not needed)
+  useEffect(() => {
+    if (userStats && process.env.NODE_ENV === 'development') {
+      console.log('Dashboard Stats Debug:', {
+        rawBalance: userStats.balance,
+        rawTotalSpent: userStats.totalSpent,
+        convertedBalance: balance,
+        convertedTotalSpend: totalSpend,
+        fullUserStats: userStats
+      });
+    }
+  }, [userStats, balance, totalSpend]);
   const pendingOrders = userStats?.ordersByStatus?.pending || 0;
   const completedOrders = userStats?.ordersByStatus?.completed || 0;
   const processingOrders = userStats?.ordersByStatus?.processing || 0;

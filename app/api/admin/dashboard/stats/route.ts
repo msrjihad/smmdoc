@@ -164,7 +164,6 @@ export async function GET() {
       orders: typeof order._count.id === 'bigint' ? Number(order._count.id) : order._count.id
     }));
 
-    // Calculate total payments (sum of all successful transactions/deposits)
     const totalPaymentsResult = await db.addFunds.aggregate({
       where: {
         status: 'Success'
@@ -180,7 +179,6 @@ export async function GET() {
           : Number(totalPaymentsResult._sum.usdAmount))
       : 0;
 
-    // Calculate last 30 days revenue
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     thirtyDaysAgo.setHours(0, 0, 0, 0);

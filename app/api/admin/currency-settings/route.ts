@@ -184,7 +184,6 @@ export async function POST(request: Request) {
 
       const codesToDelete = existingCodes.filter(code => !newCodes.includes(code));
 
-      // Only USD is the core currency and cannot be deleted
       for (const codeToDelete of codesToDelete) {
         if (codeToDelete !== 'USD') {
           await db.currencies.delete({
@@ -196,14 +195,12 @@ export async function POST(request: Request) {
       }
 
       for (const currency of currencies) {
-        // Prevent editing USD (core currency)
         if (currency.code === 'USD') {
           const existingUSD = await db.currencies.findUnique({
             where: { code: 'USD' }
           });
           
           if (existingUSD) {
-            // Only allow updating enabled status for USD, not other fields
             await db.currencies.update({
               where: { code: 'USD' },
               data: {
@@ -211,7 +208,7 @@ export async function POST(request: Request) {
                 updatedAt: new Date()
               }
             });
-            continue; // Skip the upsert for USD
+            continue;
           }
         }
 

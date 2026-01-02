@@ -25,7 +25,6 @@ export function PriceDisplay({
     );
   }
 
-  // If currency matches originalCurrency, no conversion needed
   if (currency === originalCurrency) {
     const symbol = currentCurrencyData?.symbol || (originalCurrency === 'USD' ? '$' : '৳');
     return (
@@ -35,7 +34,6 @@ export function PriceDisplay({
     );
   }
 
-  // Convert from originalCurrency to selected currency
   const convertedAmount = convertCurrency(amount, originalCurrency, currency, availableCurrencies);
   const displaySymbol = currentCurrencyData?.symbol || '$';
 

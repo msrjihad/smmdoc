@@ -968,7 +968,6 @@ export default function AdminDashboardPage() {
   };
 
   const formatDashboardCurrency = useCallback((amount: number) => {
-    // Amounts from API are in USD, convert to selected currency
     const formatNumber = (num: number) => {
       return num.toLocaleString('en-US', {
         minimumFractionDigits: 2,
@@ -977,18 +976,14 @@ export default function AdminDashboardPage() {
     };
 
     if (!currentCurrencyData || !availableCurrencies || availableCurrencies.length === 0) {
-      // Fallback to USD if currency data not loaded
       return `$${formatNumber(amount)}`;
     }
 
-    // Convert from USD to selected currency
     let convertedAmount = amount;
     if (currency !== 'USD') {
-      // Multiply by the rate to convert from USD to target currency
       convertedAmount = amount * Number(currentCurrencyData.rate);
     }
 
-    // Get the symbol for the current currency
     const symbol = currentCurrencyData.symbol || '$';
     
     return `${symbol}${formatNumber(convertedAmount)}`;

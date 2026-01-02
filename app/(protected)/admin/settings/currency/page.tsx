@@ -144,7 +144,7 @@ const CurrencyItem = ({
 
   const handleSave = () => {
     if (currency.code === 'USD') {
-      return; // Prevent editing USD
+      return;
     }
     if (editValues.code.trim() && editValues.name.trim()) {
       onEdit(currency.id, editValues);
@@ -260,7 +260,7 @@ const CurrencyItem = ({
           </div>
           <div className="flex items-center justify-center gap-2 w-20">
             {currency.code === 'USD' ? (
-              <div className="w-3 h-3" /> // Spacer to maintain layout
+              <div className="w-3 h-3" />
             ) : (
               <button
                 onClick={() => setIsEditing(true)}

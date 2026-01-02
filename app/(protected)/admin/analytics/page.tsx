@@ -164,7 +164,6 @@ const CustomChart = ({ data, activeTab, maxValue }: {
     if (activeTab === 'orders') {
       return value.toLocaleString();
     }
-    // For currency values, convert from USD to selected currency
     if (!currentCurrencyData || !availableCurrencies || !currencySettings) {
       return `$${value.toFixed(0)}`;
     }
@@ -369,7 +368,6 @@ export default function AnalyticsPage() {
   const availableYears = [2024, 2023, 2022];
 
   const formatCurrency = useCallback((amount: number) => {
-    // This function is kept for backward compatibility but should use PriceDisplay component instead
     return `৳${amount.toFixed(2)}`;
   }, []);
 
