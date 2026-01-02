@@ -21,6 +21,7 @@ import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import { PriceDisplay } from '@/components/price-display';
 
 const ChangeRoleModal = dynamic(
   () => import('@/components/admin/users/role-modal'),
@@ -862,7 +863,11 @@ const ModeratorsPage = () => {
                           <td className="p-3">
                             <div className="text-left">
                               <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">
-                                {formatCurrency(moderator.balance || 0)}
+                                <PriceDisplay
+                                  amount={moderator.balance || 0}
+                                  originalCurrency="USD"
+                                  className="font-semibold text-sm text-gray-900 dark:text-gray-100"
+                                />
                               </div>
                             </div>
                           </td>

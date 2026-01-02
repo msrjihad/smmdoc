@@ -21,6 +21,7 @@ import { setPageTitle } from '@/lib/utils/set-page-title';
 import { formatID, formatNumber, formatPrice } from '@/lib/utils';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import { PriceDisplay } from '@/components/price-display';
 
 const cleanLinkDisplay = (link: string): string => {
   if (!link) return link;
@@ -1200,7 +1201,11 @@ const RefillOrdersPage = () => {
                                 className="font-semibold text-sm"
                                 style={{ color: 'var(--text-primary)' }}
                               >
-                                ${formatPrice(order.charge || order.price, 2)}
+                                <PriceDisplay
+                                  amount={order.charge || order.price || 0}
+                                  originalCurrency="USD"
+                                  className="font-semibold text-sm"
+                                />
                               </div>
                               <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
                                 {order.currency}
@@ -1561,7 +1566,11 @@ const RefillOrdersPage = () => {
                               Amount
                             </div>
                             <div className="font-semibold text-sm text-blue-600 dark:text-blue-400">
-                              ${formatPrice(order.charge || order.price, 2)}
+                              <PriceDisplay
+                                amount={order.charge || order.price || 0}
+                                originalCurrency="USD"
+                                className="font-semibold text-sm text-blue-600 dark:text-blue-400"
+                              />
                             </div>
                             <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
                               {order.currency}

@@ -14,6 +14,8 @@ import {
 import { userOrderApi } from '@/lib/services/user-order-api';
 import { ServiceTypeFields } from '@/components/service-type-fields';
 import { validateOrderByType, getServiceTypeConfig, ServiceTypeConfig } from '@/lib/service-types';
+import { PriceDisplay } from '@/components/price-display';
+import { convertCurrency, formatCurrencyAmount } from '@/lib/currency-utils';
 import axios from 'axios';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -204,7 +206,7 @@ const ServiceDetailsCard = ({
         <h3 className="text-lg font-bold leading-tight">{selected.name}</h3>
         <div className="text-sm opacity-90 mt-2">
           Max {toString(selected.max_order) || 'N/A'} ~ NO REFILL ~{' '}
-          {selected.avg_time || 'N/A'} ~ INSTANT - ${selected.rate || '0.00'}{' '}
+          {selected.avg_time || 'N/A'} ~ INSTANT - <PriceDisplay amount={selected.rate || 0} originalCurrency="USD" />{' '}
           per 1000
         </div>
       </div>
@@ -393,7 +395,7 @@ const ServiceDetailsCard = ({
           </div>
           <div className="text-center">
             <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
-              ${selected.rate || '0.00'}
+              <PriceDisplay amount={selected.rate || 0} originalCurrency="USD" />
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">Per 1000</div>
           </div>
@@ -505,7 +507,7 @@ function NewOrder() {
   const perQty = Number(selected?.perqty) || 1;
   const price = Number(selected?.rate) || 0;
 
-  const { currency, availableCurrencies, currentCurrencyData } = useCurrency();
+  const { currency, availableCurrencies, currentCurrencyData, currencySettings } = useCurrency();
 
   let totalPrice = 0;
   const baseUsdPrice = (price * qty) / 1000;
@@ -1242,7 +1244,7 @@ function NewOrder() {
                                       {service.name}
                                     </span>
                                     <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-                                      ${service.rate || '0.00'}
+                                      <PriceDisplay amount={service.rate || 0} originalCurrency="USD" />
                                     </span>
                                   </div>
                                 </div>
@@ -1315,11 +1317,22 @@ function NewOrder() {
                       <option value="" disabled>
                         {services.length === 0 ? 'No services available' : 'Select a service'}
                       </option>
-                      {services?.map((service: any) => (
-                        <option key={service.id} value={String(service.id)}>
-                          {service.name} - ${service.rate || '0.00'}
-                        </option>
-                      ))}
+                      {services?.map((service: any) => {
+                        const servicePrice = Number(service.rate) || 0;
+                        const formattedPrice = currentCurrencyData && currencySettings && availableCurrencies
+                          ? formatCurrencyAmount(
+                              convertCurrency(servicePrice, 'USD', currency, availableCurrencies),
+                              currency,
+                              availableCurrencies,
+                              currencySettings
+                            )
+                          : `$${servicePrice.toFixed(2)}`;
+                        return (
+                          <option key={service.id} value={String(service.id)}>
+                            {service.name} - {formattedPrice}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                   <div className="form-group">
@@ -1394,7 +1407,7 @@ function NewOrder() {
                   )}
                   <div className="form-group">
                     <label className="form-label" htmlFor="price">
-                      Charge (per 1000 = ${price.toFixed(2)})
+                      Charge (per 1000 = <PriceDisplay amount={price} originalCurrency="USD" />)
                     </label>
                     <input
                       type="text"
@@ -1403,7 +1416,14 @@ function NewOrder() {
                       disabled
                       className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       value={
-                        currency === 'USD'
+                        currentCurrencyData && currencySettings && availableCurrencies
+                          ? formatCurrencyAmount(
+                              convertCurrency(baseUsdPrice, 'USD', currency, availableCurrencies),
+                              currency,
+                              availableCurrencies,
+                              currencySettings
+                            )
+                          : currency === 'USD'
                           ? `$ ${totalPrice.toFixed(4)}`
                           : currency === 'BDT'
                           ? `৳ ${totalPrice.toFixed(2)}`

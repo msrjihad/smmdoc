@@ -21,6 +21,7 @@ import { setPageTitle } from '@/lib/utils/set-page-title';
 import { formatID, formatNumber, formatPrice } from '@/lib/utils';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import { PriceDisplay } from '@/components/price-display';
 
 const FormField = ({ children }: { children: React.ReactNode }) => (
   <div className="space-y-2">{children}</div>
@@ -1810,7 +1811,11 @@ const ChildPanelsPage = () => {
                                 Total Revenue
                               </label>
                               <div className="text-lg font-semibold text-green-600 dark:text-green-400 mt-1">
-                                ${formatPrice(viewDialog.panel.totalRevenue, 2)}
+                                <PriceDisplay
+                                  amount={viewDialog.panel.totalRevenue || 0}
+                                  originalCurrency="USD"
+                                  className="text-lg font-semibold text-green-600 dark:text-green-400"
+                                />
                               </div>
                             </div>
                             <div>

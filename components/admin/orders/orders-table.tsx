@@ -13,6 +13,7 @@ import { formatID, formatNumber, formatPrice, formatCount } from '@/lib/utils';
 import { useSelector } from 'react-redux';
 import { useEffect, useState } from 'react';
 import { getUserDetails } from '@/lib/actions/getUser';
+import { PriceDisplay } from '@/components/price-display';
 
 const cleanLinkDisplay = (link: string): string => {
   if (!link) return link;
@@ -306,16 +307,19 @@ const OrdersTableContent: React.FC<OrdersTableContentProps> = ({
                     className="font-semibold text-sm"
                     style={{ color: 'var(--text-primary)' }}
                   >
-                    $
-                    {order.charge
-                      ? formatPriceProp(order.charge, 2)
-                      : '0.00'}
+                    <PriceDisplay
+                      amount={order.charge || 0}
+                      originalCurrency="USD"
+                      className="font-semibold"
+                    />
                   </div>
                   <div className="text-xs text-green-600 dark:text-green-400">
-                    Profit: $
-                    {order.profit
-                      ? formatPriceProp(order.profit, 2)
-                      : '0.00'}
+                    Profit:{' '}
+                    <PriceDisplay
+                      amount={order.profit || 0}
+                      originalCurrency="USD"
+                      className="text-green-600 dark:text-green-400"
+                    />
                   </div>
                 </div>
               </td>

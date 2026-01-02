@@ -86,7 +86,7 @@ export default function ServiceViewModal({ service, setIsOpen, isOpen }: any) {
                   <span className="text-gray-700 dark:text-gray-300 font-medium">Price Per 1000</span>
                 </div>
                 <span className="text-gray-800 dark:text-gray-100 font-semibold">
-                  <PriceDisplay amount={service?.rate || 1.9688} originalCurrency={'USD'} />
+                  <PriceDisplay amount={service?.rate || 1.9688} originalCurrency="USD" />
                 </span>
               </div>
               <div className="flex items-center justify-between pb-2 border-b border-dotted border-gray-300 dark:border-gray-600">

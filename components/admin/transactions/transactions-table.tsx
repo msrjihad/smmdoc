@@ -141,7 +141,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
               <td className="p-3">
                 <PriceDisplay
                   amount={transaction.bdt_amount || transaction.amount}
-                  originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : 'BDT'}
+                  originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency || 'USD')}
                   className="font-semibold text-sm"
                 />
               </td>

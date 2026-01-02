@@ -19,6 +19,7 @@ import { setPageTitle } from '@/lib/utils/set-page-title';
 import { formatID, formatNumber, formatPrice } from '@/lib/utils';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import { PriceDisplay } from '@/components/price-display';
 
 const cleanLinkDisplay = (link: string): string => {
   if (!link) return link;
@@ -1119,7 +1120,11 @@ const CancelRequestsPage = () => {
                           </td>
                           <td className="p-3">
                             <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                              ${formatPrice(request.order?.charge || 0, 2)}
+                              <PriceDisplay
+                                amount={request.order?.charge || 0}
+                                originalCurrency="USD"
+                                className="text-sm font-semibold"
+                              />
                             </div>
                           </td>
                           <td className="p-3">
@@ -1305,7 +1310,11 @@ const CancelRequestsPage = () => {
                               className="font-semibold text-sm"
                               style={{ color: 'var(--text-primary)' }}
                             >
-                              ${formatPrice(request.order?.charge || 0, 2)}
+                              <PriceDisplay
+                                amount={request.order?.charge || 0}
+                                originalCurrency="USD"
+                                className="font-semibold text-sm"
+                              />
                             </div>
                           </div>
                           <div>
@@ -1584,11 +1593,11 @@ const CancelRequestsPage = () => {
                                   Amount
                                 </label>
                                 <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
-                                  $
-                                  {formatPrice(
-                                    viewDialog.request.order?.charge || 0,
-                                    2
-                                  )}
+                                  <PriceDisplay
+                                    amount={viewDialog.request.order?.charge || 0}
+                                    originalCurrency="USD"
+                                    className="text-sm text-gray-900 dark:text-gray-100"
+                                  />
                                 </div>
                               </div>
                             </div>

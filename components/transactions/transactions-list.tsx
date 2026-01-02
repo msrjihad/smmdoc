@@ -3,6 +3,7 @@
 import {
     FaSearch
 } from 'react-icons/fa';
+import { PriceDisplay } from '@/components/price-display';
 import moment from 'moment';
 
 type Transaction = {
@@ -33,15 +34,6 @@ export function TransactionsList({
   limit,
   formatTime,
 }: TransactionsListProps) {
-
-  const formatTransactionCurrency = (amount: number, transactionCurrency?: string) => {
-
-    if (transactionCurrency === 'USD' || transactionCurrency === 'USDT') {
-      return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    } else {
-      return `৳${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-  };
 
   if (!transactions.length) {
     return (
@@ -107,7 +99,10 @@ export function TransactionsList({
                 </td>
                 <td className="py-3 px-4">
                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {formatTransactionCurrency(transaction.amount, transaction.currency)}
+                    <PriceDisplay
+                      amount={transaction.amount}
+                      originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency || 'USD')}
+                    />
                   </span>
                 </td>
                 <td className="py-3 px-4">

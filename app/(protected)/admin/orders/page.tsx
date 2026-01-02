@@ -23,6 +23,7 @@ import { useCurrency } from '@/contexts/currency-context';
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { formatID, formatNumber, formatPrice } from '@/lib/utils';
+import { PriceDisplay } from '@/components/price-display';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/axios-instance';
 import { userOrderApi } from '@/lib/services/user-order-api';
@@ -1057,7 +1058,11 @@ const AdminOrdersPage = () => {
                   <div className="h-8 w-20 gradient-shimmer rounded" />
                 ) : (
                   <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    ${formatPrice(stats.totalRevenue, 2)}
+                    <PriceDisplay
+                      amount={stats.totalRevenue || 0}
+                      originalCurrency="USD"
+                      className="text-2xl font-bold text-purple-600 dark:text-purple-400"
+                    />
                   </p>
                 )}
               </div>

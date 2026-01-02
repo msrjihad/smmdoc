@@ -5,6 +5,7 @@ import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useGetUserOrdersQuery } from '@/lib/services/user-order-api';
 import { formatID, formatNumber, formatPrice, formatCount } from '@/lib/utils';
+import { PriceDisplay } from '@/components/price-display';
 import moment from 'moment';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -1107,27 +1108,10 @@ export default function OrdersList() {
                         </td>
                         <td className="py-3 px-4">
                           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {(() => {
-
-                              const usdPrice = order.usdPrice || 0;
-
-                              if (!currentCurrencyData) {
-                                return `$${formatPrice(usdPrice)}`;
-                              }
-
-                              let displayAmount = 0;
-
-                              if (currentCurrencyData.code === 'USD') {
-                                displayAmount = usdPrice;
-                              } else if (currentCurrencyData.code === 'BDT') {
-                                displayAmount = usdPrice * (order.user?.dollarRate || 121.52);
-                              } else {
-
-                                displayAmount = usdPrice * currentCurrencyData.rate;
-                              }
-
-                              return `${currentCurrencyData.symbol}${formatPrice(displayAmount)}`;
-                            })()}
+                            <PriceDisplay
+                              amount={order.usdPrice || 0}
+                              originalCurrency="USD"
+                            />
                           </span>
                         </td>
                         <td className="py-3 px-4">

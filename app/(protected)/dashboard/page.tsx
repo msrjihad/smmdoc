@@ -7,6 +7,7 @@ import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useGetUserStatsQuery } from '@/lib/services/dashboard-api';
 import { formatID, formatNumber, formatPrice } from '@/lib/utils';
+import { PriceDisplay } from '@/components/price-display';
 import moment from 'moment';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -282,7 +283,11 @@ const DashboardPage = () => {
                   <div className="h-8 w-24 gradient-shimmer rounded" />
                 ) : (
                   <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(balance)}
+                    <PriceDisplay
+                      amount={balance || 0}
+                      originalCurrency="USD"
+                      className="text-2xl font-bold text-green-600"
+                    />
                   </p>
                 )}
               </div>
@@ -325,7 +330,11 @@ const DashboardPage = () => {
                   <div className="h-8 w-24 gradient-shimmer rounded" />
                 ) : (
                   <p className="text-2xl font-bold text-purple-600">
-                    {formatCurrency(totalSpend)}
+                    <PriceDisplay
+                      amount={totalSpend || 0}
+                      originalCurrency="USD"
+                      className="text-2xl font-bold text-purple-600"
+                    />
                   </p>
                 )}
               </div>

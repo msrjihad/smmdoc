@@ -10,6 +10,9 @@ import {
 } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import { PriceDisplay } from '@/components/price-display';
+import { useCurrency } from '@/contexts/currency-context';
+import { convertCurrency, formatCurrencyAmount } from '@/lib/currency-utils';
 
 const TrendingUpIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,11 +158,23 @@ const CustomChart = ({ data, activeTab, maxValue }: {
   activeTab: string;
   maxValue: number;
 }) => {
+  const { currency, currentCurrencyData, availableCurrencies, currencySettings } = useCurrency();
+  
   const formatValue = (value: number) => {
     if (activeTab === 'orders') {
       return value.toLocaleString();
     }
-    return `৳${value.toFixed(0)}`;
+    // For currency values, convert from USD to selected currency
+    if (!currentCurrencyData || !availableCurrencies || !currencySettings) {
+      return `$${value.toFixed(0)}`;
+    }
+    
+    let convertedAmount = value;
+    if (currency !== 'USD') {
+      convertedAmount = convertCurrency(value, 'USD', currency, availableCurrencies);
+    }
+    
+    return formatCurrencyAmount(convertedAmount, currency, availableCurrencies, currencySettings);
   };
 
   const getBarColor = () => {
@@ -354,6 +369,7 @@ export default function AnalyticsPage() {
   const availableYears = [2024, 2023, 2022];
 
   const formatCurrency = useCallback((amount: number) => {
+    // This function is kept for backward compatibility but should use PriceDisplay component instead
     return `৳${amount.toFixed(2)}`;
   }, []);
 
@@ -517,7 +533,7 @@ export default function AnalyticsPage() {
                     <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                       {activeTab === 'orders' 
                         ? metrics.total.toLocaleString()
-                        : formatCurrency(metrics.total)
+                        : <PriceDisplay amount={metrics.total} originalCurrency="USD" className="text-2xl font-bold text-blue-700 dark:text-blue-300" />
                       }
                     </p>
                   )}
@@ -562,7 +578,7 @@ export default function AnalyticsPage() {
                     <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
                       {activeTab === 'orders'
                         ? Math.round(metrics.total / 12).toLocaleString()
-                        : formatCurrency(metrics.total / 12)
+                        : <PriceDisplay amount={metrics.total / 12} originalCurrency="USD" className="text-2xl font-bold text-purple-700 dark:text-purple-300" />
                       }
                     </p>
                   )}

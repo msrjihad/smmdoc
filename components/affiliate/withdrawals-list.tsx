@@ -4,6 +4,7 @@ import {
     FaSearch,
     FaEye
 } from 'react-icons/fa';
+import { PriceDisplay } from '@/components/price-display';
 import moment from 'moment';
 
 type Withdrawal = {
@@ -35,15 +36,6 @@ export function WithdrawalsList({
   onViewCancelReason,
   formatTime,
 }: WithdrawalsListProps) {
-
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
 
   if (!withdrawals.length) {
     return (
@@ -108,7 +100,10 @@ export function WithdrawalsList({
                 </td>
                 <td className="py-3 px-4">
                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {formatAmount(withdrawal.amount)}
+                    <PriceDisplay
+                      amount={withdrawal.amount}
+                      originalCurrency="USD"
+                    />
                   </span>
                 </td>
                 <td className="py-3 px-4">

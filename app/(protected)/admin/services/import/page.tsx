@@ -24,6 +24,7 @@ import {
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { formatID } from '@/lib/utils';
+import { PriceDisplay } from '@/components/price-display';
 
 const Toast = ({
   message,
@@ -1453,11 +1454,19 @@ const ImportServicesPage = () => {
                                                   <div
                                                     className="font-semibold text-sm text-gray-900 dark:text-gray-100"
                                                   >
-                                                    ${getCurrentSalePrice(service)}
+                                                    <PriceDisplay
+                                                      amount={getCurrentSalePrice(service)}
+                                                      originalCurrency="USD"
+                                                      className="font-semibold text-sm text-gray-900 dark:text-gray-100"
+                                                    />
                                                   </div>
                                                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                    Provider: $
-                                                    {service.providerPrice ? parseFloat(service.providerPrice.toString()).toFixed(2) : '0.00'}
+                                                    Provider:{' '}
+                                                    <PriceDisplay
+                                                      amount={service.providerPrice ? parseFloat(service.providerPrice.toString()) : 0}
+                                                      originalCurrency="USD"
+                                                      className="text-xs text-gray-500 dark:text-gray-400"
+                                                    />
                                                   </div>
                                                 </div>
                                               </td>
@@ -1694,11 +1703,19 @@ const ImportServicesPage = () => {
                                             <div
                                               className="font-semibold text-sm bg-gray-50 dark:bg-gray-800/50 px-3 py-2 rounded text-gray-900 dark:text-gray-100"
                                             >
-                                              ${getCurrentSalePrice(service)}
+                                              <PriceDisplay
+                                                amount={getCurrentSalePrice(service)}
+                                                originalCurrency="USD"
+                                                className="font-semibold text-sm text-gray-900 dark:text-gray-100"
+                                              />
                                             </div>
                                             <div className="text-xs text-gray-500 dark:text-gray-400 px-3">
-                                              Provider: $
-                                              {service.providerPrice ? parseFloat(service.providerPrice.toString()).toFixed(2) : '0.00'}
+                                              Provider:{' '}
+                                              <PriceDisplay
+                                                amount={service.providerPrice ? parseFloat(service.providerPrice.toString()) : 0}
+                                                originalCurrency="USD"
+                                                className="text-xs text-gray-500 dark:text-gray-400"
+                                              />
                                             </div>
                                           </div>
                                         </div>

@@ -29,6 +29,7 @@ import {
     FaTimesCircle,
 } from 'react-icons/fa';
 import { formatCurrencyAmount } from '@/lib/currency-utils';
+import { PriceDisplay } from '@/components/price-display';
 import { useDispatch } from 'react-redux';
 
 const Toast = ({
@@ -105,6 +106,13 @@ const StatsCard: React.FC<StatsCardProps> = ({
 };
 
 const InstructionsPanel: React.FC = () => {
+  const getServicesUrl = () => {
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/services`;
+    }
+    return '/services';
+  };
+
   return (
     <div className="card card-padding">
       <div className="card-header">
@@ -122,12 +130,12 @@ const InstructionsPanel: React.FC = () => {
         </p>
 
         <a
-          href="https://smmdoc.com/services"
+          href={getServicesUrl()}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors duration-200"
         >
-          https:
+          {getServicesUrl()}
           <FaExternalLinkAlt className="ml-2 text-xs" />
         </a>
 
@@ -521,7 +529,7 @@ export default function MassOrder() {
                               <div className="flex justify-between">
                                 <span>Available Balance:</span>
                                 <span className="font-semibold">
-                                  {formatCurrency(balanceCheck.available)}
+                                  <PriceDisplay amount={balanceCheck.available} originalCurrency="USD" />
                                 </span>
                               </div>
                               <div className="flex justify-between">

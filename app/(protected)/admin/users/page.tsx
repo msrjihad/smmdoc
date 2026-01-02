@@ -27,6 +27,7 @@ import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { invalidateUserSessions } from '@/lib/session-invalidation';
 import { convertCurrency, formatCurrencyAmount } from '@/lib/currency-utils';
+import { PriceDisplay } from '@/components/price-display';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
@@ -1468,7 +1469,11 @@ const UsersListPage = () => {
                               <div
                                 className="font-semibold text-sm text-gray-900 dark:text-gray-100"
                               >
-                                {formatCurrency(user.balance || 0, user.currency)}
+                                <PriceDisplay
+                                  amount={user.balance || 0}
+                                  originalCurrency="USD"
+                                  className="font-semibold text-sm text-gray-900 dark:text-gray-100"
+                                />
                               </div>
                             </div>
                           </td>
@@ -1477,7 +1482,11 @@ const UsersListPage = () => {
                               <div
                                 className="font-semibold text-sm text-gray-900 dark:text-gray-100"
                               >
-                                {formatCurrency(user.total_spent || 0)}
+                                <PriceDisplay
+                                  amount={user.total_spent || 0}
+                                  originalCurrency="USD"
+                                  className="font-semibold text-sm text-gray-900 dark:text-gray-100"
+                                />
                               </div>
                             </div>
                           </td>
@@ -2070,7 +2079,11 @@ const UserCard: React.FC<UserCardProps> = ({
           <div
             className="font-semibold text-sm text-gray-900 dark:text-gray-100"
           >
-            {formatCurrency(user.balance || 0, user.currency || 'USD')}
+            <PriceDisplay
+              amount={user.balance || 0}
+              originalCurrency="USD"
+              className="font-semibold text-sm text-gray-900 dark:text-gray-100"
+            />
           </div>
         </div>
         <div>
@@ -2082,7 +2095,11 @@ const UserCard: React.FC<UserCardProps> = ({
           <div
             className="font-semibold text-sm text-gray-900 dark:text-gray-100"
           >
-            {formatCurrency((user as any).total_spent || 0, user.currency || 'USD')}
+            <PriceDisplay
+              amount={(user as any).total_spent || 0}
+              originalCurrency="USD"
+              className="font-semibold text-sm text-gray-900 dark:text-gray-100"
+            />
           </div>
         </div>
       </div>

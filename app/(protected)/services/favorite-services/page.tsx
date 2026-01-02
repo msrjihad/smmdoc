@@ -673,7 +673,7 @@ const FavoriteServicesTable: React.FC = () => {
                                   <span className="text-sm font-medium text-gray-900 dark:text-white">
                                     <PriceDisplay
                                       amount={service.rate}
-                                      originalCurrency={'USD'}
+                                      originalCurrency="USD"
                                     />
                                   </span>
                                 </td>

@@ -2,6 +2,7 @@
 'use client';
 import { useCurrency } from '@/contexts/currency-context';
 import { formatPrice } from '@/lib/utils';
+import { convertCurrency } from '@/lib/currency-utils';
 
 interface PriceDisplayProps {
   amount: number;
@@ -14,7 +15,7 @@ export function PriceDisplay({
   originalCurrency,
   className,
 }: PriceDisplayProps) {
-  const { currency, availableCurrencies, isLoading } = useCurrency();
+  const { currency, availableCurrencies, isLoading, currentCurrencyData } = useCurrency();
 
   if (isLoading || !availableCurrencies.length) {
     return (
@@ -24,22 +25,23 @@ export function PriceDisplay({
     );
   }
 
-  const currentCurrencyData = availableCurrencies.find(c => c.code === currency);
-
-  if (currency === 'USD' || !currentCurrencyData) {
+  // If currency matches originalCurrency, no conversion needed
+  if (currency === originalCurrency) {
+    const symbol = currentCurrencyData?.symbol || (originalCurrency === 'USD' ? '$' : '৳');
     return (
       <span className={className}>
-        ${formatPrice(amount, 2)}
+        {symbol}{formatPrice(amount, 2)}
       </span>
     );
   }
 
-  const displayAmount = amount * Number(currentCurrencyData.rate);
-  const displaySymbol = currentCurrencyData.symbol;
+  // Convert from originalCurrency to selected currency
+  const convertedAmount = convertCurrency(amount, originalCurrency, currency, availableCurrencies);
+  const displaySymbol = currentCurrencyData?.symbol || '$';
 
   return (
     <span className={className}>
-      {displaySymbol}{formatPrice(displayAmount, 2)}
+      {displaySymbol}{formatPrice(convertedAmount, 2)}
     </span>
   );
 }
