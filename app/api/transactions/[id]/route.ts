@@ -120,14 +120,6 @@ export async function PATCH(
         } else {
           notificationMessage = `Your deposit of $${usdAmount} is now pending review.`;
         }
-      } else if (status === 'Suspicious') {
-        updateData = {
-          status: 'Processing'
-        };
-        const usdAmount = typeof transaction.usdAmount === 'object' && transaction.usdAmount !== null
-          ? Number(transaction.usdAmount)
-          : Number(transaction.usdAmount || 0);
-        notificationMessage = `Your transaction of $${usdAmount} is under review for suspicious activity.`;
       } else {
         updateData = {
           status: status

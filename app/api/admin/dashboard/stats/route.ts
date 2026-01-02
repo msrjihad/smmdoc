@@ -164,6 +164,43 @@ export async function GET() {
       orders: typeof order._count.id === 'bigint' ? Number(order._count.id) : order._count.id
     }));
 
+    // Calculate total payments (sum of all successful transactions/deposits)
+    const totalPaymentsResult = await db.addFunds.aggregate({
+      where: {
+        status: 'Success'
+      },
+      _sum: {
+        usdAmount: true
+      }
+    });
+
+    const totalPayments = totalPaymentsResult._sum.usdAmount
+      ? (typeof totalPaymentsResult._sum.usdAmount === 'object' && totalPaymentsResult._sum.usdAmount !== null
+          ? Number(totalPaymentsResult._sum.usdAmount)
+          : Number(totalPaymentsResult._sum.usdAmount))
+      : 0;
+
+    // Calculate last 30 days revenue
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    const last30DaysOrders = await db.newOrders.findMany({
+      where: {
+        createdAt: {
+          gte: thirtyDaysAgo
+        },
+        status: {
+          in: ['completed', 'processing']
+        }
+      },
+      select: {
+        usdPrice: true
+      }
+    });
+
+    const last30DaysRevenue = last30DaysOrders.reduce((acc, order) => acc + order.usdPrice, 0);
+
     const responseData = {
       success: true,
       data: {
@@ -172,6 +209,8 @@ export async function GET() {
         totalServices: typeof totalServices === 'bigint' ? Number(totalServices) : totalServices,
         totalCategories: typeof totalCategories === 'bigint' ? Number(totalCategories) : totalCategories,
         totalRevenue,
+        totalPayments,
+        last30DaysRevenue,
         recentOrders,
         ordersByStatus: {
           pending: typeof pendingOrders === 'bigint' ? Number(pendingOrders) : pendingOrders,

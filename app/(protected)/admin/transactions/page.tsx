@@ -168,7 +168,7 @@ interface Transaction {
   paymentGateway?: string;
   paymentMethod?: string;
   status: 'pending' | 'completed' | 'cancelled' | 'Processing' | 'Success' | 'Cancelled';
-  admin_status: 'Pending' | 'pending' | 'Success' | 'Cancelled' | 'Suspicious';
+  admin_status: 'Pending' | 'pending' | 'Success' | 'Cancelled';
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -327,7 +327,6 @@ const AdminAllTransactionsPage = () => {
       Success: 0,
       Pending: 0,
       Cancelled: 0,
-      Suspicious: 0,
     },
   });
 
@@ -481,7 +480,6 @@ const AdminAllTransactionsPage = () => {
               Success: result.stats.completedTransactions,
               Pending: result.stats.pendingTransactions,
               Cancelled: result.stats.cancelledTransactions || 0,
-              Suspicious: result.stats.suspiciousTransactions || 0,
             },
           });
         }
@@ -551,7 +549,6 @@ const AdminAllTransactionsPage = () => {
             Success: result.data.completedTransactions,
             Pending: result.data.pendingTransactions,
             Cancelled: result.data.cancelledTransactions || 0,
-            Suspicious: result.data.suspiciousTransactions || 0,
           },
         });
       } else {
@@ -614,8 +611,6 @@ const AdminAllTransactionsPage = () => {
       case 'cancelled':
       case 'rejected':
         return <FaTimesCircle className="h-3 w-3 text-red-500 dark:text-red-400" />;
-      case 'Suspicious':
-        return <FaExclamationCircle className="h-3 w-3 text-purple-500 dark:text-purple-400" />;
       default:
         return <FaClock className="h-3 w-3 text-gray-500 dark:text-gray-400" />;
     }
@@ -648,15 +643,6 @@ const AdminAllTransactionsPage = () => {
           <div className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 rounded-full w-fit">
             <FaTimesCircle className="h-3 w-3 text-red-500 dark:text-red-400" />
             <span className="text-xs font-medium text-red-700 dark:text-red-300">Cancel</span>
-          </div>
-        );
-      case 'Suspicious':
-        return (
-          <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 rounded-full w-fit">
-            <FaExclamationCircle className="h-3 w-3 text-purple-500 dark:text-purple-400" />
-            <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
-              Suspicious
-            </span>
           </div>
         );
       default:
@@ -937,7 +923,7 @@ const AdminAllTransactionsPage = () => {
             transaction.id === transactionId
               ? {
                   ...transaction,
-                  admin_status: newStatus as 'pending' | 'Success' | 'Cancelled' | 'Suspicious',
+                  admin_status: newStatus as 'pending' | 'Success' | 'Cancelled',
                   status: newStatus === 'Success' ? 'completed' as const :
                          newStatus === 'Cancelled' ? 'cancelled' as const :
                          newStatus === 'Pending' ? 'pending' as const : 'pending' as const,
@@ -1129,25 +1115,6 @@ const AdminAllTransactionsPage = () => {
                     }`}
                   >
                     {stats.statusBreakdown?.cancelled || 0}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setStatusFilter('Suspicious')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
-                    statusFilter === 'Suspicious'
-                      ? 'bg-gradient-to-r from-purple-600 to-purple-400 text-white shadow-lg'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  Suspicious
-                  <span
-                    className={`ml-2 text-xs px-2 py-1 rounded-full ${
-                      statusFilter === 'Suspicious'
-                        ? 'bg-white/20'
-                        : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                    }`}
-                  >
-                    {stats.statusBreakdown?.Suspicious || 0}
                   </span>
                 </button>
               </div>
@@ -1405,7 +1372,6 @@ const AdminAllTransactionsPage = () => {
                           <option value="Pending">Pending</option>
                           <option value="Success">Success</option>
                           <option value="Cancelled">Cancelled</option>
-                          <option value="Suspicious">Suspicious</option>
                         </select>
                       </div>
                       <div className="flex gap-2 justify-end">

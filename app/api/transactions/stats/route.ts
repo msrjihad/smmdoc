@@ -58,7 +58,6 @@ export async function GET(request: NextRequest) {
       pendingTransactions,
       completedTransactions,
       cancelledTransactions,
-      suspiciousTransactions,
       totalVolumeResult,
       todayTransactions,
       recentTransactions
@@ -75,10 +74,6 @@ export async function GET(request: NextRequest) {
       
       db.addFunds.count({ 
         where: { ...dateFilter, status: 'Cancelled' } 
-      }),
-      
-      db.addFunds.count({ 
-        where: { ...dateFilter, status: 'Suspicious' } 
       }),
       
       db.addFunds.aggregate({
@@ -127,18 +122,15 @@ export async function GET(request: NextRequest) {
       pending: pendingTransactions,
       completed: completedTransactions,
       cancelled: cancelledTransactions,
-      suspicious: suspiciousTransactions,
       Success: completedTransactions,
       Pending: pendingTransactions,
-      Cancelled: cancelledTransactions,
-      Suspicious: suspiciousTransactions
+      Cancelled: cancelledTransactions
     };
 
     const percentages = {
       pending: totalTransactions > 0 ? Math.round((pendingTransactions / totalTransactions) * 100) : 0,
       completed: totalTransactions > 0 ? Math.round((completedTransactions / totalTransactions) * 100) : 0,
-      cancelled: totalTransactions > 0 ? Math.round((cancelledTransactions / totalTransactions) * 100) : 0,
-      suspicious: totalTransactions > 0 ? Math.round((suspiciousTransactions / totalTransactions) * 100) : 0
+      cancelled: totalTransactions > 0 ? Math.round((cancelledTransactions / totalTransactions) * 100) : 0
     };
 
     return NextResponse.json({
@@ -148,7 +140,6 @@ export async function GET(request: NextRequest) {
         pendingTransactions,
         completedTransactions,
         cancelledTransactions,
-        suspiciousTransactions,
         totalVolume,
         todayTransactions,
         statusBreakdown,

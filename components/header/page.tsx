@@ -264,12 +264,14 @@ const ThemeToggle = ({
   );
 };
 
-const MobileCurrencyToggle = () => {
+const MobileCurrencyToggle = ({ onClose }: { onClose?: () => void }) => {
   const { currency, setCurrency, rate, isLoading, availableCurrencies, currentCurrencyData } = useCurrency();
 
   const handleCurrencyChange = async (newCurrency: string) => {
     await setCurrency(newCurrency);
-
+    if (onClose) {
+      onClose();
+    }
   };
 
   return (
@@ -548,7 +550,7 @@ const Header = () => {
 
   const handleCurrencyChange = async (newCurrency: string) => {
     await setCurrency(newCurrency);
-
+    handleDropdownChange('currency', false);
   };
 
   return (

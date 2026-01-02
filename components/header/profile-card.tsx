@@ -65,11 +65,14 @@ const AvatarFallback = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-const MobileCurrencyToggle = () => {
+const MobileCurrencyToggle = ({ onClose }: { onClose?: () => void }) => {
   const { currency, setCurrency, rate, isLoading, availableCurrencies, currentCurrencyData } = useCurrency();
 
   const handleCurrencyChange = async (newCurrency: string) => {
     await setCurrency(newCurrency);
+    if (onClose) {
+      onClose();
+    }
   };
 
   return (
@@ -519,7 +522,7 @@ const ProfileCard = ({
             )}
 
             <div className="sm:hidden p-2 space-y-2">
-              <MobileCurrencyToggle />
+              <MobileCurrencyToggle onClose={() => handleDropdownChange?.('profile', false)} />
               <ThemeToggle isMobile={true} />
             </div>
 

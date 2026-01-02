@@ -184,16 +184,37 @@ export async function POST(request: Request) {
 
       const codesToDelete = existingCodes.filter(code => !newCodes.includes(code));
 
-      const coreCurrencies = ['USD', 'BDT'];
+      // Only USD is the core currency and cannot be deleted
       for (const codeToDelete of codesToDelete) {
-        if (!coreCurrencies.includes(codeToDelete)) {
+        if (codeToDelete !== 'USD') {
           await db.currencies.delete({
             where: { code: codeToDelete }
           });
+        } else {
+          throw new Error('Cannot delete USD - it\'s the core currency');
         }
       }
 
       for (const currency of currencies) {
+        // Prevent editing USD (core currency)
+        if (currency.code === 'USD') {
+          const existingUSD = await db.currencies.findUnique({
+            where: { code: 'USD' }
+          });
+          
+          if (existingUSD) {
+            // Only allow updating enabled status for USD, not other fields
+            await db.currencies.update({
+              where: { code: 'USD' },
+              data: {
+                enabled: currency.enabled,
+                updatedAt: new Date()
+              }
+            });
+            continue; // Skip the upsert for USD
+          }
+        }
+
         const rateValue = typeof currency.rate === 'number' 
           ? currency.rate 
           : parseFloat(String(currency.rate)) || 1;

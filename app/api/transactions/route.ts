@@ -81,11 +81,6 @@ export async function GET(request: NextRequest) {
         if (adminView && session.user.role === 'admin') {
           where.adminStatus = 'Cancelled';
         }
-      } else if (status === 'Suspicious') {
-        where.status = 'Suspicious';
-        if (adminView && session.user.role === 'admin') {
-          where.adminStatus = 'Suspicious';
-        }
       } else if (status === 'failed') {
         where.status = { in: ['Failed', 'Cancelled'] };
         if (adminView && session.user.role === 'admin') {
@@ -180,7 +175,6 @@ export async function GET(request: NextRequest) {
             pendingTransactions: 0,
             completedTransactions: 0,
             cancelledTransactions: 0,
-            suspiciousTransactions: 0,
             totalVolume: 0,
             todayTransactions: 0
           }
@@ -243,9 +237,6 @@ export async function GET(request: NextRequest) {
         }),
         cancelledTransactions: await db.addFunds.count({
           where: { ...where, status: 'Cancelled' }
-        }),
-        suspiciousTransactions: await db.addFunds.count({
-          where: { ...where, status: 'Suspicious' }
         }),
         totalVolume: await db.addFunds.aggregate({
           where: { ...where, status: 'Success' },
@@ -363,8 +354,6 @@ export async function PATCH(request: NextRequest) {
           }
         });
       }
-    } else if (status === 'Suspicious') {
-      updateData.status = 'Suspicious';
     } else if (status === 'Pending' || status === 'pending') {
       updateData.status = 'Processing';
     }

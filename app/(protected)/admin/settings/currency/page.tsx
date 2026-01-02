@@ -143,6 +143,9 @@ const CurrencyItem = ({
   });
 
   const handleSave = () => {
+    if (currency.code === 'USD') {
+      return; // Prevent editing USD
+    }
     if (editValues.code.trim() && editValues.name.trim()) {
       onEdit(currency.id, editValues);
       setIsEditing(false);
@@ -177,14 +180,24 @@ const CurrencyItem = ({
               onChange={(e) => setEditValues(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
               placeholder="USD"
               maxLength={3}
-              className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none col-span-2"
+              disabled={currency.code === 'USD'}
+              className={`form-field w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none col-span-2 ${
+                currency.code === 'USD'
+                  ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white'
+              }`}
             />
             <input
               type="text"
               value={editValues.name}
               onChange={(e) => setEditValues(prev => ({ ...prev, name: e.target.value }))}
               placeholder="US Dollar"
-              className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none col-span-4"
+              disabled={currency.code === 'USD'}
+              className={`form-field w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none col-span-4 ${
+                currency.code === 'USD'
+                  ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white'
+              }`}
             />
             <input
               type="text"
@@ -192,7 +205,12 @@ const CurrencyItem = ({
               onChange={(e) => setEditValues(prev => ({ ...prev, symbol: e.target.value }))}
               placeholder="$"
               maxLength={3}
-              className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none col-span-2"
+              disabled={currency.code === 'USD'}
+              className={`form-field w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none col-span-2 ${
+                currency.code === 'USD'
+                  ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white'
+              }`}
             />
             <input
               type="number"
@@ -200,7 +218,12 @@ const CurrencyItem = ({
               onChange={(e) => setEditValues(prev => ({ ...prev, rate: parseFloat(e.target.value) || 1 }))}
               step="0.01"
               min="0"
-              className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none col-span-2"
+              disabled={currency.code === 'USD'}
+              className={`form-field w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none col-span-2 ${
+                currency.code === 'USD'
+                  ? 'bg-gray-100 dark:bg-gray-600 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                  : 'bg-white dark:bg-gray-700/50 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white'
+              }`}
             />
           </div>
           <div className="flex items-center justify-center gap-2 w-20">
@@ -236,14 +259,18 @@ const CurrencyItem = ({
             <span className="text-left font-mono col-span-2">{currency.rate.toFixed(2)}</span>
           </div>
           <div className="flex items-center justify-center gap-2 w-20">
-            <button
-              onClick={() => setIsEditing(true)}
-              className="p-1 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
-              title="Edit"
-            >
-              <FaEdit className="w-3 h-3" />
-            </button>
-            {['USD', 'BDT'].includes(currency.code) ? (
+            {currency.code === 'USD' ? (
+              <div className="w-3 h-3" /> // Spacer to maintain layout
+            ) : (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="p-1 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                title="Edit"
+              >
+                <FaEdit className="w-3 h-3" />
+              </button>
+            )}
+            {currency.code === 'USD' ? (
               <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded text-xs text-blue-700 dark:text-blue-300 font-medium">
                 <span>Core</span>
               </div>
@@ -432,6 +459,11 @@ const PaymentCurrencyPage = () => {
   };
 
   const editCurrency = async (id: number, updates: Partial<Currency>) => {
+    const currencyToEdit = currencies.find(c => c.id === id);
+    if (currencyToEdit?.code === 'USD') {
+      showToast('Cannot edit USD - it\'s the core currency', 'error');
+      return;
+    }
     const updatedCurrencies = currencies.map(c => c.id === id ? { ...c, ...updates } : c);
     setCurrencies(updatedCurrencies);
 
@@ -479,9 +511,8 @@ const PaymentCurrencyPage = () => {
       return;
     }
 
-    const coreCurrencies = ['USD', 'BDT'];
-    if (coreCurrencies.includes(currencyToDelete.code)) {
-      showToast(`Cannot delete ${currencyToDelete.code} - it's a core currency`, 'error');
+    if (currencyToDelete.code === 'USD') {
+      showToast('Cannot delete USD - it\'s the core currency', 'error');
       return;
     }
 

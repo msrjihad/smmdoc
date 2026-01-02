@@ -371,6 +371,8 @@ type DashboardStats = {
   totalServices: number;
   totalCategories: number;
   totalRevenue: number;
+  totalPayments?: number;
+  last30DaysRevenue?: number;
   recentOrders: Order[];
   ordersByStatus: {
     pending: number;
@@ -477,6 +479,8 @@ export default function AdminDashboardPage() {
       totalServices: 0,
       totalCategories: 0,
       totalRevenue: 0,
+      totalPayments: 0,
+      last30DaysRevenue: 0,
       recentOrders: [],
       ordersByStatus: {
         pending: 0,
@@ -815,15 +819,6 @@ export default function AdminDashboardPage() {
             <span className="text-xs font-medium text-red-700 dark:text-red-300">Cancel</span>
           </div>
         );
-      case 'Suspicious':
-        return (
-          <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 rounded-full w-fit">
-            <FaExclamationCircle className="h-3 w-3 text-purple-500 dark:text-purple-400" />
-            <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
-              Suspicious
-            </span>
-          </div>
-        );
       default:
         return (
           <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full w-fit">
@@ -973,12 +968,18 @@ export default function AdminDashboardPage() {
   };
 
   const formatDashboardCurrency = useCallback((amount: number) => {
+    const formatNumber = (num: number) => {
+      return num.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    };
 
     if (currency === 'USD' && rate) {
       const amountInUSD = amount / rate;
-      return `$${amountInUSD.toFixed(2)}`;
+      return `$${formatNumber(amountInUSD)}`;
     } else {
-      return `৳${amount.toFixed(2)}`;
+      return `৳${formatNumber(amount)}`;
     }
   }, [currency, rate]);
 
@@ -1022,7 +1023,7 @@ export default function AdminDashboardPage() {
                   <div className="h-8 w-16 gradient-shimmer rounded" />
                 ) : (
                   <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {stats.totalUsers || 1}
+                    {stats.totalUsers || 0}
                   </p>
                 )}
               </div>
@@ -1076,7 +1077,7 @@ export default function AdminDashboardPage() {
                   <div className="h-8 w-20 gradient-shimmer rounded" />
                 ) : (
                   <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    {formatDashboardCurrency(stats.totalRevenue || 0)}
+                    {formatDashboardCurrency(stats.totalPayments || 0)}
                   </p>
                 )}
               </div>
@@ -1095,7 +1096,7 @@ export default function AdminDashboardPage() {
                   <div className="h-8 w-20 gradient-shimmer rounded" />
                 ) : (
                   <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
-                    {formatDashboardCurrency(stats.totalRevenue || 0)}
+                    {formatDashboardCurrency(stats.last30DaysRevenue || 0)}
                   </p>
                 )}
               </div>

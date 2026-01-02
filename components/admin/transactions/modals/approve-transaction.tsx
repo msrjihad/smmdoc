@@ -23,7 +23,7 @@ interface Transaction {
   paymentGateway?: string;
   paymentMethod?: string;
   status?: 'pending' | 'completed' | 'cancelled' | 'Processing' | 'Success' | 'Cancelled' | string;
-  admin_status?: 'Pending' | 'pending' | 'Success' | 'Cancelled' | 'Suspicious' | string;
+  admin_status?: 'Pending' | 'pending' | 'Success' | 'Cancelled' | string;
   notes?: string;
   createdAt: string;
   updatedAt?: string;
