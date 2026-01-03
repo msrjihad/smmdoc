@@ -674,11 +674,145 @@ const ContactDetailsPage = () => {
     return (
       <div className="page-container">
         <div className="page-content">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <GradientSpinner size="w-16 h-16" className="mx-auto mb-4" />
-              <p className="text-lg font-medium text-gray-900 dark:text-gray-100">Loading contact details...</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Please wait while we fetch the message information.</p>
+          <div className="mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-40 gradient-shimmer rounded-lg" />
+              </div>
+              <div className="h-8 w-48 gradient-shimmer rounded" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="card card-padding">
+                <div className="card-header">
+                  <div className="h-5 w-6 gradient-shimmer rounded" />
+                  <div className="h-5 w-40 gradient-shimmer rounded" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <div className="h-4 w-16 gradient-shimmer rounded mb-2" />
+                    <div className="h-4 w-32 gradient-shimmer rounded" />
+                  </div>
+                  <div>
+                    <div className="h-4 w-20 gradient-shimmer rounded mb-2" />
+                    <div className="h-4 w-24 gradient-shimmer rounded" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="h-4 w-16 gradient-shimmer rounded mb-2" />
+                    <div className="h-4 w-40 gradient-shimmer rounded" />
+                  </div>
+                  <div>
+                    <div className="h-4 w-24 gradient-shimmer rounded mb-2" />
+                    <div className="h-4 w-40 gradient-shimmer rounded" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="card card-padding">
+                <div className="card-header">
+                  <div className="h-5 w-6 gradient-shimmer rounded" />
+                  <div className="h-5 w-40 gradient-shimmer rounded" />
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="h-4 w-full gradient-shimmer rounded" />
+                    <div className="h-4 w-5/6 gradient-shimmer rounded" />
+                    <div className="h-4 w-4/5 gradient-shimmer rounded" />
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="h-4 w-24 gradient-shimmer rounded" />
+                    <div className="flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                      <div className="h-4 w-4 gradient-shimmer rounded" />
+                      <div className="flex-1">
+                        <div className="h-4 w-32 gradient-shimmer rounded mb-1" />
+                        <div className="h-3 w-24 gradient-shimmer rounded" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card card-padding">
+                <div className="card-header">
+                  <div className="h-5 w-6 gradient-shimmer rounded" />
+                  <div className="h-5 w-24 gradient-shimmer rounded" />
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <div className="h-3 w-32 gradient-shimmer rounded mb-2" />
+                    <div className="space-y-2">
+                      <div className="h-4 w-full gradient-shimmer rounded" />
+                      <div className="h-4 w-4/5 gradient-shimmer rounded" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card card-padding">
+                <div className="card-header">
+                  <div className="h-5 w-6 gradient-shimmer rounded" />
+                  <div className="h-5 w-32 gradient-shimmer rounded" />
+                </div>
+                <div className="space-y-4">
+                  <div className="h-32 gradient-shimmer rounded-lg" />
+                  <div className="h-10 w-24 gradient-shimmer rounded" />
+                  <div className="h-10 w-32 gradient-shimmer rounded-lg" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="card card-padding">
+                <div className="card-header">
+                  <div className="h-5 w-6 gradient-shimmer rounded" />
+                  <div className="h-5 w-48 gradient-shimmer rounded" />
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <div className="h-4 w-20 gradient-shimmer rounded mb-2" />
+                    <div className="h-4 w-32 gradient-shimmer rounded" />
+                  </div>
+                  <div>
+                    <div className="h-4 w-20 gradient-shimmer rounded mb-2" />
+                    <div className="h-4 w-40 gradient-shimmer rounded" />
+                  </div>
+                  <div>
+                    <div className="h-4 w-16 gradient-shimmer rounded mb-2" />
+                    <div className="h-4 w-48 gradient-shimmer rounded" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 pt-2 border-t dark:border-gray-700">
+                    <div>
+                      <div className="h-4 w-28 gradient-shimmer rounded mb-2" />
+                      <div className="h-6 w-8 gradient-shimmer rounded" />
+                    </div>
+                    <div>
+                      <div className="h-4 w-28 gradient-shimmer rounded mb-2" />
+                      <div className="h-6 w-8 gradient-shimmer rounded" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card card-padding">
+                <div className="card-header">
+                  <div className="h-5 w-6 gradient-shimmer rounded" />
+                  <div className="h-5 w-40 gradient-shimmer rounded" />
+                </div>
+                <div className="space-y-3">
+                  <div className="h-20 gradient-shimmer rounded-lg" />
+                  <div className="h-8 w-24 gradient-shimmer rounded-lg" />
+                  {Array.from({ length: 2 }).map((_, idx) => (
+                    <div key={idx} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="h-3 w-32 gradient-shimmer rounded mb-2" />
+                      <div className="h-4 w-full gradient-shimmer rounded" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1124,12 +1258,5 @@ const ContactDetailsPage = () => {
     </div>
   );
 };
-import ContactSystemGuard from '@/components/contact-system-guard';
 
-const ProtectedContactDetailsPage = () => (
-  <ContactSystemGuard>
-    <ContactDetailsPage />
-  </ContactSystemGuard>
-);
-
-export default ProtectedContactDetailsPage;
+export default ContactDetailsPage;
