@@ -49,7 +49,6 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Convert BigInt/Decimal to number if needed
     const userBalance = user.balance ? Number(user.balance) : 0;
     const totalDeposit = user.total_deposit ? Number(user.total_deposit) : 0;
     const totalSpent = user.total_spent ? Number(user.total_spent) : 0;

@@ -130,3 +130,42 @@ export function serializeServices(services: any[]): any[] {
   if (!services || !Array.isArray(services)) return services;
   return services.map(serializeService);
 }
+
+export function detectTimezone(): string {
+  try {
+    if (typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (timezone) {
+        return timezone;
+      }
+    }
+    
+    if (typeof Date !== 'undefined') {
+      const offset = -new Date().getTimezoneOffset();
+      const hours = Math.floor(Math.abs(offset) / 60);
+      const minutes = Math.abs(offset) % 60;
+      const sign = offset >= 0 ? '+' : '-';
+      
+      const offsetString = `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      
+      const timezoneMap: Record<string, string> = {
+        '+06:00': 'Asia/Dhaka',
+        '+05:30': 'Asia/Kolkata',
+        '+00:00': 'UTC',
+        '+01:00': 'Europe/Berlin',
+        '-05:00': 'America/New_York',
+        '-08:00': 'America/Los_Angeles',
+        '+09:00': 'Asia/Tokyo',
+        '+08:00': 'Asia/Shanghai',
+      };
+      
+      if (timezoneMap[offsetString]) {
+        return timezoneMap[offsetString];
+      }
+    }
+  } catch (error) {
+    console.error('Error detecting timezone:', error);
+  }
+  
+  return 'Asia/Dhaka';
+}

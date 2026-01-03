@@ -3,10 +3,6 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiRequestBuilder, ApiResponseParser, createApiSpecFromProvider } from '@/lib/provider-api-specification';
 
-/**
- * Check if an order is eligible for refill according to the provider
- * This syncs the order status with the provider and checks if refill is available
- */
 async function checkProviderRefillEligibility(
   provider: any,
   providerOrderId: string

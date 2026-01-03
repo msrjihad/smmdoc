@@ -11,6 +11,7 @@ import {
   signUpDefaultValues,
   type DynamicSignUpSchema
 } from '@/lib/validators/auth.validator';
+import { detectTimezone } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
@@ -26,10 +27,18 @@ export default function SignUpForm() {
   const [success, setSuccess] = useState<string | undefined>('');
   const [showPassword, setShowPassword] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [detectedTimezone, setDetectedTimezone] = useState<string>('Asia/Dhaka');
 
   const { settings: userSettings, loading: settingsLoading } = useUserSettings();
 
   const { recaptchaSettings, isEnabledForForm } = useReCAPTCHA();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const timezone = detectTimezone();
+      setDetectedTimezone(timezone);
+    }
+  }, []);
 
   const dynamicSchema = useMemo(() => {
     if (settingsLoading || !userSettings) {
@@ -229,6 +238,8 @@ export default function SignUpForm() {
     if (recaptchaToken) {
       submitData.recaptchaToken = recaptchaToken;
     }
+
+    submitData.timezone = detectedTimezone;
 
     setUsernameStatus({
       checking: false,

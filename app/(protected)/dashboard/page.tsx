@@ -109,13 +109,10 @@ const DashboardPage = () => {
 
   const userOrders = userStats?.recentOrders || [];
 
-  // Ensure we're getting the correct values from the API response
-  // Handle BigInt, Decimal, string, or number types
   const balance = userStats?.balance != null ? Number(userStats.balance) : 0;
   const totalSpend = userStats?.totalSpent != null ? Number(userStats.totalSpent) : 0;
   const totalOrders = userStats?.totalOrders || 0;
 
-  // Debug logging (remove in production if not needed)
   useEffect(() => {
     if (userStats && process.env.NODE_ENV === 'development') {
       console.log('Dashboard Stats Debug:', {

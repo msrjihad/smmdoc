@@ -9,11 +9,6 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
-/**
- * AuthGuard component handles all authentication and authorization logic
- * without affecting the parent layout's DOM structure.
- * This prevents hydration mismatches by keeping the layout stable.
- */
 export function AuthGuard({ children }: AuthGuardProps) {
   const { data: session, status } = useSession();
   const pathname = usePathname();

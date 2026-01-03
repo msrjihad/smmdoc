@@ -21,6 +21,7 @@ export const CustomAdapter = (): Adapter => ({
         username,
         role: 'user',
         status: 'active',
+        timezone: 'Asia/Dhaka',
       },
     })
     

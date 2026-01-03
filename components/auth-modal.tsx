@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { login } from '@/lib/actions/login';
 import { register } from '@/lib/actions/register';
+import { detectTimezone } from '@/lib/utils';
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -27,6 +28,14 @@ export default function AuthModal({ isOpen, onClose, type, onSuccess }: AuthModa
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [detectedTimezone, setDetectedTimezone] = useState<string>('Asia/Dhaka');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const timezone = detectTimezone();
+      setDetectedTimezone(timezone);
+    }
+  }, []);
 
   if (!isOpen) return null;
 
@@ -77,7 +86,8 @@ export default function AuthModal({ isOpen, onClose, type, onSuccess }: AuthModa
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          confirmPassword: formData.confirmPassword
+          confirmPassword: formData.confirmPassword,
+          timezone: detectedTimezone
         });
 
         if (result?.error) {

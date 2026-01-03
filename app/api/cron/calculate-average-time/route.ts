@@ -1,26 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * Calculate average completion time for services based on completed orders
- * This endpoint should be called periodically (e.g., via cron job)
- * 
- * Setup:
- * - Add CRON_SECRET to your .env file for authentication
- * - Set up a cron job to call: GET /api/cron/calculate-average-time
- * - Example cron schedule: 0 0,6,12,18 * * * (every 6 hours)
- * 
- * Logic (matches old project):
- * - For each active service, get the last 10 completed orders with qty = 1000
- * - Calculate time difference between createdAt and updatedAt (when status changed to completed)
- * - Average the times across all 10 orders
- * - Update service avg_time field
- * - Format: "X hours and Y minutes" or variations like "X Hours", "Y Minutes", "Not enough data"
- * 
- * Requirements:
- * - Needs at least 10 completed orders per service to calculate average
- * - If less than 10 orders, sets avg_time to "Not enough data"
- */
 export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');

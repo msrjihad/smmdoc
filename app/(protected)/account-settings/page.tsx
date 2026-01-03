@@ -118,7 +118,7 @@ const ProfilePage = () => {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [isUserDataLoading, setIsUserDataLoading] = useState(true);
   const [selectedLanguage, setSelectedLanguage] = useState('en');
-  const [selectedTimezone, setSelectedTimezone] = useState('21600');
+  const [selectedTimezone, setSelectedTimezone] = useState('Asia/Dhaka');
   const [selectedTimeFormat, setSelectedTimeFormat] = useState<'12' | '24'>('24');
   const [showApiKey, setShowApiKey] = useState(false);
 
@@ -1403,7 +1403,7 @@ const ProfilePage = () => {
 
               <div className="space-y-4">
                 <div className="form-group">
-                  <label className="form-label">Select Timezone</label>
+                  <label className="form-label">Timezone</label>
                   <select
                     value={selectedTimezone || ''}
                     onChange={(e) => setSelectedTimezone(e.target.value)}

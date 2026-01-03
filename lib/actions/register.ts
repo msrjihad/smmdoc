@@ -77,6 +77,8 @@ export const register = async (values: any & { recaptchaToken?: string }) => {
 
     const userName = nameFieldEnabled ? name : (name || null);
 
+    const timezone = values.timezone || 'Asia/Dhaka';
+
     const newUser = await db.users.create({
       data: {
         username,
@@ -86,6 +88,7 @@ export const register = async (values: any & { recaptchaToken?: string }) => {
         balance: initialBalance,
         total_deposit: initialBalance,
         emailVerified: emailConfirmationEnabled ? null : new Date(),
+        timezone: timezone,
       },
     });
 
