@@ -329,14 +329,38 @@ const AnnouncementsPage = () => {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
+        timeZone: userTimezone,
       });
     } else {
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        timeZone: userTimezone,
       });
     }
+  };
+
+  const formatDate = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      timeZone: userTimezone,
+    });
   };
 
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -1195,7 +1219,7 @@ const AnnouncementsPage = () => {
                         </td>
                         <td className="p-3">
                           <div className="text-xs text-gray-900 dark:text-gray-100">
-                            {new Date(announcement.startDate).toLocaleDateString()}
+                            {formatDate(announcement.startDate)}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             {formatTime(announcement.startDate)}
@@ -1205,7 +1229,7 @@ const AnnouncementsPage = () => {
                           {announcement.endDate ? (
                             <>
                               <div className="text-xs text-gray-900 dark:text-gray-100">
-                                {new Date(announcement.endDate).toLocaleDateString()}
+                                {formatDate(announcement.endDate)}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 {formatTime(announcement.endDate)}

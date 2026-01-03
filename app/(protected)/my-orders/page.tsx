@@ -213,6 +213,7 @@ export default function OrdersList() {
   const { appName } = useAppNameWithFallback();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -270,18 +271,30 @@ export default function OrdersList() {
   useEffect(() => {
     const loadTimeFormat = async () => {
       const storedTimeFormat = (userDetails as any)?.timeFormat;
+      const storedTimezone = (userDetails as any)?.timezone;
+      
       if (storedTimeFormat === '12' || storedTimeFormat === '24') {
         setTimeFormat(storedTimeFormat);
+      }
+      
+      if (storedTimezone) {
+        setUserTimezone(storedTimezone);
+      }
+
+      if ((storedTimeFormat === '12' || storedTimeFormat === '24') && storedTimezone) {
         return;
       }
 
       try {
         const userData = await getUserDetails();
         const userTimeFormat = (userData as any)?.timeFormat || '24';
+        const userTz = (userData as any)?.timezone || 'Asia/Dhaka';
         setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+        setUserTimezone(userTz);
       } catch (error) {
         console.error('Error loading time format:', error);
         setTimeFormat('24');
+        setUserTimezone('Asia/Dhaka');
       }
     };
 
@@ -307,14 +320,38 @@ export default function OrdersList() {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
+        timeZone: userTimezone,
       });
     } else {
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        timeZone: userTimezone,
       });
     }
+  };
+
+  const formatDate = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    return date.toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: userTimezone,
+    });
   };
 
   useEffect(() => {
@@ -1083,7 +1120,7 @@ export default function OrdersList() {
                         </td>
                         <td className="py-3 px-4 whitespace-nowrap">
                           <span className="text-sm text-gray-700 dark:text-gray-300">
-                            {moment(order.createdAt).format('DD/MM/YYYY')}
+                            {formatDate(order.createdAt)}
                           </span>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {formatTime(order.createdAt)}

@@ -27,6 +27,7 @@ interface WithdrawalsListProps {
   limit: number;
   onViewCancelReason?: (reason: string) => void;
   formatTime?: (dateString: string | Date) => string;
+  formatDate?: (dateString: string | Date) => string;
 }
 
 export function WithdrawalsList({
@@ -35,6 +36,7 @@ export function WithdrawalsList({
   limit,
   onViewCancelReason,
   formatTime,
+  formatDate,
 }: WithdrawalsListProps) {
 
   if (!withdrawals.length) {
@@ -113,7 +115,9 @@ export function WithdrawalsList({
                 </td>
                 <td className="py-3 px-4 whitespace-nowrap">
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {moment(withdrawal.createdAt).format('DD/MM/YYYY')}
+                    {formatDate 
+                      ? formatDate(withdrawal.createdAt)
+                      : moment(withdrawal.createdAt).format('DD/MM/YYYY')}
                   </span>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
                     {formatTime 

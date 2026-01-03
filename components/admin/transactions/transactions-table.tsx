@@ -48,6 +48,7 @@ interface TransactionsTableProps {
   openViewDetailsDialog: (transaction: any) => void;
   openUpdateStatusDialog: (transactionId: number, currentStatus: string) => void;
   formatTime: (dateString: string | Date) => string;
+  formatDate?: (dateString: string | Date) => string;
 }
 
 const TransactionsTable: React.FC<TransactionsTableProps> = ({
@@ -60,6 +61,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
   openViewDetailsDialog,
   openUpdateStatusDialog,
   formatTime,
+  formatDate,
 }) => {
   return (
     <div className="overflow-x-auto">
@@ -141,7 +143,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
               <td className="p-3">
                 <PriceDisplay
                   amount={transaction.bdt_amount || transaction.amount}
-                  originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency || 'USD')}
+                  originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency === 'BDT' ? 'BDT' : 'USD')}
                   className="font-semibold text-sm"
                 />
               </td>
@@ -159,7 +161,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                 <div>
                   <div className="text-xs text-gray-600 dark:text-gray-400">
                     {transaction.createdAt
-                      ? new Date(transaction.createdAt).toLocaleDateString()
+                      ? (formatDate ? formatDate(transaction.createdAt) : new Date(transaction.createdAt).toLocaleDateString())
                       : 'null'}
                   </div>
                   <div className="text-xs text-gray-600 dark:text-gray-400">

@@ -110,6 +110,7 @@ export default function TransactionsPage() {
   const router = useRouter();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
 
   const { currency, rate } = useCurrency();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -154,18 +155,30 @@ export default function TransactionsPage() {
   useEffect(() => {
     const loadTimeFormat = async () => {
       const storedTimeFormat = (userDetails as any)?.timeFormat;
+      const storedTimezone = (userDetails as any)?.timezone;
+      
       if (storedTimeFormat === '12' || storedTimeFormat === '24') {
         setTimeFormat(storedTimeFormat);
+      }
+      
+      if (storedTimezone) {
+        setUserTimezone(storedTimezone);
+      }
+
+      if ((storedTimeFormat === '12' || storedTimeFormat === '24') && storedTimezone) {
         return;
       }
 
       try {
         const userData = await getUserDetails();
         const userTimeFormat = (userData as any)?.timeFormat || '24';
+        const userTz = (userData as any)?.timezone || 'Asia/Dhaka';
         setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+        setUserTimezone(userTz);
       } catch (error) {
         console.error('Error loading time format:', error);
         setTimeFormat('24');
+        setUserTimezone('Asia/Dhaka');
       }
     };
 
@@ -191,14 +204,38 @@ export default function TransactionsPage() {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
+        timeZone: userTimezone,
       });
     } else {
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        timeZone: userTimezone,
       });
     }
+  };
+
+  const formatDate = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    return date.toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: userTimezone,
+    });
   };
 
   useEffect(() => {
@@ -818,6 +855,7 @@ export default function TransactionsPage() {
                     page={page}
                     limit={limit}
                     formatTime={formatTime}
+                    formatDate={formatDate}
                   />
                   {pagination.totalPages > 1 && (
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">

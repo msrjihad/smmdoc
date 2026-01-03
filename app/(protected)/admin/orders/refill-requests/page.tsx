@@ -161,6 +161,7 @@ const RefillOrdersPage = () => {
   const { appName } = useAppNameWithFallback();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
 
   useEffect(() => {
     setPageTitle('Refill Orders', appName);
@@ -169,18 +170,27 @@ const RefillOrdersPage = () => {
   useEffect(() => {
     const loadTimeFormat = async () => {
       const storedTimeFormat = (userDetails as any)?.timeFormat;
+      const storedTimezone = (userDetails as any)?.timezone;
+      
       if (storedTimeFormat === '12' || storedTimeFormat === '24') {
         setTimeFormat(storedTimeFormat);
-        return;
+      }
+      
+      if (storedTimezone) {
+        setUserTimezone(storedTimezone);
       }
 
       try {
         const userData = await getUserDetails();
         const userTimeFormat = (userData as any)?.timeFormat || '24';
+        const userTz = (userData as any)?.timezone || 'Asia/Dhaka';
+        
         setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+        setUserTimezone(userTz);
       } catch (error) {
         console.error('Error loading time format:', error);
         setTimeFormat('24');
+        setUserTimezone('Asia/Dhaka');
       }
     };
 
@@ -206,14 +216,38 @@ const RefillOrdersPage = () => {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
+        timeZone: userTimezone,
       });
     } else {
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        timeZone: userTimezone,
       });
     }
+  };
+
+  const formatDate = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: userTimezone,
+    });
   };
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -1244,7 +1278,7 @@ const RefillOrdersPage = () => {
                                   return (
                                     <>
                                       <div className="text-xs text-gray-900 dark:text-gray-300">
-                                        {date.toLocaleDateString()}
+                                        {formatDate(date)}
                                       </div>
                                       <div className="text-xs text-gray-900 dark:text-gray-300">
                                         {formatTime(date)}
@@ -1613,7 +1647,7 @@ const RefillOrdersPage = () => {
                                 return (
                                   <>
                                     <div className="text-xs text-gray-900 dark:text-gray-300">
-                                      {date.toLocaleDateString()}
+                                      {formatDate(date)}
                                     </div>
                                     <div className="text-xs text-gray-900 dark:text-gray-300">
                                       {formatTime(date)}
@@ -1685,10 +1719,10 @@ const RefillOrdersPage = () => {
                         )}
                         <div className="mt-4 pt-4 border-t dark:border-gray-700">
                           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                            Date: {new Date(order.createdAt).toLocaleDateString()}
+                            Date: {formatDate(order.createdAt)}
                           </div>
                           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                            Time: {new Date(order.createdAt).toLocaleTimeString()}
+                            Time: {formatTime(order.createdAt)}
                           </div>
                         </div>
                       </div>
@@ -1886,7 +1920,7 @@ const RefillOrdersPage = () => {
                   <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
                     {viewDialog.order.refillRequest.createdAt ? (
                       <>
-                        {new Date(viewDialog.order.refillRequest.createdAt).toLocaleDateString()} at{' '}
+                        {formatDate(viewDialog.order.refillRequest.createdAt)} at{' '}
                         {formatTime(viewDialog.order.refillRequest.createdAt)}
                       </>
                     ) : (
@@ -1968,7 +2002,7 @@ const RefillOrdersPage = () => {
                   <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
                     {viewDialog.order.createdAt ? (
                       <>
-                        {new Date(viewDialog.order.createdAt).toLocaleDateString()} at{' '}
+                        {formatDate(viewDialog.order.createdAt)} at{' '}
                         {formatTime(viewDialog.order.createdAt)}
                       </>
                     ) : (
@@ -2014,7 +2048,7 @@ const RefillOrdersPage = () => {
                   {viewDialog.order.refillRequest.processedAt && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                       Processed on{' '}
-                      {new Date(viewDialog.order.refillRequest.processedAt).toLocaleDateString()} at{' '}
+                      {formatDate(viewDialog.order.refillRequest.processedAt)} at{' '}
                       {formatTime(viewDialog.order.refillRequest.processedAt)}
                       {viewDialog.order.refillRequest.processedBy &&
                         ` by ${viewDialog.order.refillRequest.processedBy}`}

@@ -4,7 +4,6 @@ import { useCurrency } from '@/contexts/currency-context';
 import axiosInstance from '@/lib/axios-instance';
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
-import moment from 'moment';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -395,6 +394,7 @@ export default function AdminDashboardPage() {
   const { data: session } = useSession();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
 
   useEffect(() => {
     setPageTitle('Admin Dashboard', appName);
@@ -403,18 +403,27 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const loadTimeFormat = async () => {
       const storedTimeFormat = (userDetails as any)?.timeFormat;
+      const storedTimezone = (userDetails as any)?.timezone;
+      
       if (storedTimeFormat === '12' || storedTimeFormat === '24') {
         setTimeFormat(storedTimeFormat);
-        return;
+      }
+      
+      if (storedTimezone) {
+        setUserTimezone(storedTimezone);
       }
 
       try {
         const userData = await getUserDetails();
         const userTimeFormat = (userData as any)?.timeFormat || '24';
+        const userTz = (userData as any)?.timezone || 'Asia/Dhaka';
+        
         setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+        setUserTimezone(userTz);
       } catch (error) {
         console.error('Error loading time format:', error);
         setTimeFormat('24');
+        setUserTimezone('Asia/Dhaka');
       }
     };
 
@@ -440,15 +449,39 @@ export default function AdminDashboardPage() {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
+        timeZone: userTimezone,
       });
     } else {
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        timeZone: userTimezone,
       });
     }
-  }, [timeFormat]);
+  }, [timeFormat, userTimezone]);
+
+  const formatDate = useCallback((dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: userTimezone,
+    });
+  }, [userTimezone]);
 
   const { currency, rate, currentCurrencyData, availableCurrencies } = useCurrency();
 
@@ -989,12 +1022,6 @@ export default function AdminDashboardPage() {
     return `${symbol}${formatNumber(convertedAmount)}`;
   }, [currency, currentCurrencyData, availableCurrencies]);
 
-  const formatDate = useCallback((dateString: string) => {
-    return {
-      date: moment(dateString).format('DD/MM/YYYY'),
-      time: moment(dateString).format('HH:mm'),
-    };
-  }, []);
 
   if (false) {
     return (
@@ -1259,6 +1286,7 @@ export default function AdminDashboardPage() {
                   openViewDetailsDialog={openViewDetailsDialog}
                   openUpdateStatusDialog={openUpdateStatusDialog}
                   formatTime={formatTime}
+                  formatDate={formatDate}
                 />
               )}
             </div>

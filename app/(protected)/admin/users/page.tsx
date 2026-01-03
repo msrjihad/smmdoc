@@ -229,6 +229,7 @@ interface UserCardProps {
   onDelete: (userId: number) => void;
   formatCurrency: (amount: number, currency: string) => string;
   formatTime: (dateString: string | Date) => string;
+  formatDate?: (dateString: string | Date) => string;
   isLoading: boolean;
   isModerator?: boolean;
 }
@@ -347,6 +348,7 @@ const UsersListPage = () => {
   const router = useRouter();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
 
   useEffect(() => {
     setPageTitle('All Users', appName);
@@ -355,18 +357,27 @@ const UsersListPage = () => {
   useEffect(() => {
     const loadTimeFormat = async () => {
       const storedTimeFormat = (userDetails as any)?.timeFormat;
+      const storedTimezone = (userDetails as any)?.timezone;
+      
       if (storedTimeFormat === '12' || storedTimeFormat === '24') {
         setTimeFormat(storedTimeFormat);
-        return;
+      }
+      
+      if (storedTimezone) {
+        setUserTimezone(storedTimezone);
       }
 
       try {
         const userData = await getUserDetails();
         const userTimeFormat = (userData as any)?.timeFormat || '24';
+        const userTz = (userData as any)?.timezone || 'Asia/Dhaka';
+        
         setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+        setUserTimezone(userTz);
       } catch (error) {
         console.error('Error loading time format:', error);
         setTimeFormat('24');
+        setUserTimezone('Asia/Dhaka');
       }
     };
 
@@ -392,14 +403,38 @@ const UsersListPage = () => {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
+        timeZone: userTimezone,
       });
     } else {
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        timeZone: userTimezone,
       });
     }
+  };
+
+  const formatDate = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: userTimezone,
+    });
   };
 
   const isModerator = session?.user?.role === 'moderator';
@@ -1534,9 +1569,7 @@ const UsersListPage = () => {
                                 className="text-xs text-gray-600 dark:text-gray-400"
                               >
                                 {user.createdAt
-                                  ? new Date(
-                                      user.createdAt
-                                    ).toLocaleDateString()
+                                  ? formatDate(user.createdAt)
                                   : 'null'}
                               </div>
                               <div
@@ -1593,6 +1626,7 @@ const UsersListPage = () => {
                         }}
                         formatCurrency={formatCurrency}
                         formatTime={formatTime}
+                        formatDate={formatDate}
                         isLoading={actionLoading === user.id.toString()}
                       />
                     ))}
@@ -1942,6 +1976,7 @@ const UserCard: React.FC<UserCardProps> = ({
   onDelete,
   formatCurrency,
   formatTime,
+  formatDate,
   isLoading,
   isModerator = false,
 }) => (
@@ -2135,7 +2170,7 @@ const UserCard: React.FC<UserCardProps> = ({
         <div className="text-sm text-gray-900 dark:text-gray-100">
           Registered:{' '}
           {user.createdAt
-            ? new Date(user.createdAt).toLocaleDateString()
+            ? (formatDate ? formatDate(user.createdAt) : new Date(user.createdAt).toLocaleDateString())
             : 'null'}
         </div>
         <div className="text-sm text-gray-900 dark:text-gray-100">
@@ -2148,7 +2183,7 @@ const UserCard: React.FC<UserCardProps> = ({
           <div
             className="text-sm mt-1 text-gray-900 dark:text-gray-100"
           >
-            Last login: {new Date(user.lastLoginAt).toLocaleDateString()}
+            Last login: {formatDate ? formatDate(user.lastLoginAt) : new Date(user.lastLoginAt).toLocaleDateString()}
           </div>
         )}
       </div>

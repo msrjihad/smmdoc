@@ -270,6 +270,7 @@ const AdminsListPage = () => {
   const { appName } = useAppNameWithFallback();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
 
   useEffect(() => {
     setPageTitle('All Admins', appName);
@@ -278,18 +279,27 @@ const AdminsListPage = () => {
   useEffect(() => {
     const loadTimeFormat = async () => {
       const storedTimeFormat = (userDetails as any)?.timeFormat;
+      const storedTimezone = (userDetails as any)?.timezone;
+      
       if (storedTimeFormat === '12' || storedTimeFormat === '24') {
         setTimeFormat(storedTimeFormat);
-        return;
+      }
+      
+      if (storedTimezone) {
+        setUserTimezone(storedTimezone);
       }
 
       try {
         const userData = await getUserDetails();
         const userTimeFormat = (userData as any)?.timeFormat || '24';
+        const userTz = (userData as any)?.timezone || 'Asia/Dhaka';
+        
         setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+        setUserTimezone(userTz);
       } catch (error) {
         console.error('Error loading time format:', error);
         setTimeFormat('24');
+        setUserTimezone('Asia/Dhaka');
       }
     };
 
@@ -315,14 +325,38 @@ const AdminsListPage = () => {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
+        timeZone: userTimezone,
       });
     } else {
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        timeZone: userTimezone,
       });
     }
+  };
+
+  const formatDate = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: userTimezone,
+    });
   };
 
   const [admins, setAdmins] = useState<Admin[]>([]);
@@ -965,9 +999,7 @@ const AdminsListPage = () => {
                                 className="text-xs text-gray-600 dark:text-gray-400"
                               >
                                 {admin.createdAt
-                                  ? new Date(
-                                      admin.createdAt
-                                    ).toLocaleDateString()
+                                  ? formatDate(admin.createdAt)
                                   : 'null'}
                               </div>
                               <div
@@ -986,9 +1018,7 @@ const AdminsListPage = () => {
                                   <div
                                     className="text-xs text-gray-600 dark:text-gray-400"
                                   >
-                                    {new Date(
-                                      admin.lastLoginAt
-                                    ).toLocaleDateString()}
+                                    {formatDate(admin.lastLoginAt)}
                                   </div>
                                   <div
                                     className="text-xs text-gray-600 dark:text-gray-400"

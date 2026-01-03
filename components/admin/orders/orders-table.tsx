@@ -121,22 +121,32 @@ const OrdersTableContent: React.FC<OrdersTableContentProps> = ({
 }) => {
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
 
   useEffect(() => {
     const loadTimeFormat = async () => {
       const storedTimeFormat = (userDetails as any)?.timeFormat;
+      const storedTimezone = (userDetails as any)?.timezone;
+      
       if (storedTimeFormat === '12' || storedTimeFormat === '24') {
         setTimeFormat(storedTimeFormat);
-        return;
+      }
+      
+      if (storedTimezone) {
+        setUserTimezone(storedTimezone);
       }
 
       try {
         const userData = await getUserDetails();
         const userTimeFormat = (userData as any)?.timeFormat || '24';
+        const userTz = (userData as any)?.timezone || 'Asia/Dhaka';
+        
         setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+        setUserTimezone(userTz);
       } catch (error) {
         console.error('Error loading time format:', error);
         setTimeFormat('24');
+        setUserTimezone('Asia/Dhaka');
       }
     };
 
@@ -154,14 +164,30 @@ const OrdersTableContent: React.FC<OrdersTableContentProps> = ({
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
+        timeZone: userTimezone,
       });
     } else {
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        timeZone: userTimezone,
       });
     }
+  };
+
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return 'null';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'null';
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: userTimezone,
+    });
   };
 
   return (
@@ -470,9 +496,7 @@ const OrdersTableContent: React.FC<OrdersTableContentProps> = ({
                 <div>
                   <div className="text-xs text-gray-900 dark:text-gray-300">
                     {order.createdAt
-                      ? new Date(
-                          order.createdAt
-                        ).toLocaleDateString()
+                      ? formatDate(order.createdAt)
                       : 'null'}
                   </div>
                   <div className="text-xs text-gray-900 dark:text-gray-300">

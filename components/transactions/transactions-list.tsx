@@ -26,6 +26,7 @@ interface TransactionsListProps {
   page: number;
   limit: number;
   formatTime?: (dateString: string | Date) => string;
+  formatDate?: (dateString: string | Date) => string;
 }
 
 export function TransactionsList({
@@ -33,6 +34,7 @@ export function TransactionsList({
   page,
   limit,
   formatTime,
+  formatDate,
 }: TransactionsListProps) {
 
   if (!transactions.length) {
@@ -101,7 +103,7 @@ export function TransactionsList({
                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     <PriceDisplay
                       amount={transaction.amount}
-                      originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency || 'USD')}
+                      originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency === 'BDT' ? 'BDT' : 'USD')}
                     />
                   </span>
                 </td>
@@ -119,7 +121,9 @@ export function TransactionsList({
                 </td>
                 <td className="py-3 px-4 whitespace-nowrap">
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {moment(transaction.createdAt).format('DD/MM/YYYY')}
+                    {formatDate 
+                      ? formatDate(transaction.createdAt)
+                      : moment(transaction.createdAt).format('DD/MM/YYYY')}
                   </span>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
                     {formatTime 
