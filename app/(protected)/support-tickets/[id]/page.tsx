@@ -27,6 +27,8 @@ import TicketSystemGuard from '@/components/ticket-system-guard';
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import useTicketPolling from '@/hooks/useTicketPolling';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 
 const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   <div className={`${size} ${className} relative`}>
@@ -92,6 +94,9 @@ interface SupportTicketDetails {
 const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) => {
   const router = useRouter();
   const { appName } = useAppNameWithFallback();
+  const userDetails = useSelector((state: any) => state.userDetails);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
   const [ticketId, setTicketId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -111,6 +116,111 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
       setPageTitle(`Ticket #${ticketId}`, appName);
     }
   }, [appName, ticketId]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      const storedTimeFormat = (userDetails as any)?.timeFormat;
+      const storedTimezone = (userDetails as any)?.timezone;
+      
+      if (storedTimeFormat === '12' || storedTimeFormat === '24') {
+        setTimeFormat(storedTimeFormat);
+      }
+      
+      if (storedTimezone) {
+        setUserTimezone(storedTimezone);
+      }
+
+      if ((storedTimeFormat === '12' || storedTimeFormat === '24') && storedTimezone) {
+        return;
+      }
+
+      try {
+        const userData = await getUserDetails();
+        const userTimeFormat = (userData as any)?.timeFormat || '24';
+        const userTz = (userData as any)?.timezone || 'Asia/Dhaka';
+        setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+        setUserTimezone(userTz);
+      } catch (error) {
+        console.error('Error loading time format:', error);
+        setTimeFormat('24');
+        setUserTimezone('Asia/Dhaka');
+      }
+    };
+
+    loadTimeFormat();
+  }, [userDetails]);
+
+  const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return '';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return '';
+    }
+    
+    if (isNaN(date.getTime())) return '';
+
+    if (timeFormat === '12') {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: userTimezone,
+      });
+    } else {
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: userTimezone,
+      });
+    }
+  };
+
+  const formatDate = (dateString: string | Date): string => {
+    if (!dateString) return '';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return '';
+    }
+    
+    if (isNaN(date.getTime())) return '';
+
+    return date.toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: userTimezone,
+    });
+  };
+
+  const formatDateTime = (dateString: string | Date): string => {
+    if (!dateString) return '';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return '';
+    }
+    
+    if (isNaN(date.getTime())) return '';
+
+    const dateStr = formatDate(date);
+    const timeStr = formatTime(date);
+    return `${dateStr} at ${timeStr}`;
+  };
 
   const [ticketDetails, setTicketDetails] = useState<SupportTicketDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -539,8 +649,7 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{message.author}</span>
                         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                          {new Date(message.createdAt).toLocaleDateString()} at{' '}
-                          {new Date(message.createdAt).toLocaleTimeString()}
+                          {formatDateTime(message.createdAt)}
                         </span>
                       </div>
 
@@ -705,13 +814,13 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
                 <div>
                   <label className="form-label">Created</label>
                   <p className="mt-1 text-sm" style={{ color: 'var(--text-primary)' }}>
-                    {new Date(ticketDetails.createdAt).toLocaleString()}
+                    {formatDate(ticketDetails.createdAt)} {formatTime(ticketDetails.createdAt)}
                   </p>
                 </div>
                 <div>
                   <label className="form-label">Last Updated</label>
                   <p className="mt-1 text-sm" style={{ color: 'var(--text-primary)' }}>
-                    {new Date(ticketDetails.lastUpdated).toLocaleString()}
+                    {formatDate(ticketDetails.lastUpdated)} {formatTime(ticketDetails.lastUpdated)}
                   </p>
                 </div>
               </div>

@@ -152,6 +152,7 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
   const { appName } = useAppNameWithFallback();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
   const [ticketId, setTicketId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -175,18 +176,30 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
   useEffect(() => {
     const loadTimeFormat = async () => {
       const storedTimeFormat = (userDetails as any)?.timeFormat;
+      const storedTimezone = (userDetails as any)?.timezone;
+      
       if (storedTimeFormat === '12' || storedTimeFormat === '24') {
         setTimeFormat(storedTimeFormat);
+      }
+      
+      if (storedTimezone) {
+        setUserTimezone(storedTimezone);
+      }
+
+      if ((storedTimeFormat === '12' || storedTimeFormat === '24') && storedTimezone) {
         return;
       }
 
       try {
         const userData = await getUserDetails();
         const userTimeFormat = (userData as any)?.timeFormat || '24';
+        const userTz = (userData as any)?.timezone || 'Asia/Dhaka';
         setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+        setUserTimezone(userTz);
       } catch (error) {
         console.error('Error loading time format:', error);
         setTimeFormat('24');
+        setUserTimezone('Asia/Dhaka');
       }
     };
 
@@ -212,14 +225,38 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
+        timeZone: userTimezone,
       });
     } else {
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        timeZone: userTimezone,
       });
     }
+  };
+
+  const formatDate = (dateString: string | Date): string => {
+    if (!dateString) return 'null';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'null';
+    }
+    
+    if (isNaN(date.getTime())) return 'null';
+
+    return date.toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: userTimezone,
+    });
   };
 
   const [ticketDetails, setTicketDetails] = useState<SupportTicketDetails | null>(null);
@@ -688,14 +725,14 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
                 <div>
                   <label className="form-label">Created</label>
                   <p className="mt-1 text-gray-900 dark:text-gray-100">
-                    {new Date(ticketDetails.createdAt).toLocaleDateString()} at{' '}
+                    {formatDate(ticketDetails.createdAt)} at{' '}
                     {formatTime(ticketDetails.createdAt)}
                   </p>
                 </div>
                 <div>
                   <label className="form-label">Last Updated</label>
                   <p className="mt-1 text-gray-900 dark:text-gray-100">
-                    {new Date(ticketDetails.lastUpdated).toLocaleDateString()} at{' '}
+                    {formatDate(ticketDetails.lastUpdated)} at{' '}
                     {formatTime(ticketDetails.lastUpdated)}
                   </p>
                 </div>
@@ -802,7 +839,7 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
                           </span>
                         )}
                         <span className="text-xs text-gray-600 dark:text-gray-400">
-                          {new Date(message.createdAt).toLocaleDateString()} at{' '}
+                          {formatDate(message.createdAt)} at{' '}
                           {formatTime(message.createdAt)}
                         </span>
                         {message.isEdited && (
@@ -1032,7 +1069,7 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
                     {ticketDetails.notes?.map((note) => (
                       <div key={note.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                         <div className="text-xs mb-1 text-gray-600 dark:text-gray-400">
-                          {note.author} • {new Date(note.createdAt).toLocaleDateString()}
+                          {note.author} • {formatDate(note.createdAt)} {formatTime(note.createdAt)}
                         </div>
                         <div className="text-sm whitespace-pre-wrap text-gray-900 dark:text-gray-100">{note.content}</div>
                       </div>

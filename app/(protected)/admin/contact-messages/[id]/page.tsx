@@ -153,6 +153,7 @@ const ContactDetailsPage = () => {
   const currentUser = useCurrentUser();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
 
   const messageId: string = typeof window !== 'undefined'
     ? (window.location.pathname.split('/').pop() ?? '1')
@@ -165,18 +166,30 @@ const ContactDetailsPage = () => {
   useEffect(() => {
     const loadTimeFormat = async () => {
       const storedTimeFormat = (userDetails as any)?.timeFormat;
+      const storedTimezone = (userDetails as any)?.timezone;
+      
       if (storedTimeFormat === '12' || storedTimeFormat === '24') {
         setTimeFormat(storedTimeFormat);
+      }
+      
+      if (storedTimezone) {
+        setUserTimezone(storedTimezone);
+      }
+
+      if ((storedTimeFormat === '12' || storedTimeFormat === '24') && storedTimezone) {
         return;
       }
 
       try {
         const userData = await getUserDetails();
         const userTimeFormat = (userData as any)?.timeFormat || '24';
+        const userTz = (userData as any)?.timezone || 'Asia/Dhaka';
         setTimeFormat(userTimeFormat === '12' || userTimeFormat === '24' ? userTimeFormat : '24');
+        setUserTimezone(userTz);
       } catch (error) {
         console.error('Error loading time format:', error);
         setTimeFormat('24');
+        setUserTimezone('Asia/Dhaka');
       }
     };
 
@@ -202,14 +215,38 @@ const ContactDetailsPage = () => {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
+        timeZone: userTimezone,
       });
     } else {
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        timeZone: userTimezone,
       });
     }
+  };
+
+  const formatDate = (dateString: string | Date): string => {
+    if (!dateString) return 'Unknown';
+    
+    let date: Date;
+    if (typeof dateString === 'string') {
+      date = new Date(dateString);
+    } else if (dateString instanceof Date) {
+      date = dateString;
+    } else {
+      return 'Unknown';
+    }
+    
+    if (isNaN(date.getTime())) return 'Unknown';
+
+    return date.toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: userTimezone,
+    });
   };
 
   const [contactDetails, setContactDetails] = useState<ContactMessageDetails | null>(null);
@@ -739,14 +776,14 @@ const ContactDetailsPage = () => {
                 <div>
                   <label className="form-label">Created</label>
                   <p className="mt-1 text-gray-900 dark:text-gray-100">
-                    {contactDetails?.createdAt ? new Date(contactDetails.createdAt).toLocaleDateString() : 'Unknown'} at{' '}
+                    {contactDetails?.createdAt ? formatDate(contactDetails.createdAt) : 'Unknown'} at{' '}
                     {contactDetails?.createdAt ? formatTime(contactDetails.createdAt) : 'Unknown'}
                   </p>
                 </div>
                 <div>
                   <label className="form-label">Last Updated</label>
                   <p className="mt-1 text-gray-900 dark:text-gray-100">
-                    {contactDetails?.lastUpdated ? new Date(contactDetails.lastUpdated).toLocaleDateString() : 'Unknown'} at{' '}
+                    {contactDetails?.lastUpdated ? formatDate(contactDetails.lastUpdated) : 'Unknown'} at{' '}
                     {contactDetails?.lastUpdated ? formatTime(contactDetails.lastUpdated) : 'Unknown'}
                   </p>
                 </div>
@@ -828,7 +865,7 @@ const ContactDetailsPage = () => {
                     <div key={message.id}>
                       <div className="mb-2">
                         <span className="text-xs text-gray-600 dark:text-gray-400">
-                          {message.author} • {new Date(message.createdAt).toLocaleDateString()} at {formatTime(message.createdAt)}
+                          {message.author} • {formatDate(message.createdAt)} at {formatTime(message.createdAt)}
                         </span>
                       </div>
 
@@ -1072,7 +1109,7 @@ const ContactDetailsPage = () => {
                     {(contactDetails?.notes || []).map((note) => (
                        <div key={note.id} className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                          <div className="text-xs mb-1 text-gray-600 dark:text-gray-400">
-                           {note.author} • {new Date(note.createdAt).toLocaleDateString()}
+                           {note.author} • {formatDate(note.createdAt)} {formatTime(note.createdAt)}
                          </div>
                          <div className="text-sm whitespace-pre-wrap text-gray-900 dark:text-gray-100">{note.content}</div>
                        </div>
