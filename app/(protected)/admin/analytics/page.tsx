@@ -111,35 +111,6 @@ const PlatformChartSkeleton = () => {
   );
 };
 
-const generateSMMData = (year: number) => {
-  const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
-
-  const baseOrderCounts = [850, 920, 1150, 1320, 1280, 1450, 1680, 1520, 1380, 1600, 1750, 1920];
-  const baseProfits = [12500, 13800, 17250, 19800, 19200, 21750, 25200, 22800, 20700, 24000, 26250, 28800];
-  const basePayments = [85000, 92000, 115000, 132000, 128000, 145000, 168000, 152000, 138000, 160000, 175000, 192000];
-
-  return months.map((month, index) => {
-
-    const yearMultiplier = year === 2024 ? 1 : year === 2023 ? 0.8 : 0.6;
-    const randomVariation = 0.9 + Math.random() * 0.2;
-
-    return {
-      month,
-      orders: Math.round(baseOrderCounts[index] * yearMultiplier * randomVariation),
-      profit: Math.round(baseProfits[index] * yearMultiplier * randomVariation),
-      payments: Math.round(basePayments[index] * yearMultiplier * randomVariation),
-
-      instagramOrders: Math.round(baseOrderCounts[index] * 0.35 * yearMultiplier * randomVariation),
-      facebookOrders: Math.round(baseOrderCounts[index] * 0.25 * yearMultiplier * randomVariation),
-      youtubeOrders: Math.round(baseOrderCounts[index] * 0.20 * yearMultiplier * randomVariation),
-      tiktokOrders: Math.round(baseOrderCounts[index] * 0.15 * yearMultiplier * randomVariation),
-      twitterOrders: Math.round(baseOrderCounts[index] * 0.05 * yearMultiplier * randomVariation),
-    };
-  });
-};
 
 type AnalyticsData = {
   month: string;
@@ -397,25 +368,94 @@ export default function AnalyticsPage() {
   };
 
   const [activeTab, setActiveTab] = useState<'profit' | 'payments' | 'orders'>('profit');
-  const [selectedYear, setSelectedYear] = useState<number>(2024);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const availableYears = [2024, 2023, 2022];
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const availableMonths = [
+    { value: 1, label: 'January' },
+    { value: 2, label: 'February' },
+    { value: 3, label: 'March' },
+    { value: 4, label: 'April' },
+    { value: 5, label: 'May' },
+    { value: 6, label: 'June' },
+    { value: 7, label: 'July' },
+    { value: 8, label: 'August' },
+    { value: 9, label: 'September' },
+    { value: 10, label: 'October' },
+    { value: 11, label: 'November' },
+    { value: 12, label: 'December' },
+  ];
 
   const formatCurrency = useCallback((amount: number) => {
     return `৳${amount.toFixed(2)}`;
   }, []);
 
   useEffect(() => {
-    setLoading(true);
+    const fetchAnalyticsData = async () => {
+      setLoading(true);
 
-    setTimeout(() => {
-      setAnalyticsData(generateSMMData(selectedYear));
-      setLoading(false);
-    }, 1000);
-  }, [selectedYear]);
+      try {
+        const params = new URLSearchParams();
+        if (selectedYear !== null) {
+          params.append('year', selectedYear.toString());
+        }
+        if (selectedMonth !== null) {
+          params.append('month', selectedMonth.toString());
+        }
+
+        const response = await fetch(`/api/admin/analytics?${params}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch analytics data');
+        }
+
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          const formattedData = result.data.map((item: any) => ({
+            month: item.month,
+            orders: typeof item.orders === 'number' ? item.orders : Number(item.orders || 0),
+            profit: typeof item.profit === 'number' ? item.profit : Number(item.profit || 0),
+            payments: typeof item.payments === 'number' ? item.payments : Number(item.payments || 0),
+            instagramOrders: typeof item.instagramOrders === 'number' ? item.instagramOrders : Number(item.instagramOrders || 0),
+            facebookOrders: typeof item.facebookOrders === 'number' ? item.facebookOrders : Number(item.facebookOrders || 0),
+            youtubeOrders: typeof item.youtubeOrders === 'number' ? item.youtubeOrders : Number(item.youtubeOrders || 0),
+            tiktokOrders: typeof item.tiktokOrders === 'number' ? item.tiktokOrders : Number(item.tiktokOrders || 0),
+            twitterOrders: typeof item.twitterOrders === 'number' ? item.twitterOrders : Number(item.twitterOrders || 0),
+          }));
+          setAnalyticsData(formattedData);
+          
+          if (result.availableYears && Array.isArray(result.availableYears)) {
+            setAvailableYears(result.availableYears);
+          }
+        } else {
+          throw new Error(result.message || 'Failed to fetch analytics data');
+        }
+      } catch (error) {
+        console.error('Error fetching analytics data:', error);
+        setAnalyticsData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalyticsData();
+  }, [selectedYear, selectedMonth]);
+
+  useEffect(() => {
+    if (availableYears.length > 0) {
+      if (selectedYear === null) {
+        setSelectedYear(availableYears[0]);
+      }
+      else if (!availableYears.includes(selectedYear)) {
+        setSelectedYear(availableYears[0]);
+      }
+    }
+  }, [availableYears, selectedYear]);
 
   const calculateMetrics = () => {
     if (!analyticsData.length) return { total: 0, trend: 0, isPositive: true, maxValue: 0 };
@@ -433,10 +473,17 @@ export default function AnalyticsPage() {
     const total = values.reduce((sum, value) => sum + value, 0);
     const maxValue = Math.max(...values);
 
-    const firstHalf = values.slice(0, 6).reduce((sum, value) => sum + value, 0);
-    const secondHalf = values.slice(6, 12).reduce((sum, value) => sum + value, 0);
-
-    const trend = firstHalf > 0 ? ((secondHalf - firstHalf) / firstHalf) * 100 : 0;
+    let trend = 0;
+    if (selectedMonth === null && values.length >= 12) {
+      const firstHalf = values.slice(0, 6).reduce((sum, value) => sum + value, 0);
+      const secondHalf = values.slice(6, 12).reduce((sum, value) => sum + value, 0);
+      trend = firstHalf > 0 ? ((secondHalf - firstHalf) / firstHalf) * 100 : 0;
+    } else if (selectedMonth === null && values.length > 1) {
+      const midPoint = Math.floor(values.length / 2);
+      const firstHalf = values.slice(0, midPoint).reduce((sum, value) => sum + value, 0);
+      const secondHalf = values.slice(midPoint).reduce((sum, value) => sum + value, 0);
+      trend = firstHalf > 0 ? ((secondHalf - firstHalf) / firstHalf) * 100 : 0;
+    }
 
     return { total, trend, isPositive: trend >= 0, maxValue };
   };
@@ -499,35 +546,97 @@ export default function AnalyticsPage() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">Track your SMM panel performance and growth</p>
               </div>
             </div>
-            <div className="relative">
-              <button
-                onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
-                className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer flex items-center gap-2"
-              >
-                <FaCalendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span className="font-medium">{selectedYear}</span>
-              </button>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setIsMonthDropdownOpen(!isMonthDropdownOpen);
+                    setIsYearDropdownOpen(false);
+                  }}
+                  className="form-field w-full pl-4 pr-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer flex items-center gap-2 min-w-[160px]"
+                >
+                  <FaCalendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <span className="font-medium">
+                    {selectedMonth !== null 
+                      ? availableMonths.find(m => m.value === selectedMonth)?.label || 'Select Month'
+                      : 'All Months'}
+                  </span>
+                </button>
 
-              {isYearDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg z-10">
-                  {availableYears.map((year) => (
+                {isMonthDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg z-20 max-h-64 overflow-y-auto">
                     <button
-                      key={year}
                       onClick={() => {
-                        setSelectedYear(year);
-                        setIsYearDropdownOpen(false);
+                        setSelectedMonth(null);
+                        setIsMonthDropdownOpen(false);
                       }}
-                      className={`w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 ${
-                        year === selectedYear ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
-                      } ${year === availableYears[0] ? 'rounded-t-lg' : ''} ${
-                        year === availableYears[availableYears.length - 1] ? 'rounded-b-lg' : ''
+                      className={`w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 rounded-t-lg ${
+                        selectedMonth === null ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
                       }`}
                     >
-                      {year}
+                      All Months
                     </button>
-                  ))}
-                </div>
-              )}
+                    {availableMonths.map((month) => (
+                      <button
+                        key={month.value}
+                        onClick={() => {
+                          setSelectedMonth(month.value);
+                          setIsMonthDropdownOpen(false);
+                        }}
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 ${
+                          month.value === selectedMonth ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                        } ${month.value === availableMonths[availableMonths.length - 1].value ? 'rounded-b-lg' : ''}`}
+                      >
+                        {month.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    setIsYearDropdownOpen(!isYearDropdownOpen);
+                    setIsMonthDropdownOpen(false);
+                  }}
+                  className="form-field w-full pl-4 pr-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer flex items-center gap-2 min-w-[120px]"
+                >
+                  <FaCalendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <span className="font-medium">
+                    {selectedYear !== null ? selectedYear : 'All Years'}
+                  </span>
+                </button>
+
+                {isYearDropdownOpen && availableYears.length > 0 && (
+                  <div className="absolute right-0 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg z-20">
+                    <button
+                      onClick={() => {
+                        setSelectedYear(null);
+                        setIsYearDropdownOpen(false);
+                      }}
+                      className={`w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 rounded-t-lg ${
+                        selectedYear === null ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      All Years
+                    </button>
+                    {availableYears.map((year) => (
+                      <button
+                        key={year}
+                        onClick={() => {
+                          setSelectedYear(year);
+                          setIsYearDropdownOpen(false);
+                        }}
+                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 ${
+                          year === selectedYear ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                        } ${year === availableYears[availableYears.length - 1] ? 'rounded-b-lg' : ''}`}
+                      >
+                        {year}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -561,7 +670,9 @@ export default function AnalyticsPage() {
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors duration-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-600 dark:text-blue-400 font-semibold">Total {selectedYear}</p>
+                  <p className="text-blue-600 dark:text-blue-400 font-semibold">
+                    Total {selectedYear !== null ? selectedYear : 'All Years'}
+                  </p>
                   {loading ? (
                     <div className="h-8 w-24 gradient-shimmer rounded mt-2" />
                   ) : (
@@ -612,8 +723,8 @@ export default function AnalyticsPage() {
                   ) : (
                     <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
                       {activeTab === 'orders'
-                        ? Math.round(metrics.total / 12).toLocaleString()
-                        : <PriceDisplay amount={metrics.total / 12} originalCurrency="USD" className="text-2xl font-bold text-purple-700 dark:text-purple-300" />
+                        ? Math.round(metrics.total / (selectedMonth !== null ? 1 : Math.max(analyticsData.length, 1))).toLocaleString()
+                        : <PriceDisplay amount={metrics.total / (selectedMonth !== null ? 1 : Math.max(analyticsData.length, 1))} originalCurrency="USD" className="text-2xl font-bold text-purple-700 dark:text-purple-300" />
                       }
                     </p>
                   )}
@@ -624,9 +735,14 @@ export default function AnalyticsPage() {
           </div>
           <div className="mb-4">
             <h3 className="card-title mb-4">
-              {activeTab === 'profit' ? 'Monthly Profit Analysis' :
-               activeTab === 'payments' ? 'Monthly Payment Revenue' :
-               'Monthly Order Volume'}
+              {selectedMonth !== null 
+                ? `${activeTab === 'profit' ? 'Profit Analysis' :
+                   activeTab === 'payments' ? 'Payment Revenue' :
+                   'Order Volume'} - ${availableMonths.find(m => m.value === selectedMonth)?.label} ${selectedYear !== null ? selectedYear : 'All Years'}`
+                : `${activeTab === 'profit' ? 'Monthly Profit Analysis' :
+                   activeTab === 'payments' ? 'Monthly Payment Revenue' :
+                   'Monthly Order Volume'} - ${selectedYear !== null ? selectedYear : 'All Years'}`
+              }
             </h3>
             {loading ? (
               <ChartSkeleton />
@@ -640,59 +756,6 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
-      {activeTab === 'orders' && !loading && (
-        <div className="mb-6">
-          <div className="card card-padding">
-            <div className="card-header mb-4">
-              <h3 className="card-title">Platform Breakdown</h3>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Order distribution across platforms</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-              {[
-                { name: 'Instagram', key: 'instagramOrders', color: 'bg-pink-500', bgColor: 'bg-pink-50 dark:bg-pink-900/20', borderColor: 'border-pink-200 dark:border-pink-800', textColor: 'text-pink-600 dark:text-pink-400', hoverColor: 'hover:bg-pink-100 dark:hover:bg-pink-900/30' },
-                { name: 'Facebook', key: 'facebookOrders', color: 'bg-blue-600', bgColor: 'bg-blue-50 dark:bg-blue-900/20', borderColor: 'border-blue-200 dark:border-blue-800', textColor: 'text-blue-600 dark:text-blue-400', hoverColor: 'hover:bg-blue-100 dark:hover:bg-blue-900/30' },
-                { name: 'YouTube', key: 'youtubeOrders', color: 'bg-red-500', bgColor: 'bg-red-50 dark:bg-red-900/20', borderColor: 'border-red-200 dark:border-red-800', textColor: 'text-red-600 dark:text-red-400', hoverColor: 'hover:bg-red-100 dark:hover:bg-red-900/30' },
-                { name: 'TikTok', key: 'tiktokOrders', color: 'bg-gray-900', bgColor: 'bg-gray-50 dark:bg-gray-800/50', borderColor: 'border-gray-200 dark:border-gray-700', textColor: 'text-gray-600 dark:text-gray-400', hoverColor: 'hover:bg-gray-100 dark:hover:bg-gray-700/50' },
-                { name: 'Twitter', key: 'twitterOrders', color: 'bg-cyan-500', bgColor: 'bg-cyan-50 dark:bg-cyan-900/20', borderColor: 'border-cyan-200 dark:border-cyan-800', textColor: 'text-cyan-600 dark:text-cyan-400', hoverColor: 'hover:bg-cyan-100 dark:hover:bg-cyan-900/30' },
-              ].map((platform) => {
-                const total = analyticsData.reduce((sum, item) => sum + (item[platform.key as keyof AnalyticsData] as number), 0);
-                const percentage = metrics.total > 0 ? ((total / metrics.total) * 100).toFixed(1) : '0.0';
-
-                return (
-                  <div key={platform.name} className={`${platform.bgColor} border ${platform.borderColor} rounded-lg p-4 ${platform.hoverColor} transition-colors duration-200`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-3 h-3 rounded-full ${platform.color}`}></div>
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{platform.name}</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{total.toLocaleString()}</p>
-                    <p className={`text-sm ${platform.textColor}`}>{percentage}% of total</p>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mb-4">
-              <h4 className="text-md font-semibold text-gray-900 dark:text-gray-100 mb-4">Monthly Platform Distribution</h4>
-              <PlatformChart data={analyticsData} totalOrders={metrics.total} />
-            </div>
-            <div className="flex flex-wrap gap-4 justify-center mt-4">
-              {[
-                { name: 'Instagram', color: 'bg-pink-500' },
-                { name: 'Facebook', color: 'bg-blue-600' },
-                { name: 'YouTube', color: 'bg-red-500' },
-                { name: 'TikTok', color: 'bg-gray-900' },
-                { name: 'Twitter', color: 'bg-cyan-500' },
-              ].map((platform) => (
-                <div key={platform.name} className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${platform.color}`}></div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{platform.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
       </div>
     </div>
   );
