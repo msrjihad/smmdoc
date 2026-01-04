@@ -87,7 +87,7 @@ const DashboardPage = () => {
           setTimeFormat(userDetails.timeFormat);
         } else {
           const user = await getUserDetails();
-          if (user?.timeFormat) {
+          if (user && 'timeFormat' in user && user.timeFormat) {
             setTimeFormat(user.timeFormat);
           }
         }
@@ -95,7 +95,7 @@ const DashboardPage = () => {
           setUserTimezone(userDetails.timezone);
         } else {
           const user = await getUserDetails();
-          if (user?.timezone) {
+          if (user && 'timezone' in user && user.timezone) {
             setUserTimezone(user.timezone);
           }
         }

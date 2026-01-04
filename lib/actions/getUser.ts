@@ -117,6 +117,8 @@ export async function getUserDetails() {
           username: session.user.username || null,
           createdAt: new Date(),
           updatedAt: new Date(),
+          timezone: 'Asia/Dhaka',
+          timeFormat: '24',
           addFund: []
         };
       }
