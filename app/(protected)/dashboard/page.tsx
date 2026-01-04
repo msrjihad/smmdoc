@@ -13,6 +13,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSelector } from 'react-redux';
+import { getUserDetails } from '@/lib/actions/getUser';
 import {
     FaChartLine,
     FaCheckCircle,
@@ -67,12 +69,42 @@ const DashboardPage = () => {
   const [statisticsLoading, setStatisticsLoading] = useState(true);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ticketsLoading, setTicketsLoading] = useState(true);
+  const [recentTickets, setRecentTickets] = useState<any[]>([]);
+  const [timeFormat, setTimeFormat] = useState<string>('24');
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
 
+  const userDetails = useSelector((state: any) => state.userDetails);
   const { appName } = useAppNameWithFallback();
 
   useEffect(() => {
     setPageTitle('Dashboard', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const loadTimeFormat = async () => {
+      try {
+        if (userDetails?.timeFormat) {
+          setTimeFormat(userDetails.timeFormat);
+        } else {
+          const user = await getUserDetails();
+          if (user?.timeFormat) {
+            setTimeFormat(user.timeFormat);
+          }
+        }
+        if (userDetails?.timezone) {
+          setUserTimezone(userDetails.timezone);
+        } else {
+          const user = await getUserDetails();
+          if (user?.timezone) {
+            setUserTimezone(user.timezone);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading time format:', error);
+      }
+    };
+    loadTimeFormat();
+  }, [userDetails]);
 
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -96,8 +128,20 @@ const DashboardPage = () => {
     };
 
     const loadTickets = async () => {
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      setTicketsLoading(false);
+      try {
+        const response = await fetch('/api/support-tickets?page=1&limit=3');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.tickets) {
+            setRecentTickets(data.tickets);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching tickets:', error);
+      } finally {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setTicketsLoading(false);
+      }
     };
 
     loadUserInfo();
@@ -207,10 +251,70 @@ const DashboardPage = () => {
   };
 
   const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return {
-      date: moment(dateString).format('DD/MM/YYYY'),
-      time: moment(dateString).format('HH:mm'),
+      date: date.toLocaleDateString('en-GB', { timeZone: userTimezone }),
+      time: date.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: timeFormat === '12',
+        timeZone: userTimezone,
+      }),
     };
+  };
+
+  const mapApiStatusToFrontend = (apiStatus: string) => {
+    const statusMap: { [key: string]: string } = {
+      'pending': 'open',
+      'in_progress': 'in_progress',
+      'on_hold': 'on_hold',
+      'closed': 'closed',
+      'Open': 'open',
+      'Answered': 'answered',
+      'Customer Reply': 'customer_reply',
+      'Closed': 'closed'
+    };
+    return statusMap[apiStatus] || apiStatus.toLowerCase();
+  };
+
+  const getTicketStatusBadge = (status: string) => {
+    const mappedStatus = mapApiStatusToFrontend(status);
+    switch (mappedStatus) {
+      case 'open':
+        return 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-800';
+      case 'answered':
+        return 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800';
+      case 'customer_reply':
+        return 'bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200 border border-orange-200 dark:border-orange-800';
+      case 'on_hold':
+        return 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-800';
+      case 'in_progress':
+        return 'bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-200 border border-purple-200 dark:border-purple-800';
+      case 'closed':
+        return 'bg-gray-100 dark:bg-gray-900/20 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800';
+      default:
+        return 'bg-gray-100 dark:bg-gray-900/20 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800';
+    }
+  };
+
+  const formatTicketStatus = (status: string) => {
+    const mappedStatus = mapApiStatusToFrontend(status);
+    switch (mappedStatus) {
+      case 'open':
+        return 'Open';
+      case 'answered':
+        return 'Answered';
+      case 'customer_reply':
+        return 'Customer Reply';
+      case 'on_hold':
+        return 'On Hold';
+      case 'in_progress':
+        return 'In Progress';
+      case 'closed':
+        return 'Closed';
+      default:
+        return status;
+    }
   };
 
   return (
@@ -661,10 +765,47 @@ const DashboardPage = () => {
               </div>
 
               {ticketsLoading ? (
-                <div className="text-center py-8">
-                  <div className="h-16 w-16 gradient-shimmer rounded-full mx-auto mb-4" />
-                  <div className="h-6 w-48 gradient-shimmer rounded mx-auto mb-2" />
-                  <div className="h-4 w-64 gradient-shimmer rounded mx-auto" />
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                      <div className="h-4 w-32 gradient-shimmer rounded mb-2" />
+                      <div className="h-3 w-24 gradient-shimmer rounded mb-2" />
+                      <div className="h-6 w-20 gradient-shimmer rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              ) : recentTickets.length > 0 ? (
+                <div className="space-y-3">
+                  {recentTickets.map((ticket: any) => {
+                    const dateTime = formatDate(ticket.createdAt);
+                    return (
+                      <Link
+                        key={ticket.id}
+                        href={`/support-tickets/${ticket.id}`}
+                        className="block border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 flex-1">
+                            {ticket.subject}
+                          </h4>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            <span>{dateTime.date}</span>
+                            <span className="mx-1">•</span>
+                            <span>{dateTime.time}</span>
+                          </div>
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${getTicketStatusBadge(
+                              ticket.status
+                            )}`}
+                          >
+                            {formatTicketStatus(ticket.status)}
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               ) : (
                 <div

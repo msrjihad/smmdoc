@@ -53,37 +53,37 @@ export async function GET(request: NextRequest) {
     const totalDeposit = user.total_deposit ? Number(user.total_deposit) : 0;
     const totalSpent = user.total_spent ? Number(user.total_spent) : 0;
     
-    const totalOrders = await db.newOrders.count({
+    const totalOrders = Number(await db.newOrders.count({
       where: { userId: userId }
-    });
+    }));
     
-    const pendingOrders = await db.newOrders.count({
+    const pendingOrders = Number(await db.newOrders.count({
       where: { 
         userId: userId,
         status: 'pending' 
       }
-    });
+    }));
     
-    const processingOrders = await db.newOrders.count({
+    const processingOrders = Number(await db.newOrders.count({
       where: { 
         userId: userId,
         status: 'processing' 
       }
-    });
+    }));
     
-    const completedOrders = await db.newOrders.count({
+    const completedOrders = Number(await db.newOrders.count({
       where: { 
         userId: userId,
         status: 'completed' 
       }
-    });
+    }));
     
-    const cancelledOrders = await db.newOrders.count({
+    const cancelledOrders = Number(await db.newOrders.count({
       where: { 
         userId: userId,
         status: 'cancelled' 
       }
-    });
+    }));
     
     const recentOrders = await db.newOrders.findMany({
       where: { userId: userId },
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
       data: {
         balance: userBalance,
         currency: user.currency,
-        dollarRate: user.dollarRate,
+        dollarRate: user.dollarRate ? (typeof user.dollarRate === 'bigint' ? Number(user.dollarRate) : Number(user.dollarRate)) : null,
         totalDeposit: totalDeposit,
         totalSpent: totalSpent,
         totalOrders,
@@ -149,12 +149,12 @@ export async function GET(request: NextRequest) {
           cancelled: cancelledOrders
         },
         recentOrders: recentOrders.map(order => ({
-          id: order.id,
+          id: typeof order.id === 'bigint' ? Number(order.id) : order.id,
           status: order.status,
           createdAt: order.createdAt,
           link: order.link,
-          qty: order.qty,
-          usdPrice: order.usdPrice,
+          qty: typeof order.qty === 'bigint' ? Number(order.qty) : (order.qty ? Number(order.qty) : 0),
+          usdPrice: typeof order.usdPrice === 'bigint' ? Number(order.usdPrice) : (order.usdPrice ? Number(order.usdPrice) : 0),
           providerStatus: order.providerStatus,
           service: {
             name: order.service.name
@@ -163,15 +163,45 @@ export async function GET(request: NextRequest) {
             category_name: order.service.category.category_name
           },
           user: {
-            dollarRate: user.dollarRate
+            dollarRate: user.dollarRate ? Number(user.dollarRate) : null
           }
         })),
         favoriteCategories: favoriteCategories.map(category => ({
-          id: category.id,
+          id: typeof category.id === 'bigint' ? Number(category.id) : category.id,
           name: category.category_name,
-          services: category.services
+          services: category.services.map(service => ({
+            id: typeof service.id === 'bigint' ? Number(service.id) : service.id,
+            name: service.name
+          }))
         })),
-        recentTransactions
+        recentTransactions: recentTransactions.map(transaction => ({
+          id: typeof transaction.id === 'bigint' ? Number(transaction.id) : transaction.id,
+          userId: typeof transaction.userId === 'bigint' ? Number(transaction.userId) : transaction.userId,
+          name: transaction.name,
+          email: transaction.email,
+          invoiceId: transaction.invoiceId,
+          transactionId: transaction.transactionId,
+          amount: typeof transaction.amount === 'bigint' ? Number(transaction.amount) : (transaction.amount ? Number(transaction.amount) : null),
+          usdAmount: typeof transaction.usdAmount === 'object' && 'toNumber' in transaction.usdAmount 
+            ? (transaction.usdAmount as any).toNumber() 
+            : (typeof transaction.usdAmount === 'bigint' ? Number(transaction.usdAmount) : Number(transaction.usdAmount || 0)),
+          originalAmount: transaction.originalAmount ? Number(transaction.originalAmount) : null,
+          spentAmount: transaction.spentAmount ? Number(transaction.spentAmount) : null,
+          currency: transaction.currency,
+          gatewayFee: transaction.gatewayFee ? Number(transaction.gatewayFee) : null,
+          status: transaction.status,
+          adminStatus: transaction.adminStatus,
+          paymentGateway: transaction.paymentGateway,
+          paymentMethod: transaction.paymentMethod,
+          senderNumber: transaction.senderNumber,
+          orderId: transaction.orderId,
+          referenceId: transaction.referenceId,
+          transactionType: transaction.transactionType,
+          transactionDate: transaction.transactionDate,
+          paidAt: transaction.paidAt,
+          createdAt: transaction.createdAt,
+          updatedAt: transaction.updatedAt
+        }))
       }
     });
   } catch (error) {

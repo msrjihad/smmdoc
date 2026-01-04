@@ -487,24 +487,118 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
 
   if (loading || !ticketId) {
     return (
-      <div className="page-container">
-        <div className="page-content">
-          <div className="card card-padding">
-            <div className="card-header">
-              <div className="card-icon">
-                <FaTicketAlt />
+      <TicketSystemGuard>
+        <div className="page-container">
+          <div className="page-content">
+            {/* Back button and title skeleton */}
+            <div className="mb-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="h-10 w-32 gradient-shimmer rounded-lg" />
+                <div className="h-8 w-48 gradient-shimmer rounded" />
               </div>
-              <h3 className="card-title">Loading Ticket Details</h3>
             </div>
-            <div className="flex items-center justify-center min-h-[200px]">
-              <div className="text-center">
-                <GradientSpinner size="w-12 h-12" className="mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">Loading ticket details...</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Main content area skeleton */}
+              <div className="md:col-span-2 space-y-6">
+                {/* System Processing Result card skeleton (optional) */}
+                <div className="card card-padding">
+                  <div className="card-header">
+                    <div className="card-icon">
+                      <div className="w-6 h-6 gradient-shimmer rounded" />
+                    </div>
+                    <div className="h-5 w-40 gradient-shimmer rounded" />
+                  </div>
+                  <div className="mt-4">
+                    <div className="h-20 w-full gradient-shimmer rounded-lg" />
+                  </div>
+                </div>
+
+                {/* Conversation card skeleton */}
+                <div className="card card-padding">
+                  <div className="card-header">
+                    <div className="card-icon">
+                      <div className="w-6 h-6 gradient-shimmer rounded" />
+                    </div>
+                    <div className="h-5 w-32 gradient-shimmer rounded" />
+                  </div>
+                  <div className="space-y-6 mt-6">
+                    {Array.from({ length: 3 }).map((_, idx) => (
+                      <div key={idx} className="flex items-start gap-4">
+                        <div className="w-10 h-10 gradient-shimmer rounded-full" />
+                        <div className="flex-1 space-y-3">
+                          <div className="h-4 w-32 gradient-shimmer rounded" />
+                          <div className="h-4 w-full gradient-shimmer rounded" />
+                          <div className="h-4 w-3/4 gradient-shimmer rounded" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Post a Reply card skeleton */}
+                <div className="card card-padding">
+                  <div className="card-header">
+                    <div className="card-icon">
+                      <div className="w-6 h-6 gradient-shimmer rounded" />
+                    </div>
+                    <div className="h-5 w-28 gradient-shimmer rounded" />
+                  </div>
+                  <div className="space-y-4 mt-4">
+                    <div className="h-32 w-full gradient-shimmer rounded-lg" />
+                    <div className="h-10 w-32 gradient-shimmer rounded-lg" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sidebar skeleton */}
+              <div className="space-y-6">
+                {/* Ticket Details card skeleton */}
+                <div className="card card-padding">
+                  <div className="card-header">
+                    <div className="card-icon">
+                      <div className="w-6 h-6 gradient-shimmer rounded" />
+                    </div>
+                    <div className="h-5 w-28 gradient-shimmer rounded" />
+                  </div>
+                  <div className="space-y-4 mt-4">
+                    <div>
+                      <div className="h-3 w-16 gradient-shimmer rounded mb-2" />
+                      <div className="h-4 w-full gradient-shimmer rounded" />
+                    </div>
+                    <div>
+                      <div className="h-3 w-12 gradient-shimmer rounded mb-2" />
+                      <div className="h-6 w-20 gradient-shimmer rounded-full" />
+                    </div>
+                    <div>
+                      <div className="h-3 w-16 gradient-shimmer rounded mb-2" />
+                      <div className="h-4 w-32 gradient-shimmer rounded" />
+                    </div>
+                    <div>
+                      <div className="h-3 w-24 gradient-shimmer rounded mb-2" />
+                      <div className="h-4 w-32 gradient-shimmer rounded" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Close Ticket card skeleton */}
+                <div className="card card-padding">
+                  <div className="card-header">
+                    <div className="card-icon">
+                      <div className="w-6 h-6 gradient-shimmer rounded" />
+                    </div>
+                    <div className="h-5 w-28 gradient-shimmer rounded" />
+                  </div>
+                  <div className="space-y-4 mt-4">
+                    <div className="h-12 w-full gradient-shimmer rounded" />
+                    <div className="h-10 w-32 gradient-shimmer rounded-lg" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </TicketSystemGuard>
     );
   }
 
