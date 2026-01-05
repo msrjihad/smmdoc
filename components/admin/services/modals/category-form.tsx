@@ -269,7 +269,6 @@ export const CreateCategoryForm = ({
     </div>
   );
 
-  // If modal props are provided, wrap with modal structure
   if (isOpen !== undefined) {
     return (
       <div
@@ -294,6 +293,5 @@ export const CreateCategoryForm = ({
     );
   }
 
-  // Otherwise return form content directly
   return formContent;
 };

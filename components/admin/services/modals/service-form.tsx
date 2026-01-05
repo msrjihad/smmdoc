@@ -1287,7 +1287,6 @@ export const CreateServiceForm: React.FC<{
     </div>
   );
 
-  // If modal props are provided, wrap with modal structure
   if (isOpen !== undefined) {
     return (
       <div
@@ -1312,6 +1311,5 @@ export const CreateServiceForm: React.FC<{
     );
   }
 
-  // Otherwise return form content directly
   return formContent;
 };

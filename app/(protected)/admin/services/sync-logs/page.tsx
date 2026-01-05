@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
     FaBox,
     FaCheckCircle,
@@ -15,6 +16,12 @@ import { setPageTitle } from '@/lib/utils/set-page-title';
 import { formatNumber } from '@/lib/utils';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import DeleteSelectedSyncLogsModal from '@/components/admin/services/sync-logs/modals/delete-selected-sync-logs';
+
+const LogsTable = dynamic(
+  () => import('@/components/admin/services/sync-logs/logs-table'),
+  { ssr: false }
+);
 
 const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   <div className={`${size} ${className} relative`}>
@@ -373,10 +380,6 @@ const SyncLogsPage = () => {
     fetchSyncLogs();
   }, [fetchSyncLogs]);
 
-  const getPaginatedData = () => {
-    return syncLogs;
-  };
-
   const showToast = (
     message: string,
     type: 'success' | 'error' | 'info' | 'pending' = 'success'
@@ -386,11 +389,10 @@ const SyncLogsPage = () => {
   };
 
   const handleSelectAll = () => {
-    const currentPageData = getPaginatedData();
-    if (selectedLogs.length === currentPageData.length) {
+    if (selectedLogs.length === syncLogs.length) {
       setSelectedLogs([]);
     } else {
-      setSelectedLogs(currentPageData.map((log) => log.id));
+      setSelectedLogs(syncLogs.map((log) => log.id));
     }
   };
 
@@ -558,7 +560,7 @@ const SyncLogsPage = () => {
           <div style={{ padding: '0 24px' }} className="min-h-[600px]">
             {logsLoading ? (
               <SyncLogsTableSkeleton />
-            ) : getPaginatedData().length === 0 ? (
+            ) : syncLogs.length === 0 ? (
               <div className="text-center py-12">
                 <FaBox
                   className="h-16 w-16 mx-auto mb-4 text-gray-400 dark:text-gray-500"
@@ -574,282 +576,27 @@ const SyncLogsPage = () => {
                 </p>
               </div>
             ) : (
-              <React.Fragment>
-                <div className="hidden lg:block overflow-x-auto">
-                  <table className="w-full text-sm min-w-[1000px]">
-                    <thead className="sticky top-0 bg-white dark:bg-[var(--card-bg)] border-b dark:border-gray-700 z-10">
-                      <tr>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={
-                              selectedLogs.length ===
-                                getPaginatedData().length &&
-                              getPaginatedData().length > 0
-                            }
-                            onChange={handleSelectAll}
-                            className="rounded border-gray-300 dark:border-gray-600 w-4 h-4 text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer"
-                          />
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Sl. No
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          API Provider
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Service Name
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Changes
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          When
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                    {getPaginatedData().map((log, index) => (
-                      <tr
-                        key={log.id}
-                        className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)] transition-colors duration-200"
-                      >
-                          <td className="p-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedLogs.includes(log.id)}
-                              onChange={() => handleSelectLog(log.id)}
-                              className="rounded border-gray-300 dark:border-gray-600 w-4 h-4 text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer"
-                            />
-                          </td>
-                          <td className="p-3">
-                            <div
-                              className="font-medium text-sm text-gray-900 dark:text-gray-100"
-                            >
-                              {(pagination.page - 1) * pagination.limit + index + 1}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div
-                              className="font-medium text-sm text-gray-900 dark:text-gray-100"
-                            >
-                              {log.apiProvider}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div
-                              className="font-medium text-sm text-gray-900 dark:text-gray-100"
-                            >
-                              {log.serviceName}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="max-w-xs">
-                              <div className="flex items-center gap-2 mb-1">
-                                {getChangeTypeBadge(log.changeType)}
-                              </div>
-                              <div
-                                className="text-sm truncate text-gray-900 dark:text-gray-100"
-                                title={log.changes}
-                              >
-                                {log.changes}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400">
-                                {formatDate(log.when)}
-                              </div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400">
-                                {formatTime(log.when)}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <button
-                              onClick={() => {
-                                setLogToDelete(log.id);
-                                setDeleteDialogOpen(true);
-                              }}
-                              className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors duration-200"
-                              title="Delete Log"
-                            >
-                              <FaTrash className="h-3 w-3" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="lg:hidden">
-                  <div className="space-y-4" style={{ padding: '24px 0 0 0' }}>
-                    {getPaginatedData().map((log, index) => (
-                      <div
-                        key={log.id}
-                        className="card card-padding border-l-4 border-blue-500 dark:border-blue-400 mb-4"
-                      >
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedLogs.includes(log.id)}
-                              onChange={() => handleSelectLog(log.id)}
-                              className="rounded border-gray-300 dark:border-gray-600 w-4 h-4 text-[var(--primary)] focus:ring-[var(--primary)] cursor-pointer"
-                            />
-                            <div className="font-mono text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded">
-                              {(pagination.page - 1) * pagination.limit + index + 1}
-                            </div>
-                            {getChangeTypeBadge(log.changeType)}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => {
-                                setLogToDelete(log.id);
-                                setDeleteDialogOpen(true);
-                              }}
-                              className="p-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors duration-200"
-                              title="Delete Log"
-                            >
-                              <FaTrash className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <div
-                              className="text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
-                            >
-                              API Provider
-                            </div>
-                            <div
-                              className="font-medium text-sm text-gray-900 dark:text-gray-100"
-                            >
-                              {log.apiProvider}
-                            </div>
-                          </div>
-                          <div>
-                            <div
-                              className="text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
-                            >
-                              Service Name
-                            </div>
-                            <div
-                              className="font-medium text-sm text-gray-900 dark:text-gray-100"
-                            >
-                              {log.serviceName}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mb-4">
-                          <div
-                            className="text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
-                          >
-                            Changes
-                          </div>
-                          <div
-                            className="text-sm text-gray-900 dark:text-gray-100"
-                          >
-                            {log.changes}
-                          </div>
-                        </div>
-                        <div>
-                          <div
-                            className="text-xs font-medium mb-1 text-gray-500 dark:text-gray-400"
-                          >
-                            When
-                          </div>
-                          <div
-                            className="text-xs text-gray-600 dark:text-gray-400"
-                          >
-                            Date: {formatDate(log.when)}
-                          </div>
-                          <div
-                            className="text-xs text-gray-600 dark:text-gray-400"
-                          >
-                            Time: {formatTime(log.when)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row items-center justify-between pt-4 pb-6 border-t dark:border-gray-700">
-                  <div
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    {logsLoading ? (
-                      <div className="flex items-center gap-2">
-                        <span>Loading pagination...</span>
-                      </div>
-                    ) : (
-                      `Showing ${formatNumber(
-                        (pagination.page - 1) * pagination.limit + 1
-                      )} to ${formatNumber(
-                        Math.min(
-                          pagination.page * pagination.limit,
-                          pagination.total
-                        )
-                      )} of ${formatNumber(pagination.total)} sync logs`
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-4 md:mt-0">
-                    <button
-                      onClick={() =>
-                        setPagination((prev) => ({
-                          ...prev,
-                          page: Math.max(1, prev.page - 1),
-                        }))
-                      }
-                      disabled={!pagination.hasPrev || logsLoading}
-                      className="btn btn-secondary"
-                    >
-                      Previous
-                    </button>
-                    <span
-                      className="text-sm text-gray-600 dark:text-gray-400"
-                    >
-                      {logsLoading ? (
-                        <GradientSpinner size="w-4 h-4" />
-                      ) : (
-                        `Page ${formatNumber(
-                          pagination.page
-                        )} of ${formatNumber(pagination.totalPages)}`
-                      )}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setPagination((prev) => ({
-                          ...prev,
-                          page: Math.min(prev.totalPages, prev.page + 1),
-                        }))
-                      }
-                      disabled={!pagination.hasNext || logsLoading}
-                      className="btn btn-secondary"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              </React.Fragment>
+              <LogsTable
+                logs={syncLogs}
+                pagination={pagination}
+                selectedLogs={selectedLogs}
+                logsLoading={logsLoading}
+                formatDate={formatDate}
+                formatTime={formatTime}
+                getChangeTypeBadge={getChangeTypeBadge}
+                onSelectAll={handleSelectAll}
+                onSelectLog={handleSelectLog}
+                onDeleteLog={(logId) => {
+                  setLogToDelete(logId);
+                  setDeleteDialogOpen(true);
+                }}
+                onPageChange={(page) => {
+                  setPagination((prev) => ({
+                    ...prev,
+                    page,
+                  }));
+                }}
+              />
             )}
           </div>
         </div>
@@ -894,38 +641,15 @@ const SyncLogsPage = () => {
             </div>
           </div>
         )}
-        {bulkDeleteDialogOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                Delete Selected Sync Logs
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Are you sure you want to delete {selectedLogs.length} selected
-                sync log{selectedLogs.length !== 1 ? 's' : ''}? This action
-                cannot be undone.
-              </p>
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => setBulkDeleteDialogOpen(false)}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    handleBulkDelete();
-                    setBulkDeleteDialogOpen(false);
-                  }}
-                  className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 shadow-sm"
-                >
-                  Delete {selectedLogs.length} Log
-                  {selectedLogs.length !== 1 ? 's' : ''}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <DeleteSelectedSyncLogsModal
+          isOpen={bulkDeleteDialogOpen}
+          selectedCount={selectedLogs.length}
+          isLoading={deleteLoading}
+          onClose={() => setBulkDeleteDialogOpen(false)}
+          onConfirm={() => {
+            handleBulkDelete();
+          }}
+        />
       </div>
     </div>
   );

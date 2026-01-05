@@ -190,7 +190,6 @@ export const DeleteCategoryModal = ({
     </div>
   );
 
-  // If modal props are provided, wrap with modal structure
   if (isOpen !== undefined) {
     return (
       <div
@@ -215,6 +214,5 @@ export const DeleteCategoryModal = ({
     );
   }
 
-  // Otherwise return content directly
   return modalContent;
 };

@@ -66,7 +66,6 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
     </div>
   );
 
-  // If modal props are provided, wrap with modal structure
   if (isOpen !== undefined) {
     return (
       <div
@@ -91,6 +90,5 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
     );
   }
 
-  // Otherwise return content directly
   return modalContent;
 };

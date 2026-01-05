@@ -68,7 +68,6 @@ export const DeleteServicesAndCategoriesModal: React.FC<DeleteServicesAndCategor
     </div>
   );
 
-  // If modal props are provided, wrap with modal structure
   if (isOpen !== undefined) {
     return (
       <div
@@ -93,6 +92,5 @@ export const DeleteServicesAndCategoriesModal: React.FC<DeleteServicesAndCategor
     );
   }
 
-  // Otherwise return content directly
   return modalContent;
 };

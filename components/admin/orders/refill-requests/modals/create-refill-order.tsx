@@ -69,7 +69,6 @@ const CreateRefillOrderModal: React.FC<CreateRefillOrderModalProps> = ({
     startCount: '',
   });
 
-  // Reset form when modal closes or refillInfo changes
   useEffect(() => {
     if (!isOpen) {
       setRefillForm({ quantity: '', startCount: '' });

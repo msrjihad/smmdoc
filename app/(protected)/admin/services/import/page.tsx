@@ -181,9 +181,11 @@ const ImportServicesPage = () => {
   }, [appName]);
 
   const [realProviders, setRealProviders] = useState<Provider[]>([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
 
   useEffect(() => {
     const fetchProviders = async () => {
+      setProvidersLoading(true);
       try {
         const response = await fetch('/api/admin/providers?filter=active');
         const result = await response.json();
@@ -203,6 +205,8 @@ const ImportServicesPage = () => {
       } catch (error) {
         console.error('Error fetching providers:', error);
         showToast('Failed to fetch providers', 'error');
+      } finally {
+        setProvidersLoading(false);
       }
     };
 
@@ -728,9 +732,12 @@ const ImportServicesPage = () => {
                   <select
                     value={selectedProvider}
                     onChange={(e) => setSelectedProvider(e.target.value)}
-                    className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
+                    disabled={providersLoading}
+                    className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <option value="">-- Select API Provider --</option>
+                    <option value="">
+                      {providersLoading ? 'Loading...' : '-- Select API Provider --'}
+                    </option>
                     {realProviders.map((provider) => (
                       <option
                         key={provider.id}
