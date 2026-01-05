@@ -20,6 +20,10 @@ import { formatID, formatNumber, formatPrice } from '@/lib/utils';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
 import { PriceDisplay } from '@/components/price-display';
+import CancelRequestTable from '@/components/admin/orders/cancel-requests/cancel-request-table';
+import CancelRequestDetailsModal from '@/components/admin/orders/cancel-requests/modals/cancel-request-details';
+import ApproveCancelRequestModal from '@/components/admin/orders/cancel-requests/modals/approve-cancel-request';
+import DeclineCancelRequestModal from '@/components/admin/orders/cancel-requests/modals/decline-cancel-request';
 
 const cleanLinkDisplay = (link: string): string => {
   if (!link) return link;
@@ -227,8 +231,6 @@ const CancelRequestsPage = () => {
     refundAmount: 0,
     isLoading: false,
   });
-  const [newRefundAmount, setNewRefundAmount] = useState('');
-  const [adminNotes, setAdminNotes] = useState('');
   const [declineDialog, setDeclineDialog] = useState<{
     open: boolean;
     requestId: number;
@@ -238,7 +240,6 @@ const CancelRequestsPage = () => {
     requestId: 0,
     isLoading: false,
   });
-  const [declineReason, setDeclineReason] = useState('');
   const [viewDialog, setViewDialog] = useState<{
     open: boolean;
     request: CancelRequest | null;
@@ -476,8 +477,6 @@ const CancelRequestsPage = () => {
 
         showToast(result.message || 'Cancel request approved successfully', 'success');
         setApproveDialog({ open: false, requestId: 0, refundAmount: 0, isLoading: false });
-        setNewRefundAmount('');
-        setAdminNotes('');
 
         try {
           await fetchCancelRequests(pagination.page, statusFilter, searchTerm);
@@ -530,7 +529,6 @@ const CancelRequestsPage = () => {
 
         showToast(result.message || 'Cancel request declined successfully', 'success');
         setDeclineDialog({ open: false, requestId: 0, isLoading: false });
-        setDeclineReason('');
 
         try {
           await fetchCancelRequests(pagination.page, statusFilter, searchTerm);
@@ -561,13 +559,10 @@ const CancelRequestsPage = () => {
       requestId,
       refundAmount: currentRefundAmount,
     });
-    setNewRefundAmount(currentRefundAmount.toString());
-    setAdminNotes('');
   };
 
   const openDeclineDialog = (requestId: number) => {
     setDeclineDialog({ open: true, requestId });
-    setDeclineReason('');
   };
 
   const handleResendRequest = async (requestId: number) => {
@@ -959,819 +954,54 @@ const CancelRequestsPage = () => {
                 </p>
               </div>
             ) : (
-              <React.Fragment>
-                <div className="hidden lg:block overflow-x-auto">
-                  <table className="w-full text-sm min-w-[1100px]">
-                    <thead className="sticky top-0 bg-white dark:bg-[var(--card-bg)] border-b dark:border-gray-700 z-10">
-                      <tr>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={
-                              selectedRequests.length ===
-                                cancelRequests.length &&
-                              cancelRequests.length > 0
-                            }
-                            onChange={handleSelectAll}
-                            className="rounded border-gray-300 w-4 h-4"
-                          />
-                        </th>
-
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Order ID
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          User
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Service
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Provider
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Link
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Quantity
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Amount
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Status
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cancelRequests.map((request) => (
-                        <tr
-                          key={request.id}
-                          className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)] transition-colors duration-200"
-                        >
-                          <td className="p-3">
-                            {request.status !== 'declined' &&
-                              request.status !== 'approved' &&
-                              request.status !== 'failed' &&
-                              request.order?.seller === 'Self' && (
-                                <input
-                                  type="checkbox"
-                                  checked={selectedRequests.includes(
-                                    request.id.toString()
-                                  )}
-                                  onChange={() =>
-                                    handleSelectRequest(request.id.toString())
-                                  }
-                                  className="rounded border-gray-300 w-4 h-4"
-                                />
-                              )}
-                          </td>
-
-                          <td className="p-3">
-                            <div className="font-mono text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded">
-                              {formatID(String(request.order.id).slice(-8))}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div>
-                              <div
-                                className="font-medium text-sm"
-                                style={{ color: 'var(--text-primary)' }}
-                              >
-                                {request.user?.username ||
-                                  request.user?.email?.split('@')[0] ||
-                                  request.user?.name ||
-                                  'Unknown'}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div>
-                              <div
-                                className="font-medium text-sm truncate max-w-44"
-                                style={{ color: 'var(--text-primary)' }}
-                              >
-                                {request.order?.service?.name ||
-                                  'Unknown Service'}
-                              </div>
-                              <div
-                                className="text-xs truncate max-w-44"
-                                style={{ color: 'var(--text-muted)' }}
-                              >
-                                {request.order?.category?.category_name ||
-                                  'Unknown Category'}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div
-                              className="text-sm font-medium"
-                              style={{ color: 'var(--text-primary)' }}
-                            >
-                              {request.order?.seller === 'Self' 
-                                ? 'Self' 
-                                : (request.order?.service?.providerName || request.order?.seller || 'Unknown')}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="max-w-32">
-                              {request.order?.link ? (
-                                <a
-                                  href={request.order.link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 text-xs truncate"
-                                >
-                                  <span className="truncate">{cleanLinkDisplay(request.order.link)}</span>
-                                  <FaExternalLinkAlt className="h-3 w-3 flex-shrink-0" />
-                                </a>
-                              ) : (
-                                <span className="text-gray-400 dark:text-gray-500 text-xs">No link</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                              {formatNumber(request.order?.qty || 0)}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                              <PriceDisplay
-                                amount={request.order?.charge || 0}
-                                originalCurrency="USD"
-                                className="text-sm font-semibold"
-                              />
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full w-fit">
-                              {getStatusIcon(request.status)}
-                              <span className="text-xs font-medium capitalize text-gray-900 dark:text-gray-100">
-                                {request.status}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-1">
-                              <button
-                                className="btn btn-secondary p-2"
-                                title="View Details"
-                                onClick={() => {
-                                  setViewDialog({
-                                    open: true,
-                                    request: request,
-                                  });
-                                }}
-                              >
-                                <FaEye className="h-3 w-3" />
-                              </button>
-
-                              {request.status === 'failed' && (
-                                <button
-                                  className="btn btn-primary p-2"
-                                  title="Resend to Provider"
-                                  onClick={() => handleResendRequest(request.id)}
-                                  disabled={resendingRequestId === request.id}
-                                >
-                                  <FaRedo className={`h-3 w-3 ${resendingRequestId === request.id ? 'animate-spin' : ''}`} />
-                                </button>
-                              )}
-
-                              {request.status !== 'declined' &&
-                                request.status !== 'approved' &&
-                                request.status !== 'failed' &&
-                                request.order?.seller === 'Self' && (
-                                  <>
-                                    <button
-                                      className="btn btn-primary p-2"
-                                      title="Approve"
-                                      onClick={() =>
-                                        openApproveDialog(
-                                          request.id,
-                                          request.refundAmount || request.order?.charge || 0
-                                        )
-                                      }
-                                    >
-                                      <FaCheckCircle className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                      className="btn btn-secondary p-2"
-                                      title="Decline"
-                                      onClick={() =>
-                                        openDeclineDialog(request.id)
-                                      }
-                                    >
-                                      <FaTimesCircle className="h-3 w-3" />
-                                    </button>
-                                  </>
-                                )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="lg:hidden">
-                  <div className="space-y-4">
-                    {cancelRequests.map((request) => (
-                      <div
-                        key={request.id}
-                        className="card card-padding border-l-4 border-blue-500 dark:border-blue-400 mb-4"
-                      >
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedRequests.includes(request.id.toString())}
-                              onChange={() => handleSelectRequest(request.id.toString())}
-                              className="rounded border-gray-300 w-4 h-4"
-                            />
-
-                            <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full">
-                              {getStatusIcon(request.status)}
-                              <span className="text-xs font-medium capitalize text-gray-900 dark:text-gray-100">
-                                {request.status}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <button
-                              className="btn btn-secondary p-2"
-                              title="View Details"
-                              onClick={() => {
-                                setViewDialog({ open: true, request: request });
-                              }}
-                            >
-                              <FaEye className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between mb-4 pb-4 border-b">
-                          <div>
-                            <div
-                              className="text-xs font-medium mb-1"
-                              style={{ color: 'var(--text-muted)' }}
-                            >
-                              User
-                            </div>
-                            <div
-                              className="font-medium text-sm"
-                              style={{ color: 'var(--text-primary)' }}
-                            >
-                              {request.user?.username ||
-                                request.user?.email?.split('@')[0] ||
-                                request.user?.name ||
-                                'Unknown'}
-                            </div>
-                            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                              {request.user?.email || 'No email'}
-                            </div>
-                          </div>
-                          <div
-                            className={`text-xs font-medium px-2 py-1 rounded ${
-                              request.order?.seller === 'Auto'
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'
-                                : request.order?.seller === 'Manual'
-                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400'
-                                : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300'
-                            }`}
-                          >
-                            {request.order?.seller === 'Self' 
-                              ? 'Self' 
-                              : (request.order?.service?.providerName || request.order?.seller || 'Unknown')}
-                          </div>
-                        </div>
-                        <div className="mb-4">
-                          <div
-                            className="font-medium text-sm mb-1"
-                            style={{ color: 'var(--text-primary)' }}
-                          >
-                            {request.order?.service?.name || 'Unknown Service'}
-                          </div>
-                          <div
-                            className="text-xs"
-                            style={{ color: 'var(--text-muted)' }}
-                          >
-                            {request.order?.category?.category_name ||
-                              'Unknown Category'}{' '}
-                            • Provider: {request.order?.seller === 'Self' 
-                              ? 'Self' 
-                              : (request.order?.service?.providerName || request.order?.seller || 'Unknown')}
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4 mb-4">
-                          <div>
-                            <div
-                              className="text-xs font-medium mb-1"
-                              style={{ color: 'var(--text-muted)' }}
-                            >
-                              Quantity
-                            </div>
-                            <div
-                              className="font-semibold text-sm"
-                              style={{ color: 'var(--text-primary)' }}
-                            >
-                              {(request.order?.qty || 0).toString()}
-                            </div>
-                          </div>
-                          <div>
-                            <div
-                              className="text-xs font-medium mb-1"
-                              style={{ color: 'var(--text-muted)' }}
-                            >
-                              Amount
-                            </div>
-                            <div
-                              className="font-semibold text-sm"
-                              style={{ color: 'var(--text-primary)' }}
-                            >
-                              <PriceDisplay
-                                amount={request.order?.charge || 0}
-                                originalCurrency="USD"
-                                className="font-semibold text-sm"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <div
-                              className="text-xs font-medium mb-1"
-                              style={{ color: 'var(--text-muted)' }}
-                            >
-                              Requested
-                            </div>
-                            <div
-                              className="text-xs"
-                              style={{ color: 'var(--text-primary)' }}
-                            >
-                              {request.requestedAt
-                                ? new Date(
-                                    request.requestedAt
-                                  ).toLocaleDateString()
-                                : 'Unknown'}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mb-4">
-                          <div
-                            className="text-xs font-medium mb-1"
-                            style={{ color: 'var(--text-muted)' }}
-                          >
-                            Link
-                          </div>
-                          {request.order?.link ? (
-                            <a
-                              href={request.order.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 text-xs"
-                            >
-                              <span className="truncate">{cleanLinkDisplay(request.order.link)}</span>
-                              <FaExternalLinkAlt className="h-3 w-3 flex-shrink-0" />
-                            </a>
-                          ) : (
-                            <span className="text-gray-400 dark:text-gray-500 text-xs">No link provided</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row items-center justify-between pt-4 pb-6 border-t dark:border-gray-700">
-                  <div
-                    className="text-sm text-gray-600 dark:text-gray-300"
-                  >
-                    {requestsLoading ? (
-                      <div className="h-5 w-48 gradient-shimmer rounded" />
-                    ) : (
-                      `Showing ${formatNumber(
-                        (pagination.page - 1) * pagination.limit + 1
-                      )} to ${formatNumber(
-                        Math.min(
-                          pagination.page * pagination.limit,
-                          pagination.total
-                        )
-                      )} of ${formatNumber(pagination.total)} requests`
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-4 md:mt-0">
-                    <button
-                      onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
-                      disabled={!pagination.hasPrev || requestsLoading}
-                      className="btn btn-secondary"
-                    >
-                      Previous
-                    </button>
-                    <span
-                      className="text-sm text-gray-600 dark:text-gray-300"
-                    >
-                      {requestsLoading ? (
-                        <div className="h-5 w-24 gradient-shimmer rounded" />
-                      ) : (
-                        `Page ${formatNumber(
-                          pagination.page
-                        )} of ${formatNumber(pagination.totalPages)}`
-                      )}
-                    </span>
-                    <button
-                      onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.page + 1))}
-                      disabled={!pagination.hasNext || requestsLoading}
-                      className="btn btn-secondary"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-                {approveDialog.open && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4">
-                      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                        Approve Cancel Request
-                      </h3>
-                      <div className="mb-4">
-                        <label className="form-label mb-2 text-gray-700 dark:text-gray-300">Refund Amount</label>
-                        <input
-                          type="number"
-                          value={newRefundAmount}
-                          onChange={(e) => setNewRefundAmount(e.target.value)}
-                          className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          placeholder="Enter refund amount"
-                          step="0.01"
-                          readOnly
-                        />
-                      </div>
-                      <div className="mb-4">
-                        <label className="form-label mb-2 text-gray-700 dark:text-gray-300">
-                          Admin Notes (Optional)
-                        </label>
-                        <textarea
-                          value={adminNotes}
-                          onChange={(e) => setAdminNotes(e.target.value)}
-                          className="form-field w-full min-h-[120px] resize-y px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                          placeholder="Add any notes about the approval..."
-                          rows={3}
-                          disabled={approveDialog.isLoading}
-                        />
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => {
-                            setApproveDialog({
-                              open: false,
-                              requestId: 0,
-                              refundAmount: 0,
-                              isLoading: false,
-                            });
-                            setNewRefundAmount('');
-                            setAdminNotes('');
-                          }}
-                          className="btn btn-secondary"
-                          disabled={approveDialog.isLoading}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleApproveRequest(
-                              approveDialog.requestId,
-                              parseFloat(newRefundAmount) || 0,
-                              adminNotes
-                            )
-                          }
-                          className="btn btn-primary"
-                          disabled={approveDialog.isLoading || !newRefundAmount || parseFloat(newRefundAmount) <= 0}
-                        >
-                          {approveDialog.isLoading ? 'Processing...' : 'Approve & Process Refund'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {viewDialog.open &&
-                  viewDialog.request &&
-                  viewDialog.request.order && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between mb-6">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            Cancel Request Details
-                          </h3>
-                          <button
-                            onClick={() =>
-                              setViewDialog({ open: false, request: null })
-                            }
-                            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                          >
-                            <FaTimes className="h-5 w-5" />
-                          </button>
-                        </div>
-                        <div className="mb-6">
-                          <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                Status
-                              </label>
-                              <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full w-fit mt-1">
-                                {getStatusIcon(viewDialog.request.status)}
-                                <span className="text-xs font-medium capitalize text-gray-900 dark:text-gray-100">
-                                  {viewDialog.request.status}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                Requested
-                              </label>
-                              <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
-                                {viewDialog.request.requestedAt ? (
-                                  <>
-                                    {new Date(
-                                      viewDialog.request.requestedAt
-                                    ).toLocaleDateString()}{' '}
-                                    at{' '}
-                                    {formatTime(viewDialog.request.requestedAt)}
-                                  </>
-                                ) : (
-                                  'Unknown'
-                                )}
-                              </div>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                User
-                              </label>
-                              <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
-                                {viewDialog.request.user?.username ||
-                                  viewDialog.request.user?.email?.split(
-                                    '@'
-                                  )[0] ||
-                                  'Unknown'}{' '}
-                                ({viewDialog.request.user?.email || 'No email'})
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mb-6">
-                          <h4 className="text-md font-semibold mb-4 text-gray-800 dark:text-gray-100">
-                            Order Summary
-                          </h4>
-                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                            <div className="grid grid-cols-2 gap-4 mb-4">
-                              <div>
-                                <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                  Order ID
-                                </label>
-                                <div className="font-mono text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded w-fit mt-1">
-                                  {viewDialog.request.order.id}
-                                </div>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                  Order Status
-                                </label>
-                                <div className="text-sm text-gray-900 dark:text-gray-100 mt-1 capitalize">
-                                  {viewDialog.request.order?.status ||
-                                    'Unknown'}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="mb-4">
-                              <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                Service
-                              </label>
-                              <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
-                                {viewDialog.request.order?.service?.name ||
-                                  'Unknown Service'}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                Category:{' '}
-                                {viewDialog.request.order?.category
-                                  ?.category_name || 'Unknown'}{' '}
-                                • Seller:{' '}
-                                {viewDialog.request.order?.seller === 'Self' 
-                                  ? 'Self' 
-                                  : (viewDialog.request.order?.service?.providerName || viewDialog.request.order?.seller || 'Unknown')}
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 mb-4">
-                              <div>
-                                <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                  Quantity
-                                </label>
-                                <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
-                                  {(viewDialog.request.order?.qty || 0).toString()}
-                                </div>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                  Amount
-                                </label>
-                                <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
-                                  <PriceDisplay
-                                    amount={viewDialog.request.order?.charge || 0}
-                                    originalCurrency="USD"
-                                    className="text-sm text-gray-900 dark:text-gray-100"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                Order Link
-                              </label>
-                              <div className="text-sm mt-1">
-                                {viewDialog.request.order?.link ? (
-                                  <a
-                                    href={viewDialog.request.order.link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 break-all"
-                                  >
-                                    {cleanLinkDisplay(viewDialog.request.order.link)}
-                                  </a>
-                                ) : (
-                                  <span className="text-gray-500 dark:text-gray-400">
-                                    No link provided
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="mt-4">
-                              <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                                Order Created
-                              </label>
-                              <div className="text-sm text-gray-900 dark:text-gray-100 mt-1">
-                                {viewDialog.request.order?.createdAt ? (
-                                  <>
-                                    {new Date(
-                                      viewDialog.request.order.createdAt
-                                    ).toLocaleDateString()}{' '}
-                                    at{' '}
-                                    {formatTime(viewDialog.request.order.createdAt)}
-                                  </>
-                                ) : (
-                                  'Unknown'
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mb-6">
-                          <h4 className="text-md font-semibold mb-3 text-gray-800 dark:text-gray-100">
-                            Cancel Reason
-                          </h4>
-                          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-500 p-4 rounded">
-                            <div className="text-sm text-gray-900 dark:text-gray-100">
-                              {viewDialog.request.reason ||
-                                'No reason provided'}
-                            </div>
-                          </div>
-                        </div>
-                        {viewDialog.request.adminNotes && (
-                          <div className="mb-6">
-                            <h4 className="text-md font-semibold mb-3 text-gray-800 dark:text-gray-100">
-                              Admin Notes
-                            </h4>
-                            <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 dark:border-blue-500 p-4 rounded">
-                              <div className="text-sm text-gray-900 dark:text-gray-100">
-                                {viewDialog.request.adminNotes}
-                              </div>
-                              {viewDialog.request.processedAt && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                  Processed on{' '}
-                                  {new Date(
-                                    viewDialog.request.processedAt
-                                  ).toLocaleDateString()}{' '}
-                                  at{' '}
-                                  {formatTime(viewDialog.request.processedAt)}
-                                  {viewDialog.request.processedBy &&
-                                    ` by ${viewDialog.request.processedBy}`}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        {viewDialog.request.status === 'failed' && (
-                          <div className="flex gap-3 justify-end pt-4 border-t">
-                            <button
-                              onClick={() => {
-                                setViewDialog({ open: false, request: null });
-                                handleResendRequest(viewDialog.request!.id);
-                              }}
-                              className="btn btn-primary flex items-center gap-2"
-                              disabled={resendingRequestId === viewDialog.request!.id}
-                            >
-                              <FaRedo className={resendingRequestId === viewDialog.request!.id ? 'animate-spin' : ''} />
-                              Resend to Provider
-                            </button>
-                          </div>
-                        )}
-                        {viewDialog.request.status === 'pending' &&
-                          viewDialog.request.order?.seller === 'Self' && (
-                            <div className="flex gap-3 justify-end pt-4 border-t">
-                              <button
-                                onClick={() => {
-                                  setViewDialog({ open: false, request: null });
-                                  openDeclineDialog(viewDialog.request!.id);
-                                }}
-                                className="btn btn-secondary flex items-center gap-2"
-                              >
-                                <FaTimesCircle />
-                                Decline
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setViewDialog({ open: false, request: null });
-                                  openApproveDialog(
-                                    viewDialog.request!.id,
-                                    viewDialog.request!.refundAmount || viewDialog.request!.order?.charge || 0
-                                  );
-                                }}
-                                className="btn btn-primary flex items-center gap-2"
-                              >
-                                <FaCheckCircle />
-                                Approve
-                              </button>
-                            </div>
-                          )}
-                      </div>
-                    </div>
-                  )}
-                {declineDialog.open && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4">
-                      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                        Decline Cancel Request
-                      </h3>
-                      <div className="mb-4">
-                        <label className="form-label mb-2 text-gray-700 dark:text-gray-300">
-                          Reason for Decline
-                        </label>
-                        <textarea
-                          value={declineReason}
-                          onChange={(e) => setDeclineReason(e.target.value)}
-                          className="form-field w-full min-h-[120px] resize-y px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                          placeholder="Explain why this cancel request is being declined..."
-                          rows={4}
-                          required
-                          disabled={declineDialog.isLoading}
-                        />
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => {
-                            setDeclineDialog({ open: false, requestId: 0, isLoading: false });
-                            setDeclineReason('');
-                          }}
-                          className="btn btn-secondary"
-                          disabled={declineDialog.isLoading}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleDeclineRequest(
-                              declineDialog.requestId,
-                              declineReason
-                            )
-                          }
-                          className="btn btn-primary"
-                          disabled={!declineReason.trim() || declineDialog.isLoading}
-                        >
-                          {declineDialog.isLoading ? 'Processing...' : 'Decline Request'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </React.Fragment>
+              <CancelRequestTable
+                cancelRequests={cancelRequests}
+                requestsLoading={requestsLoading}
+                pagination={pagination}
+                selectedRequests={selectedRequests}
+                resendingRequestId={resendingRequestId}
+                onSelectAll={handleSelectAll}
+                onSelectRequest={handleSelectRequest}
+                onViewDetails={(request) => setViewDialog({ open: true, request })}
+                onResendRequest={handleResendRequest}
+                onApproveRequest={(requestId, refundAmount) => openApproveDialog(requestId, refundAmount)}
+                onDeclineRequest={openDeclineDialog}
+                onPageChange={handlePageChange}
+                getStatusIcon={getStatusIcon}
+              />
             )}
+                <ApproveCancelRequestModal
+              isOpen={approveDialog.open}
+              requestId={approveDialog.requestId}
+              refundAmount={approveDialog.refundAmount}
+              isLoading={approveDialog.isLoading || false}
+              onClose={() => setApproveDialog({ open: false, requestId: 0, refundAmount: 0, isLoading: false })}
+              onApprove={handleApproveRequest}
+            />
+            <CancelRequestDetailsModal
+              isOpen={viewDialog.open}
+              request={viewDialog.request}
+              resendingRequestId={resendingRequestId}
+              formatTime={formatTime}
+              getStatusIcon={getStatusIcon}
+              onClose={() => setViewDialog({ open: false, request: null })}
+              onResendRequest={handleResendRequest}
+              onApproveRequest={(requestId, refundAmount) => {
+                                setViewDialog({ open: false, request: null });
+                openApproveDialog(requestId, refundAmount);
+              }}
+              onDeclineRequest={(requestId) => {
+                                  setViewDialog({ open: false, request: null });
+                openDeclineDialog(requestId);
+              }}
+            />
+            <DeclineCancelRequestModal
+              isOpen={declineDialog.open}
+              requestId={declineDialog.requestId}
+              isLoading={declineDialog.isLoading || false}
+              onClose={() => setDeclineDialog({ open: false, requestId: 0, isLoading: false })}
+              onDecline={handleDeclineRequest}
+            />
           </div>
         </div>
       </div>

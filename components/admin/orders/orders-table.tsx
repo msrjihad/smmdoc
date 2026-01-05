@@ -2,13 +2,9 @@
 
 import React from 'react';
 import {
-  FaEllipsisH,
-  FaExclamationCircle,
   FaExternalLinkAlt,
-  FaEye,
-  FaSync,
-  FaEdit,
 } from 'react-icons/fa';
+import MoreActionMenu from './more-action-menu';
 import { formatID, formatNumber, formatPrice, formatCount } from '@/lib/utils';
 import { useSelector } from 'react-redux';
 import { useEffect, useState } from 'react';
@@ -519,153 +515,15 @@ const OrdersTableContent: React.FC<OrdersTableContentProps> = ({
               </td>
               <td className="p-3">
                 <div className="flex items-center">
-                  {(() => {
-                    const status = order.status?.toLowerCase();
-                    const isCancelled = ['cancelled', 'canceled'].includes(status);
-                    const isCompleted = status === 'completed';
-                    
-                    if (isCancelled || isCompleted) {
-                      return null;
-                    }
-                    
-                    return (
-                      <div className="relative">
-                        <button
-                          className="btn btn-secondary p-2"
-                          title="More Actions"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const dropdown = e.currentTarget
-                              .nextElementSibling as HTMLElement;
-                            dropdown.classList.toggle('hidden');
-                          }}
-                        >
-                          <FaEllipsisH className="h-3 w-3" />
-                        </button>
-                        <div className="hidden absolute right-0 top-8 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-                          <div className="py-1">
-                            {(() => {
-                              const pendingOrInProgress = ['pending', 'in_progress', 'inprogress', 'processing'].includes(status);
-                              const failed = status === 'failed';
-                              const cancelledOrCompleted = ['cancelled', 'canceled', 'completed'].includes(status);
-                              
-                              const showResendOrder = failed;
-                              
-                              const isAutoMode = !!order.providerOrderId;
-                              const isPending = status === 'pending';
-                              const showRequestCancelOrder = isPending && isAutoMode && onRequestCancelOrder;
-                              const showEditOrderUrl = (pendingOrInProgress || failed) && !isAutoMode;
-                              
-                              const showEditStartCount = (pendingOrInProgress || failed || cancelledOrCompleted) && !isAutoMode;
-                              const showMarkPartial = (pendingOrInProgress || failed || cancelledOrCompleted) && !isAutoMode;
-                              const showUpdateStatus = (pendingOrInProgress || failed || cancelledOrCompleted) && !showRequestCancelOrder;
-                              
-                              return (
-                                <>
-                                  {showResendOrder && (
-                                    <button
-                                      onClick={() => {
-                                        onResendOrder(order.id);
-                                        const dropdown = document.querySelector(
-                                          '.absolute.right-0'
-                                        ) as HTMLElement;
-                                        dropdown?.classList.add('hidden');
-                                      }}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    >
-                                      <FaSync className="h-3 w-3" />
-                                      Resend Order
-                                    </button>
-                                  )}
-                                  {showRequestCancelOrder && (
-                                    <button
-                                      onClick={() => {
-                                        onRequestCancelOrder(order.id);
-                                        const dropdown = document.querySelector(
-                                          '.absolute.right-0'
-                                        ) as HTMLElement;
-                                        dropdown?.classList.add('hidden');
-                                      }}
-                                      className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                                    >
-                                      <FaExclamationCircle className="h-3 w-3" />
-                                      Request Cancel Order
-                                    </button>
-                                  )}
-                                  {showEditOrderUrl && onEditOrderUrl && (
-                                    <button
-                                      onClick={() => {
-                                        onEditOrderUrl(order.id);
-                                        const dropdown = document.querySelector(
-                                          '.absolute.right-0'
-                                        ) as HTMLElement;
-                                        dropdown?.classList.add('hidden');
-                                      }}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    >
-                                      <FaEdit className="h-3 w-3" />
-                                      Edit Order URL
-                                    </button>
-                                  )}
-                                  {showEditStartCount && (
-                                    <button
-                                      onClick={() => {
-                                        onEditStartCount(
-                                          order.id,
-                                          order.startCount || 0
-                                        );
-                                        const dropdown = document.querySelector(
-                                          '.absolute.right-0'
-                                        ) as HTMLElement;
-                                        dropdown?.classList.add('hidden');
-                                      }}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    >
-                                      <FaEye className="h-3 w-3" />
-                                      Edit Start Count
-                                    </button>
-                                  )}
-                                  {showMarkPartial && order.status !== 'partial' && (
-                                    <button
-                                      onClick={() => {
-                                        onMarkPartial(order.id);
-                                        const dropdown = document.querySelector(
-                                          '.absolute.right-0'
-                                        ) as HTMLElement;
-                                        dropdown?.classList.add('hidden');
-                                      }}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    >
-                                      <FaExclamationCircle className="h-3 w-3" />
-                                      Mark Partial
-                                    </button>
-                                  )}
-                                  {showUpdateStatus && (
-                                    <button
-                                      onClick={() => {
-                                        onUpdateStatus(
-                                          order.id,
-                                          order.status
-                                        );
-                                        const dropdown = document.querySelector(
-                                          '.absolute.right-0'
-                                        ) as HTMLElement;
-                                        dropdown?.classList.add('hidden');
-                                      }}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    >
-                                      <FaSync className="h-3 w-3" />
-                                      Update Order Status
-                                    </button>
-                                  )}
-                                </>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  <MoreActionMenu
+                    order={order}
+                    onResendOrder={onResendOrder}
+                    onRequestCancelOrder={onRequestCancelOrder}
+                    onEditOrderUrl={onEditOrderUrl}
+                    onEditStartCount={onEditStartCount}
+                    onMarkPartial={onMarkPartial}
+                    onUpdateStatus={onUpdateStatus}
+                  />
                 </div>
               </td>
             </tr>
