@@ -4,20 +4,20 @@ import React, { useEffect, useState } from 'react';
 import {
     FaBox,
     FaCheckCircle,
-    FaEdit,
     FaEnvelope,
     FaEye,
     FaReply,
     FaSearch,
     FaSync,
     FaTimes,
-    FaTrash
 } from 'react-icons/fa';
 
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import MessagesTable from '@/components/admin/contact-messages/messages-table';
+import DeleteMessageModal from '@/components/admin/contact-messages/modals/delete-message';
 
 const ContactMessagesTableSkeleton = () => {
   const rows = Array.from({ length: 10 });
@@ -797,262 +797,43 @@ const ContactMessagesPage = () => {
                 </p>
               </div>
             ) : (
-              <React.Fragment>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="sticky top-0 bg-white dark:bg-[var(--card-bg)] border-b dark:border-gray-700 z-10">
-                      <tr>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={
-                              selectedMessages.length === getPaginatedData().length &&
-                              getPaginatedData().length > 0
-                            }
-                            onChange={handleSelectAll}
-                            className="rounded border-gray-300 dark:border-gray-600 w-4 h-4"
-                          />
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          ID
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          User
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Email
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Category
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Created
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Status
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getPaginatedData().length === 0 ? (
-                        <tr>
-                          <td colSpan={8} className="p-8 text-center">
-                            <div className="text-gray-500 dark:text-gray-400">
-                              <FaEnvelope className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                              <p className="text-lg font-medium mb-2">No contact messages found</p>
-                              <p className="text-sm">Try adjusting your search or filter criteria.</p>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : (
-                        getPaginatedData().map((message) => (
-                        <tr
-                          key={message.id}
-                          className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)] transition-colors duration-200"
-                        >
-                          <td className="p-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedMessages.includes(message.id)}
-                              onChange={() => handleSelectMessage(message.id)}
-                              className="rounded border-gray-300 dark:border-gray-600 w-4 h-4"
-                            />
-                          </td>
-                          <td className="p-3">
-                            <div className="font-mono text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded">
-                              {formatMessageID(message.id)}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div
-                              className="font-medium text-sm text-gray-900 dark:text-gray-100"
-                            >
-                              {message.user?.username || message.username || 'No Username'}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div
-                              className="text-sm text-gray-900 dark:text-gray-100"
-                            >
-                              {message.email || 'No Email'}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                              {message.category}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400">
-                                {formatDate(message.createdAt)}
-                              </div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400">
-                                {formatTime(message.createdAt)}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <span
-                              className={`inline-flex items-center justify-center gap-1 px-2 py-1 rounded-full text-xs font-medium border w-26 ${getStatusColor(
-                                message.status
-                              )}`}
-                            >
-                              {getStatusIcon(message.status)}
-                              {message.status}
-                            </span>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-2">
-                              {message.adminReply ? (
-                                <button
-                                  className="btn btn-secondary p-2"
-                                  title="View Message"
-                                  onClick={() => handleViewEditMessage(message.id)}
-                                >
-                                  <FaEye className="h-3 w-3" />
-                                </button>
-                              ) : (
-                                <button
-                                  className="btn btn-primary p-2"
-                                  title="Edit Message"
-                                  onClick={() => handleViewEditMessage(message.id)}
-                                >
-                                  <FaEdit className="h-3 w-3" />
-                                </button>
-                              )}
-                              <button
-                                className="btn btn-secondary p-2"
-                                title="Delete Message"
-                                onClick={() => {
-                                  setMessageToDelete(message.id);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <FaTrash className="h-3 w-3 text-red-600 dark:text-red-400" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="flex flex-col md:flex-row items-center justify-between pt-4 pb-6 border-t dark:border-gray-700">
-                  <div
-                    className="text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    {messagesLoading ? (
-                      <div className="flex items-center gap-2">
-                        <span>Loading pagination...</span>
-                      </div>
-                    ) : (
-                      `Showing ${
-                        (pagination.page - 1) * pagination.limit + 1
-                      } to ${Math.min(
-                        pagination.page * pagination.limit,
-                        pagination.total
-                      )} of ${pagination.total} messages`
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-4 md:mt-0">
-                    <button
-                      onClick={() =>
-                        setPagination((prev) => ({
-                          ...prev,
-                          page: Math.max(1, prev.page - 1),
-                        }))
-                      }
-                      disabled={!pagination.hasPrev || messagesLoading}
-                      className="btn btn-secondary"
-                    >
-                      Previous
-                    </button>
-                    <span
-                      className="text-sm text-gray-600 dark:text-gray-400"
-                    >
-                      {messagesLoading ? (
-                        <div className="h-4 w-24 gradient-shimmer rounded" />
-                      ) : (
-                        `Page ${pagination.page} of ${pagination.totalPages}`
-                      )}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setPagination((prev) => ({
-                          ...prev,
-                          page: Math.min(prev.totalPages, prev.page + 1),
-                        }))
-                      }
-                      disabled={!pagination.hasNext || messagesLoading}
-                      className="btn btn-secondary"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              </React.Fragment>
+              <MessagesTable
+                messages={contactMessages}
+                pagination={pagination}
+                selectedMessages={selectedMessages}
+                messagesLoading={messagesLoading}
+                formatMessageID={formatMessageID}
+                getStatusColor={getStatusColor}
+                getStatusIcon={getStatusIcon}
+                formatDate={formatDate}
+                formatTime={formatTime}
+                getPaginatedData={getPaginatedData}
+                onSelectAll={handleSelectAll}
+                onSelectMessage={handleSelectMessage}
+                onViewEditMessage={handleViewEditMessage}
+                onDeleteMessage={(messageId) => {
+                  setMessageToDelete(messageId);
+                  setDeleteDialogOpen(true);
+                }}
+                onPageChange={(page) =>
+                  setPagination((prev) => ({
+                    ...prev,
+                    page,
+                  }))
+                }
+              />
             )}
           </div>
         </div>
-        {deleteDialogOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Delete Message</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Are you sure you want to delete this contact message? This action
-                cannot be undone.
-              </p>
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => {
-                    setDeleteDialogOpen(false);
-                    setMessageToDelete(null);
-                  }}
-                  className="btn btn-secondary"
-                  disabled={deleteLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() =>
-                    messageToDelete && handleDeleteMessage(messageToDelete)
-                  }
-                  className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={deleteLoading}
-                >
-                  {deleteLoading ? (
-                    <div className="flex items-center gap-2">
-                      Deleting...
-                    </div>
-                  ) : (
-                    'Delete'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <DeleteMessageModal
+          isOpen={deleteDialogOpen}
+          onClose={() => {
+            setDeleteDialogOpen(false);
+            setMessageToDelete(null);
+          }}
+          onConfirm={() => messageToDelete && handleDeleteMessage(messageToDelete)}
+          isLoading={deleteLoading}
+        />
       </div>
     </div>
   );

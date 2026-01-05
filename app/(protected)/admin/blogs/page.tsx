@@ -9,15 +9,12 @@ import {
     FaClock,
     FaComments,
     FaEdit,
-    FaEllipsisH,
-    FaEye,
     FaHeart,
     FaNewspaper,
     FaPlus,
     FaSearch,
     FaSync,
     FaTimes,
-    FaTrash
 } from 'react-icons/fa';
 
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
@@ -25,6 +22,9 @@ import { setPageTitle } from '@/lib/utils/set-page-title';
 import { formatID, formatNumber } from '@/lib/utils';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import BlogsTable from '@/components/admin/blogs/blogs-table';
+import DeleteBlogModal from '@/components/admin/blogs/modals/delete-blog';
+import ChangeBlogStatusModal from '@/components/admin/blogs/modals/change-blog-status';
 
 const BlogsTableSkeleton = () => {
   const rows = Array.from({ length: 10 });
@@ -274,10 +274,8 @@ const BlogsPage = () => {
     blogId: 0,
     currentStatus: '',
   });
-  const [newStatus, setNewStatus] = useState('');
 
   const [selectedBulkAction, setSelectedBulkAction] = useState('');
-  const [dropdownOpen, setDropdownOpen] = useState<number | null>(null);
 
   const calculateStatusCounts = (blogsData: BlogPost[] | undefined | null) => {
     const counts = {
@@ -439,21 +437,6 @@ const BlogsPage = () => {
     loadData();
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownOpen !== null) {
-        const target = event.target as Element;
-        if (!target.closest('.relative')) {
-          setDropdownOpen(null);
-        }
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [dropdownOpen]);
 
   useEffect(() => {
     if (pagination.total > 0) {
@@ -654,7 +637,6 @@ const BlogsPage = () => {
         fetchAllBlogsForCounts(),
       ]);
       setStatusDialog({ open: false, blogId: 0, currentStatus: '' });
-      setNewStatus('');
 
     } catch (error) {
       console.error('Error updating status:', error);
@@ -671,7 +653,6 @@ const BlogsPage = () => {
 
   const openStatusDialog = (blogId: number, currentStatus: string) => {
     setStatusDialog({ open: true, blogId, currentStatus });
-    setNewStatus(currentStatus);
   };
 
   return (
@@ -953,343 +934,55 @@ const BlogsPage = () => {
                 </p>
               </div>
             ) : (
-              <React.Fragment>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm min-w-[1400px]">
-                    <thead className="sticky top-0 bg-white dark:bg-[var(--card-bg)] border-b dark:border-gray-700 z-10">
-                      <tr>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          <input
-                            type="checkbox"
-                            checked={
-                              selectedBlogs.length === blogs.length &&
-                              blogs.length > 0
-                            }
-                            onChange={handleSelectAll}
-                            className="rounded border-gray-300 dark:border-gray-600 w-4 h-4"
-                          />
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          ID
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Title
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Author
-                        </th>
-
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Published
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Status
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Array.isArray(blogs) ? blogs.map((blog) => (
-                        <tr
-                          key={blog.id}
-                          className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)] transition-colors duration-200"
-                        >
-                          <td className="p-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedBlogs.includes(
-                                blog.id.toString()
-                              )}
-                              onChange={() =>
-                                handleSelectBlog(blog.id.toString())
-                              }
-                              className="rounded border-gray-300 dark:border-gray-600 w-4 h-4"
-                            />
-                          </td>
-                          <td className="p-3">
-                            <div className="font-mono text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-2 py-1 rounded">
-                              {formatID(blog.id.toString())}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="max-w-xs">
-                              <div
-                                className="font-medium text-sm truncate text-gray-900 dark:text-gray-100"
-                                title={blog.title}
-                              >
-                                {blog.title}
-                              </div>
-                              <div
-                                className="text-xs truncate mt-1 text-gray-600 dark:text-gray-400"
-                                title={blog.excerpt}
-                              >
-                                {blog.excerpt}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div>
-                              <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
-                                {blog.author?.username || 'unknown'}
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="p-3">
-                            <div>
-                              {blog.status === 'published' && blog.publishedAt && (
-                                <>
-                                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                    {formatDate(blog.publishedAt)}
-                                  </div>
-                                  <div className="text-xs text-gray-600 dark:text-gray-400">
-                                    {formatTime(blog.publishedAt)}
-                                  </div>
-                                </>
-                              )}
-                              {blog.status === 'draft' && (
-                                <div className="text-sm text-gray-600 dark:text-gray-400">
-                                  Not published
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div 
-                              className={`flex items-center gap-1 px-2 py-1 rounded-full w-fit text-xs font-medium ${getStatusColor(blog.status)}`}
-                            >
-                              <span className="capitalize">
-                                {blog.status}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-1">
-                              <button
-                                className="btn btn-secondary p-2"
-                                title="View Details"
-                                onClick={() => {
-                                  window.open(`/blog/${blog.slug}`, '_blank');
-                                }}
-                              >
-                                <FaEye className="h-3 w-3" />
-                              </button>
-
-                              <div className="relative">
-                                <button
-                                  className="btn btn-secondary p-2"
-                                  title="More Actions"
-                                  onClick={() => {
-                                    setDropdownOpen(
-                                      dropdownOpen === blog.id 
-                                        ? null 
-                                        : blog.id
-                                    );
-                                  }}
-                                >
-                                  <FaEllipsisH className="h-3 w-3" />
-                                </button>
-
-                                {dropdownOpen === blog.id && (
-                                  <div className="absolute right-0 top-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 z-10 min-w-[160px]">
-                                    <button
-                                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 text-gray-900 dark:text-gray-300"
-                                      onClick={() => {
-                                        setDropdownOpen(null);
-                                        router.push(`/admin/blogs/${blog.id}`);
-                                      }}
-                                    >
-                                      <FaEdit className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                                      Edit Blog
-                                    </button>
-                                    <button
-                                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 text-gray-900 dark:text-gray-300"
-                                      onClick={() => {
-                                        setDropdownOpen(null);
-                                        openStatusDialog(blog.id, blog.status);
-                                      }}
-                                    >
-                                      <FaCheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" />
-                                      Change Status
-                                    </button>
-                                    <button
-                                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 text-red-600 dark:text-red-400"
-                                      onClick={() => {
-                                        setDropdownOpen(null);
-                                        openDeleteDialog(blog.id, blog.title);
-                                      }}
-                                    >
-                                      <FaTrash className="h-3 w-3" />
-                                      Delete Blog
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )) : (
-                        <tr>
-                          <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                            No blogs available
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="flex flex-col md:flex-row items-center justify-between pt-4 pb-6 border-t dark:border-gray-700">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {blogsLoading ? (
-                      <div className="flex items-center gap-2">
-                        <span>Loading pagination...</span>
-                      </div>
-                    ) : (
-                      `Showing ${formatNumber(
-                        (pagination.page - 1) * pagination.limit + 1
-                      )} to ${formatNumber(
-                        Math.min(
-                          pagination.page * pagination.limit,
-                          pagination.total
-                        )
-                      )} of ${formatNumber(pagination.total)} blogs`
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-4 md:mt-0">
-                    <button
-                      onClick={() =>
-                        setPagination((prev) => ({
-                          ...prev,
-                          page: Math.max(1, prev.page - 1),
-                        }))
-                      }
-                      disabled={!pagination.hasPrev || blogsLoading}
-                      className="btn btn-secondary"
-                    >
-                      Previous
-                    </button>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {blogsLoading ? (
-                        <div className="h-4 w-24 gradient-shimmer rounded" />
-                      ) : (
-                        `Page ${formatNumber(
-                          pagination.page
-                        )} of ${formatNumber(pagination.totalPages)}`
-                      )}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setPagination((prev) => ({
-                          ...prev,
-                          page: Math.min(prev.totalPages, prev.page + 1),
-                        }))
-                      }
-                      disabled={!pagination.hasNext || blogsLoading}
-                      className="btn btn-secondary"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-                {deleteDialog.open && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4">
-                      <h3 className="text-lg font-semibold mb-4 text-red-600 dark:text-red-400">
-                        Delete Blog
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                        Are you sure you want to delete "{deleteDialog.blogTitle}"? 
-                        This action cannot be undone.
-                      </p>
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => {
-                            setDeleteDialog({
-                              open: false,
-                              blogId: 0,
-                              blogTitle: '',
-                            });
-                          }}
-                          disabled={deleteLoading}
-                          className="btn btn-secondary"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => handleDeleteBlog(deleteDialog.blogId)}
-                          disabled={deleteLoading}
-                          className={`btn text-white ${
-                            deleteLoading 
-                              ? 'bg-red-400 cursor-not-allowed' 
-                              : 'bg-red-600 hover:bg-red-700'
-                          }`}
-                        >
-                          {deleteLoading ? (
-                            <>
-                              Deleting...
-                            </>
-                          ) : (
-                            'Delete Blog'
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {statusDialog.open && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4">
-                      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                        Change Blog Status
-                      </h3>
-                      <div className="mb-4">
-                        <label className="form-label mb-2 dark:text-gray-300">New Status</label>
-                        <select
-                          value={newStatus}
-                          onChange={(e) => setNewStatus(e.target.value)}
-                          className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
-                        >
-                          <option value="published">Published</option>
-                          <option value="draft">Draft</option>
-                        </select>
-                      </div>
-
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => {
-                            setStatusDialog({ 
-                              open: false, 
-                              blogId: 0, 
-                              currentStatus: '' 
-                            });
-                            setNewStatus('');
-
-                          }}
-                          className="btn btn-secondary"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleStatusChange(
-                              statusDialog.blogId,
-                              newStatus
-                            )
-                          }
-                          className="btn btn-primary"
-                          disabled={newStatus === statusDialog.currentStatus}
-                        >
-                          Update Status
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-              </React.Fragment>
+              <BlogsTable
+                blogs={blogs}
+                pagination={pagination}
+                selectedBlogs={selectedBlogs}
+                blogsLoading={blogsLoading}
+                formatID={formatID}
+                formatNumber={formatNumber}
+                formatDate={formatDate}
+                formatTime={formatTime}
+                getStatusColor={getStatusColor}
+                onSelectAll={handleSelectAll}
+                onSelectBlog={handleSelectBlog}
+                onViewBlog={(slug) => window.open(`/blog/${slug}`, '_blank')}
+                onEditBlog={(blogId) => router.push(`/admin/blogs/${blogId}`)}
+                onChangeStatus={(blogId, currentStatus) => openStatusDialog(blogId, currentStatus)}
+                onDeleteBlog={(blogId, blogTitle) => openDeleteDialog(blogId, blogTitle)}
+                onPageChange={(page) =>
+                  setPagination((prev) => ({
+                    ...prev,
+                    page,
+                  }))
+                }
+              />
             )}
+            <DeleteBlogModal
+              isOpen={deleteDialog.open}
+              onClose={() => {
+                setDeleteDialog({
+                  open: false,
+                  blogId: 0,
+                  blogTitle: '',
+                });
+              }}
+              onConfirm={() => handleDeleteBlog(deleteDialog.blogId)}
+              blogTitle={deleteDialog.blogTitle}
+              isLoading={deleteLoading}
+            />
+            <ChangeBlogStatusModal
+              isOpen={statusDialog.open}
+              onClose={() => {
+                setStatusDialog({ 
+                  open: false, 
+                  blogId: 0, 
+                  currentStatus: '' 
+                });
+              }}
+              onConfirm={(status) => handleStatusChange(statusDialog.blogId, status)}
+              currentStatus={statusDialog.currentStatus}
+            />
           </div>
         </div>
       </div>
