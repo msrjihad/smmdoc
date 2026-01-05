@@ -17,7 +17,7 @@ import {
   FaSync,
   FaTimes,
 } from 'react-icons/fa';
-import { TransactionsList } from '../../../components/transactions/transactions-list';
+import { TransactionsTable } from '@/components/dashboard/transactions/transactions-table';
 
 const ButtonLoader = () => <div className="loading-spinner"></div>;
 
@@ -850,7 +850,7 @@ export default function TransactionsPage() {
                 </div>
               ) : (
                 <>
-                  <TransactionsList
+                  <TransactionsTable
                     transactions={filteredTransactions}
                     page={page}
                     limit={limit}

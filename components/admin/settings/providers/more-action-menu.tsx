@@ -6,7 +6,15 @@ import { FaEdit, FaEllipsisH, FaSync, FaTrash, FaUndo } from 'react-icons/fa';
 interface Provider {
   id: number;
   name: string;
+  apiUrl: string;
   status: 'active' | 'inactive' | 'trash';
+  services: number;
+  orders: number;
+  importedServices: number;
+  activeServices: number;
+  inactiveServices: number;
+  currentBalance: number;
+  lastSync: Date | string;
   [key: string]: any;
 }
 

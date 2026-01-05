@@ -3,6 +3,33 @@
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
+// Helper function to convert BigInt values to numbers for JSON serialization
+function convertBigIntToNumber(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  
+  if (typeof obj === 'bigint') {
+    return Number(obj);
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(convertBigIntToNumber);
+  }
+  
+  if (typeof obj === 'object') {
+    const converted: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        converted[key] = convertBigIntToNumber(obj[key]);
+      }
+    }
+    return converted;
+  }
+  
+  return obj;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -88,7 +115,7 @@ export async function GET(request: Request) {
     
 
 
-    const [services, total] = await Promise.all([
+    const [services, total, allCategories] = await Promise.all([
       db.services.findMany({
         where: whereClause,
         skip,
@@ -105,14 +132,30 @@ export async function GET(request: Request) {
         },
       }),
       db.services.count({ where: whereClause }),
+      db.categories.findMany({
+        where: {
+          hideCategory: 'no',
+        },
+        orderBy: [
+          { id: 'asc' as any },
+          { position: 'asc' as any },
+          { createdAt: 'asc' as any },
+        ],
+      }),
     ]);
+    
+    // Convert BigInt values to numbers before serialization
+    const convertedServices = convertBigIntToNumber(services);
+    const convertedTotal = typeof total === 'bigint' ? Number(total) : total;
+    const convertedCategories = convertBigIntToNumber(allCategories);
     
     return NextResponse.json(
       {
-        data: services || [],
-        total,
+        data: convertedServices || [],
+        total: convertedTotal,
         page,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(convertedTotal / limit),
+        allCategories: convertedCategories || [],
       },
       { status: 200 }
     );

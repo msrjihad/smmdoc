@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 const WithdrawalMethodsSection = dynamic(
-  () => import('@/components/affiliate/withdrawal-methods'),
+  () => import('@/components/dashboard/affiliate/withdrawal-methods'),
   { ssr: false }
 );
 

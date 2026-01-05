@@ -14,7 +14,7 @@ import {
     FaTimes,
     FaSync,
 } from 'react-icons/fa';
-import { WithdrawalsList } from '../../../../components/affiliate/withdrawals-list';
+import { WithdrawalsList } from '../../../../components/dashboard/affiliate/withdrawals-list';
 
 const Toast = ({
   message,

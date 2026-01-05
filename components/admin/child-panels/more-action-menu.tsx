@@ -5,8 +5,28 @@ import { FaCog, FaEllipsisH, FaGlobe, FaUserCheck } from 'react-icons/fa';
 
 interface ChildPanel {
   id: number;
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    name: string;
+    joinedAt: string;
+  };
   domain: string;
+  subdomain?: string;
+  panelName: string;
+  apiKey: string;
+  totalOrders: number;
+  totalRevenue: number;
   status: 'active' | 'inactive' | 'suspended' | 'pending' | 'expired';
+  createdAt: string;
+  lastActivity: string;
+  expiryDate?: string;
+  theme: string;
+  customBranding: boolean;
+  apiCallsToday: number;
+  apiCallsTotal: number;
+  plan: string;
 }
 
 interface MoreActionMenuProps {

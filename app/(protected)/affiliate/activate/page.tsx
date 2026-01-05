@@ -20,7 +20,7 @@ import {
 } from 'react-icons/fa';
 
 const WithdrawalMethodsSection = dynamic(
-  () => import('@/components/affiliate/withdrawal-methods'),
+  () => import('@/components/dashboard/affiliate/withdrawal-methods'),
   { ssr: false }
 );
 
