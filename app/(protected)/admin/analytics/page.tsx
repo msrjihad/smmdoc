@@ -147,14 +147,40 @@ const CustomChart = ({ data, activeTab, maxValue }: {
     return formatCurrencyAmount(convertedAmount, currency, availableCurrencies, currencySettings);
   };
 
-  const getBarColor = () => {
-    switch (activeTab) {
-      case 'profit': return 'bg-gradient-to-t from-green-400 to-green-500';
-      case 'payments': return 'bg-gradient-to-t from-blue-400 to-blue-500';
-      case 'orders': return 'bg-gradient-to-t from-purple-400 to-purple-500';
-      default: return 'bg-gradient-to-t from-blue-400 to-blue-500';
-    }
+  const getBarColor = (index: number) => {
+    const colors = [
+      'bg-gradient-to-t from-purple-500 to-purple-600',
+      'bg-gradient-to-t from-orange-500 to-orange-600',
+      'bg-gradient-to-t from-blue-500 to-blue-600',
+      'bg-gradient-to-t from-red-500 to-red-600',
+    ];
+    return colors[index % 4];
   };
+
+  // Always show all 12 months
+  const allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  // Create a map of existing data by month
+  const dataMap = new Map(data.map(item => [item.month, item]));
+  
+  // Fill in all 12 months with data or zeros
+  const completeData: AnalyticsData[] = allMonths.map(month => {
+    const existingData = dataMap.get(month);
+    if (existingData) {
+      return existingData;
+    }
+    return {
+      month,
+      orders: 0,
+      profit: 0,
+      payments: 0,
+      instagramOrders: 0,
+      facebookOrders: 0,
+      youtubeOrders: 0,
+      tiktokOrders: 0,
+      twitterOrders: 0,
+    };
+  });
 
   return (
     <div className="relative h-80 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -164,8 +190,8 @@ const CustomChart = ({ data, activeTab, maxValue }: {
         ))}
       </div>
       <div className="absolute left-0 top-4 bottom-4 flex flex-col justify-between text-xs text-gray-600 dark:text-gray-400">
-        {[0, 1, 2, 3, 4].map((i) => {
-          const value = maxValue - (i * maxValue / 4);
+        {[4, 3, 2, 1, 0].map((i) => {
+          const value = (i * maxValue / 4);
           return (
             <div key={i} className="text-right pr-2">
               {formatValue(value)}
@@ -173,28 +199,28 @@ const CustomChart = ({ data, activeTab, maxValue }: {
           );
         })}
       </div>
-      <div className="absolute left-12 right-4 bottom-8 top-4 flex items-end justify-between gap-1">
-        {data.map((item, index) => {
+      <div className="absolute left-12 right-4 bottom-8 top-4 flex items-end justify-between gap-2">
+        {completeData.map((item, index) => {
           const value = activeTab === 'profit' ? item.profit :
                       activeTab === 'payments' ? item.payments :
                       item.orders;
-          const height = (value / maxValue) * 100;
+          const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
 
           return (
-            <div key={index} className="flex flex-col items-center flex-1 group">
+            <div key={index} className="flex flex-col items-center justify-end flex-1 group h-full">
               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute -top-8 bg-gray-800 dark:bg-gray-700 text-white dark:text-gray-100 text-xs px-2 py-1 rounded whitespace-nowrap z-10">
                 {item.month}: {activeTab === 'orders' ? value.toLocaleString() : formatValue(value)}
               </div>
               <div 
-                className={`w-full ${getBarColor()} rounded-t-sm transition-all duration-300 hover:opacity-80 cursor-pointer`}
-                style={{ height: `${height}%` }}
+                className={`${getBarColor(index)} rounded-t transition-all duration-300 hover:opacity-90 cursor-pointer shadow-sm`}
+                style={{ height: `${height}%`, width: '75%', minHeight: height > 0 ? '2px' : '0' }}
               ></div>
             </div>
           );
         })}
       </div>
-      <div className="absolute left-12 right-4 bottom-0 flex justify-between text-xs text-gray-600 dark:text-gray-400">
-        {data.map((item, index) => (
+      <div className="absolute left-12 right-4 bottom-0 flex justify-between text-xs text-gray-600 dark:text-gray-400 pb-1">
+        {completeData.map((item, index) => (
           <div key={index} className="flex-1 text-center">
             {item.month}
           </div>

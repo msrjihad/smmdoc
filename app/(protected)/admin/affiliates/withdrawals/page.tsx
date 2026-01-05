@@ -6,10 +6,7 @@ import {
     FaClock,
     FaCreditCard,
     FaDollarSign,
-    FaEdit,
-    FaEllipsisH,
     FaExclamationCircle,
-    FaEye,
     FaMoneyBillWave,
     FaSearch,
     FaSync,
@@ -23,6 +20,11 @@ import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import WithdrawalsTable from '@/components/admin/affiliates/withdrawals/withdrawals-table';
+import ViewDetailsModal from '@/components/admin/affiliates/withdrawals/modals/view-details';
+import ApproveWithdrawalsModal from '@/components/admin/affiliates/withdrawals/modals/approve-withdrawals';
+import CancelWithdrawalsModal from '@/components/admin/affiliates/withdrawals/modals/cancel-withdrawals';
+import EditTransactionIdModal from '@/components/admin/affiliates/withdrawals/modals/edit-transaction-id';
 
 const formatID = (id: any) => id;
 const formatNumber = (num: number) => num.toLocaleString();
@@ -882,672 +884,103 @@ const AdminWithdrawalsPage = () => {
                 </p>
               </div>
             ) : (
-              <React.Fragment>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm min-w-[1200px]">
-                    <thead className="sticky top-0 bg-white dark:bg-[var(--card-bg)] border-b dark:border-gray-700 z-10">
-                      <tr>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          ID
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          User
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Transaction ID
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Amount
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Method
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Date
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Status
-                        </th>
-                        <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {withdrawals.map((withdrawal) => (
-                        <tr
-                          key={withdrawal.id}
-                          className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)] transition-colors duration-200"
-                        >
-                          <td className="p-3">
-                            <div className="font-mono text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded">
-                              {withdrawal.id
-                                ? formatID(withdrawal.id.toString().slice(-8))
-                                : 'null'}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
-                              {withdrawal.affiliate.user?.username ||
-                                withdrawal.affiliate.user?.email?.split('@')[0] ||
-                                withdrawal.affiliate.user?.name ||
-                                'null'}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
-                              {withdrawal.withdrawalId || '-'}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <PriceDisplay
-                              amount={withdrawal.amount}
-                              originalCurrency="USD"
-                              className="font-semibold text-sm"
-                            />
-                          </td>
-                          <td className="p-3">
-                            {withdrawal.payment_method ? (
-                              <div className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                {withdrawal.payment_method}
-                              </div>
-                            ) : (
-                              <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
-                            )}
-                          </td>
-                          <td className="p-3">
-                            <div>
-                              <div className="text-xs text-gray-900 dark:text-gray-100">
-                                {withdrawal.createdAt
-                                  ? formatDate(withdrawal.createdAt)
-                                  : 'null'}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {withdrawal.createdAt
-                                  ? formatTime(withdrawal.createdAt)
-                                  : 'null'}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            {getStatusBadge(withdrawal.status)}
-                          </td>
-                          <td className="p-3">
-                            {withdrawal.status === 'Pending' ? (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => handleApprove(withdrawal.id)}
-                                  className="btn btn-primary flex items-center gap-1 px-3 py-1.5 text-xs bg-green-500 text-white border border-green-500 hover:bg-green-600"
-                                  title="Approve"
-                                >
-                                  <FaCheckCircle className="h-3 w-3" />
-                                </button>
-                                <button
-                                  onClick={() => handleCancel(withdrawal.id)}
-                                  className="btn btn-secondary flex items-center gap-1 px-3 py-1.5 text-xs bg-red-500 text-white border border-red-500 hover:bg-red-600"
-                                  title="Cancel"
-                                >
-                                  <FaTimesCircle className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center">
-                                <div className="relative">
-                                  <button
-                                    className="btn btn-secondary p-2"
-                                    title="More Actions"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const dropdown = e.currentTarget
-                                        .nextElementSibling as HTMLElement;
-                                      dropdown.classList.toggle('hidden');
-                                    }}
-                                  >
-                                    <FaEllipsisH className="h-3 w-3" />
-                                  </button>
-
-                                  <div className="hidden absolute right-0 top-8 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-                                    <div className="py-1">
-                                      {withdrawal.status === 'Success' && 
-                                       !withdrawal.transactionIdEdited && (
-                                        <button
-                                          onClick={() => {
-                                            handleEditTransactionId(withdrawal);
-                                            const dropdown =
-                                              document.querySelector(
-                                                '.absolute.right-0'
-                                              ) as HTMLElement;
-                                            dropdown?.classList.add('hidden');
-                                          }}
-                                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-2"
-                                        >
-                                          <FaEdit className="h-3 w-3" />
-                                          Edit Transaction ID
-                                        </button>
-                                      )}
-                                      <button
-                                        onClick={() => {
-                                          openViewDetailsDialog(withdrawal);
-                                          const dropdown =
-                                            document.querySelector(
-                                              '.absolute.right-0'
-                                            ) as HTMLElement;
-                                          dropdown?.classList.add('hidden');
-                                        }}
-                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-2"
-                                      >
-                                        <FaEye className="h-3 w-3" />
-                                        View Details
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="flex flex-col md:flex-row items-center justify-between pt-4 pb-6 border-t dark:border-gray-700">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {withdrawalsLoading ? (
-                      <div className="flex items-center gap-2">
-                        <span>Loading pagination...</span>
-                      </div>
-                    ) : (
-                      pagination.limit > 10000
-                        ? `Showing all ${formatNumber(pagination.total)} withdrawals`
-                        : `Showing ${formatNumber(
-                            (pagination.page - 1) * pagination.limit + 1
-                          )} to ${formatNumber(
-                            Math.min(
-                              pagination.page * pagination.limit,
-                              pagination.total
-                            )
-                          )} of ${formatNumber(pagination.total)} withdrawals`
-                    )}
-                  </div>
-                  {pagination.limit <= 10000 && (
-                    <div className="flex items-center gap-2 mt-4 md:mt-0">
-                      <button
-                        onClick={() =>
-                          setPagination((prev) => ({
-                            ...prev,
-                            page: Math.max(1, prev.page - 1),
-                          }))
-                        }
-                        disabled={!pagination.hasPrev || withdrawalsLoading}
-                        className="btn btn-secondary"
-                      >
-                        Previous
-                      </button>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {withdrawalsLoading ? (
-                          <div className="h-4 w-24 gradient-shimmer rounded" />
-                        ) : (
-                          `Page ${formatNumber(
-                            pagination.page
-                          )} of ${formatNumber(pagination.totalPages)}`
-                        )}
-                      </span>
-                      <button
-                        onClick={() =>
-                          setPagination((prev) => ({
-                            ...prev,
-                            page: Math.min(prev.totalPages, prev.page + 1),
-                          }))
-                        }
-                        disabled={!pagination.hasNext || withdrawalsLoading}
-                        className="btn btn-secondary"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {viewDetailsDialog.open && viewDetailsDialog.withdrawal && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[600px] max-w-[90vw] mx-4 max-h-[80vh] overflow-y-auto">
-                      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                        Withdrawal Details
-                      </h3>
-
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Transaction ID
-                            </label>
-                            <div className="font-mono text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {viewDetailsDialog.withdrawal.withdrawalId || '-'}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Internal ID
-                            </label>
-                            <div className="font-mono text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {formatID(viewDetailsDialog.withdrawal.id)}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              User
-                            </label>
-                            <div className="text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {viewDetailsDialog.withdrawal.affiliate.user?.username ||
-                                viewDetailsDialog.withdrawal.affiliate.user?.email ||
-                                'N/A'}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Method
-                            </label>
-                            <div className="text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {viewDetailsDialog.withdrawal.payment_method || 'N/A'}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Amount
-                            </label>
-                            <div className="text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded font-semibold text-gray-900 dark:text-gray-100">
-                              <PriceDisplay
-                                amount={viewDetailsDialog.withdrawal.amount}
-                                originalCurrency="USD"
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Status
-                            </label>
-                            <div className="flex items-center gap-2 mt-1">
-                              {getStatusBadge(viewDetailsDialog.withdrawal.status)}
-                            </div>
-                          </div>
-                        </div>
-
-                        {viewDetailsDialog.withdrawal.notes && (
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Notes
-                            </label>
-                            <div className="text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {viewDetailsDialog.withdrawal.notes}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Created
-                            </label>
-                            <div className="text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {formatDateTime(
-                                viewDetailsDialog.withdrawal.createdAt
-                              )}
-                            </div>
-                          </div>
-                          {viewDetailsDialog.withdrawal.processedAt && (
-                            <div>
-                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Processed
-                              </label>
-                              <div className="text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                                {formatDateTime(
-                                  viewDetailsDialog.withdrawal.processedAt
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end mt-6">
-                        <button
-                          onClick={() =>
-                            setViewDetailsDialog({
-                              open: false,
-                              withdrawal: null,
-                            })
-                          }
-                          className="btn btn-secondary"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {approveConfirmDialog.open &&
-                  approveConfirmDialog.withdrawal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px] max-w-[90vw] mx-4">
-                        <h3 className="text-lg font-semibold mb-4 text-green-600 dark:text-green-400">
-                          Approve Withdrawal
-                        </h3>
-
-                        <div className="mb-6">
-                          <p className="text-gray-700 dark:text-gray-300 mb-4">
-                            Are you sure you want to approve this withdrawal?
-                          </p>
-
-                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-2 border border-gray-200 dark:border-gray-700">
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-600 dark:text-gray-400">
-                                User:
-                              </span>
-                              <span className="text-gray-900 dark:text-gray-100">
-                                {approveConfirmDialog.withdrawal.affiliate.user
-                                  ?.username ||
-                                  approveConfirmDialog.withdrawal.affiliate.user
-                                    ?.email ||
-                                  'N/A'}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-600 dark:text-gray-400">
-                                Amount:
-                              </span>
-                              <span className="font-semibold text-lg text-green-600 dark:text-green-400">
-                                <PriceDisplay
-                                  amount={approveConfirmDialog.withdrawal.amount}
-                                  originalCurrency="USD"
-                                />
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-600 dark:text-gray-400">
-                                Method:
-                              </span>
-                              <span className="text-gray-900 dark:text-gray-100">
-                                {approveConfirmDialog.withdrawal.payment_method || '-'}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="form-group mt-4">
-                            <label className="form-label">
-                              Transaction ID <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={approveConfirmDialog.transactionId}
-                              onChange={(e) =>
-                                setApproveConfirmDialog({
-                                  ...approveConfirmDialog,
-                                  transactionId: e.target.value,
-                                })
-                              }
-                              placeholder="Enter transaction ID"
-                              required
-                              className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col-reverse md:flex-row gap-3 justify-center md:justify-end">
-                          <button
-                            onClick={() => {
-                              setApproveConfirmDialog({
-                                open: false,
-                                withdrawalId: 0,
-                                withdrawal: null,
-                                transactionId: '',
-                              });
-                            }}
-                            className="btn btn-secondary w-full md:w-auto"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() =>
-                              confirmApprove(
-                                approveConfirmDialog.withdrawalId,
-                                approveConfirmDialog.transactionId
-                              )
-                            }
-                            disabled={isApproving}
-                            className="btn btn-primary flex items-center gap-2 w-full md:w-auto justify-center"
-                          >
-                            {isApproving ? (
-                              <>
-                                Processing...
-                              </>
-                            ) : (
-                              <>
-                                <FaCheckCircle className="h-4 w-4" />
-                                Approve Withdrawal
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                {cancelConfirmDialog.open &&
-                  cancelConfirmDialog.withdrawal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px] max-w-[90vw] mx-4">
-                        <h3 className="text-lg font-semibold mb-4 text-red-600 dark:text-red-400">
-                          Cancel Withdrawal
-                        </h3>
-
-                        <div className="mb-6">
-                          <p className="text-gray-700 dark:text-gray-300 mb-2">
-                            Are you sure you want to cancel this withdrawal?
-                          </p>
-                          <p className="text-red-600 dark:text-red-400 text-sm font-medium mb-4">
-                            This action cannot be undone. The amount will be returned to the affiliate's available balance.
-                          </p>
-
-                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-2 border border-gray-200 dark:border-gray-700">
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-600 dark:text-gray-400">
-                                User:
-                              </span>
-                              <span className="text-gray-900 dark:text-gray-100">
-                                {cancelConfirmDialog.withdrawal.affiliate.user
-                                  ?.username ||
-                                  cancelConfirmDialog.withdrawal.affiliate.user?.email ||
-                                  'N/A'}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-600 dark:text-gray-400">
-                                Amount:
-                              </span>
-                              <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                                <PriceDisplay
-                                  amount={cancelConfirmDialog.withdrawal.amount}
-                                  originalCurrency="USD"
-                                />
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-600 dark:text-gray-400">
-                                Method:
-                              </span>
-                              <span className="text-gray-900 dark:text-gray-100">
-                                {cancelConfirmDialog.withdrawal.payment_method || '-'}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="form-group mt-4">
-                            <label className="form-label">
-                              Reason for Cancellation <span className="text-gray-400">(Optional)</span>
-                            </label>
-                            <textarea
-                              value={cancelConfirmDialog.cancelReason}
-                              onChange={(e) =>
-                                setCancelConfirmDialog({
-                                  ...cancelConfirmDialog,
-                                  cancelReason: e.target.value,
-                                })
-                              }
-                              placeholder="Enter reason for cancelling this withdrawal..."
-                              rows={3}
-                              className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 resize-vertical"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col-reverse md:flex-row gap-3 justify-center md:justify-end">
-                          <button
-                            onClick={() =>
-                              setCancelConfirmDialog({
-                                open: false,
-                                withdrawalId: 0,
-                                withdrawal: null,
-                                cancelReason: '',
-                              })
-                            }
-                            className="btn btn-primary w-full md:w-auto"
-                          >
-                            Keep Withdrawal
-                          </button>
-                          <button
-                            onClick={() =>
-                              confirmCancel(
-                                cancelConfirmDialog.withdrawalId,
-                                cancelConfirmDialog.cancelReason
-                              )
-                            }
-                            disabled={isCanceling}
-                            className="btn flex items-center gap-2 w-full md:w-auto justify-center bg-red-500 text-white border border-red-500 hover:bg-red-600 hover:border-red-600 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isCanceling ? (
-                              <>
-                                Canceling...
-                              </>
-                            ) : (
-                              <>
-                                <FaTimesCircle className="h-4 w-4" />
-                                Cancel Withdrawal
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                {editTransactionIdDialog.open &&
-                  editTransactionIdDialog.withdrawal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px] max-w-[90vw] mx-4">
-                        <h3 className="text-lg font-semibold mb-4 text-green-600 dark:text-green-400">
-                          Edit Transaction ID
-                        </h3>
-
-                        <div className="mb-6">
-                          <p className="text-gray-700 dark:text-gray-300 mb-4 text-sm">
-                            You can edit this transaction ID only once. After saving, it cannot be changed again.
-                          </p>
-
-                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-2 mb-4 border border-gray-200 dark:border-gray-700">
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-600 dark:text-gray-400">
-                                User:
-                              </span>
-                              <span className="text-gray-900 dark:text-gray-100">
-                                {editTransactionIdDialog.withdrawal.affiliate.user
-                                  ?.username ||
-                                  editTransactionIdDialog.withdrawal.affiliate.user
-                                    ?.email ||
-                                  'N/A'}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="font-medium text-gray-600 dark:text-gray-400">
-                                Amount:
-                              </span>
-                              <span className="font-semibold text-lg text-green-600 dark:text-green-400">
-                                <PriceDisplay
-                                  amount={editTransactionIdDialog.withdrawal.amount}
-                                  originalCurrency="USD"
-                                />
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="form-group">
-                            <label className="form-label">
-                              Transaction ID <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={editTransactionIdDialog.transactionId}
-                              onChange={(e) =>
-                                setEditTransactionIdDialog({
-                                  ...editTransactionIdDialog,
-                                  transactionId: e.target.value,
-                                })
-                              }
-                              placeholder="Enter transaction ID"
-                              required
-                              className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col-reverse md:flex-row gap-3 justify-center md:justify-end">
-                          <button
-                            onClick={() => {
-                              setEditTransactionIdDialog({
-                                open: false,
-                                withdrawalId: 0,
-                                withdrawal: null,
-                                transactionId: '',
-                              });
-                            }}
-                            className="btn btn-secondary w-full md:w-auto"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() =>
-                              confirmUpdateTransactionId(
-                                editTransactionIdDialog.withdrawalId,
-                                editTransactionIdDialog.transactionId
-                              )
-                            }
-                            disabled={isUpdatingTransactionId}
-                            className="btn btn-primary flex items-center gap-2 w-full md:w-auto justify-center"
-                          >
-                            {isUpdatingTransactionId ? (
-                              <>
-                                Updating...
-                              </>
-                            ) : (
-                              <>
-                                <FaCheckCircle className="h-4 w-4" />
-                                Update Transaction ID
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-              </React.Fragment>
+              <WithdrawalsTable
+                withdrawals={withdrawals}
+                pagination={pagination}
+                withdrawalsLoading={withdrawalsLoading}
+                formatID={formatID}
+                formatNumber={formatNumber}
+                formatDate={formatDate}
+                formatTime={formatTime}
+                getStatusBadge={getStatusBadge}
+                onApprove={handleApprove}
+                onCancel={handleCancel}
+                onViewDetails={openViewDetailsDialog}
+                onEditTransactionId={handleEditTransactionId}
+                onPageChange={(page) => setPagination((prev) => ({ ...prev, page }))}
+              />
             )}
+
+      <ViewDetailsModal
+        isOpen={viewDetailsDialog.open}
+        withdrawal={viewDetailsDialog.withdrawal}
+        formatID={formatID}
+        formatDateTime={formatDateTime}
+        getStatusBadge={getStatusBadge}
+        onClose={() => setViewDetailsDialog({ open: false, withdrawal: null })}
+      />
+
+      <ApproveWithdrawalsModal
+        isOpen={approveConfirmDialog.open}
+        withdrawal={approveConfirmDialog.withdrawal}
+        transactionId={approveConfirmDialog.transactionId}
+        onTransactionIdChange={(transactionId) =>
+          setApproveConfirmDialog({
+            ...approveConfirmDialog,
+            transactionId,
+          })
+        }
+        onClose={() => {
+          setApproveConfirmDialog({
+            open: false,
+            withdrawalId: 0,
+            withdrawal: null,
+            transactionId: '',
+          });
+        }}
+        onConfirm={(withdrawalId, transactionId) => {
+          confirmApprove(withdrawalId, transactionId);
+        }}
+        isLoading={isApproving}
+      />
+
+      <CancelWithdrawalsModal
+        isOpen={cancelConfirmDialog.open}
+        withdrawal={cancelConfirmDialog.withdrawal}
+        cancelReason={cancelConfirmDialog.cancelReason}
+        onCancelReasonChange={(cancelReason) =>
+          setCancelConfirmDialog({
+            ...cancelConfirmDialog,
+            cancelReason,
+          })
+        }
+        onClose={() => {
+          setCancelConfirmDialog({
+            open: false,
+            withdrawalId: 0,
+            withdrawal: null,
+            cancelReason: '',
+          });
+        }}
+        onConfirm={(withdrawalId, cancelReason) => {
+          confirmCancel(withdrawalId, cancelReason);
+        }}
+        isLoading={isCanceling}
+      />
+
+      <EditTransactionIdModal
+        isOpen={editTransactionIdDialog.open}
+        withdrawal={editTransactionIdDialog.withdrawal}
+        transactionId={editTransactionIdDialog.transactionId}
+        onTransactionIdChange={(transactionId) =>
+          setEditTransactionIdDialog({
+            ...editTransactionIdDialog,
+            transactionId,
+          })
+        }
+        onClose={() => {
+          setEditTransactionIdDialog({
+            open: false,
+            withdrawalId: 0,
+            withdrawal: null,
+            transactionId: '',
+          });
+        }}
+        onConfirm={(withdrawalId, transactionId) => {
+          confirmUpdateTransactionId(withdrawalId, transactionId);
+        }}
+        isLoading={isUpdatingTransactionId}
+      />
           </div>
         </div>
       </div>
