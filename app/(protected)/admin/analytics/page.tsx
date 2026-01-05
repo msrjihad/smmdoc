@@ -157,13 +157,10 @@ const CustomChart = ({ data, activeTab, maxValue }: {
     return colors[index % 4];
   };
 
-  // Always show all 12 months
   const allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   
-  // Create a map of existing data by month
   const dataMap = new Map(data.map(item => [item.month, item]));
   
-  // Fill in all 12 months with data or zeros
   const completeData: AnalyticsData[] = allMonths.map(month => {
     const existingData = dataMap.get(month);
     if (existingData) {

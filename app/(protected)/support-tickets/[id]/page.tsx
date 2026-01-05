@@ -490,7 +490,6 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
       <TicketSystemGuard>
         <div className="page-container">
           <div className="page-content">
-            {/* Back button and title skeleton */}
             <div className="mb-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className="h-10 w-32 gradient-shimmer rounded-lg" />
@@ -499,9 +498,7 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Main content area skeleton */}
               <div className="md:col-span-2 space-y-6">
-                {/* System Processing Result card skeleton (optional) */}
                 <div className="card card-padding">
                   <div className="card-header">
                     <div className="card-icon">
@@ -514,7 +511,6 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
                   </div>
                 </div>
 
-                {/* Conversation card skeleton */}
                 <div className="card card-padding">
                   <div className="card-header">
                     <div className="card-icon">
@@ -536,7 +532,6 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
                   </div>
                 </div>
 
-                {/* Post a Reply card skeleton */}
                 <div className="card card-padding">
                   <div className="card-header">
                     <div className="card-icon">
@@ -551,9 +546,7 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
                 </div>
               </div>
 
-              {/* Sidebar skeleton */}
               <div className="space-y-6">
-                {/* Ticket Details card skeleton */}
                 <div className="card card-padding">
                   <div className="card-header">
                     <div className="card-icon">
@@ -581,7 +574,6 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
                   </div>
                 </div>
 
-                {/* Close Ticket card skeleton */}
                 <div className="card card-padding">
                   <div className="card-header">
                     <div className="card-icon">

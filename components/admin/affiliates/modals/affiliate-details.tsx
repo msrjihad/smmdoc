@@ -85,7 +85,6 @@ const AffiliateDetailsModal: React.FC<AffiliateDetailsModalProps> = ({
         withdrawalMethods = parsed;
       }
     } catch (e) {
-      // Invalid JSON, ignore
     }
   }
 

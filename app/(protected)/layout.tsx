@@ -67,7 +67,6 @@ export default function ProtectedLayout({
               </RouteGuard>
             ) : (
               <AuthGuard>
-                {/* Show announcements for non-admin, non-dashboard pages */}
                 {!isDashboard && (
                   <Announcements visibility="all_pages" />
                 )}
