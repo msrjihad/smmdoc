@@ -15,6 +15,7 @@ import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
 import LogsTable from '@/components/admin/users/logs/logs-table';
+import DeleteActivityLogModal from '@/components/admin/users/logs/modals/delete-activity-log';
 
 const ActivityLogsTableSkeleton = () => {
   const rows = Array.from({ length: 10 });
@@ -504,48 +505,15 @@ const UserActivityLogsPage = () => {
             )}
           </div>
         </div>
-        {deleteDialogOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                Delete Activity Log
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Are you sure you want to delete this activity log? This action cannot be undone.
-              </p>
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => {
-                    setDeleteDialogOpen(false);
-                    setLogToDelete(null);
-                  }}
-                  disabled={deleteLoading}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => logToDelete && handleDeleteLog(logToDelete)}
-                  disabled={deleteLoading}
-                  className={`px-4 py-2 text-sm rounded-lg font-medium transition-all duration-200 shadow-sm text-white ${
-                    deleteLoading 
-                      ? 'bg-red-400 cursor-not-allowed' 
-                      : 'bg-red-600 hover:bg-red-700'
-                  }`}
-                >
-                  {deleteLoading ? (
-                    <>
-                      <div className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Deleting...
-                    </>
-                  ) : (
-                    'Delete'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <DeleteActivityLogModal
+          isOpen={deleteDialogOpen}
+          onClose={() => {
+            setDeleteDialogOpen(false);
+            setLogToDelete(null);
+          }}
+          onConfirm={() => logToDelete && handleDeleteLog(logToDelete)}
+          isLoading={deleteLoading}
+        />
         {bulkDeleteDialogOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4">

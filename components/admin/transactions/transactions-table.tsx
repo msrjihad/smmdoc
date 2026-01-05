@@ -4,13 +4,12 @@ import React from 'react';
 import {
   FaCheckCircle,
   FaClock,
-  FaEllipsisH,
   FaExclamationCircle,
   FaEye,
-  FaSync,
   FaTimesCircle,
 } from 'react-icons/fa';
 import { PriceDisplay } from '@/components/price-display';
+import MoreActionMenu from './more-action-menu';
 
 interface Transaction {
   id: number;
@@ -195,59 +194,24 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                       <FaTimesCircle className="h-3 w-3" />
                     </button>
                   </div>
+                ) : (transaction.admin_status === 'Cancelled' || transaction.admin_status === 'cancelled' ||
+                     transaction.status === 'cancelled' || transaction.status === 'Cancelled') ? (
+                  <button
+                    onClick={() => openViewDetailsDialog(transaction)}
+                    className="btn btn-secondary p-2"
+                    title="View Details"
+                  >
+                    <FaEye className="h-3 w-3" />
+                  </button>
                 ) : (
-                  <div className="flex items-center">
-                    <div className="relative">
-                      <button
-                        className="btn btn-secondary p-2"
-                        title="More Actions"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const dropdown = e.currentTarget
-                            .nextElementSibling as HTMLElement;
-                          dropdown.classList.toggle('hidden');
-                        }}
-                      >
-                        <FaEllipsisH className="h-3 w-3" />
-                      </button>
-
-                      <div className="hidden absolute right-0 top-8 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-                        <div className="py-1">
-                          <button
-                            onClick={() => {
-                              openViewDetailsDialog(transaction);
-                              const dropdown =
-                                document.querySelector(
-                                  '.absolute.right-0'
-                                ) as HTMLElement;
-                              dropdown?.classList.add('hidden');
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-2"
-                          >
-                            <FaEye className="h-3 w-3" />
-                            View Details
-                          </button>
-                          <button
-                            onClick={() => {
-                              openUpdateStatusDialog(
-                                transaction.id,
-                                transaction.status || 'pending'
-                              );
-                              const dropdown =
-                                document.querySelector(
-                                  '.absolute.right-0'
-                                ) as HTMLElement;
-                              dropdown?.classList.add('hidden');
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-2"
-                          >
-                            <FaSync className="h-3 w-3" />
-                            Update Status
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <MoreActionMenu
+                    transaction={transaction}
+                    onViewDetails={() => openViewDetailsDialog(transaction)}
+                    onUpdateStatus={() => openUpdateStatusDialog(
+                      transaction.id,
+                      transaction.admin_status || transaction.status || 'pending'
+                    )}
+                  />
                 )}
               </td>
             </tr>

@@ -6,10 +6,7 @@ import {
     FaCheckCircle,
     FaClock,
     FaCreditCard,
-    FaDollarSign,
-    FaEllipsisH,
     FaExclamationCircle,
-    FaEye,
     FaPlus,
     FaSearch,
     FaSync,
@@ -31,6 +28,21 @@ const ApproveTransactionModal = dynamic(
 
 const CancelTransactionModal = dynamic(
   () => import('@/components/admin/transactions/modals/cancel-transaction'),
+  { ssr: false }
+);
+
+const AddDeductUserBalanceModal = dynamic(
+  () => import('@/components/admin/transactions/modals/add-deduct-user-balance'),
+  { ssr: false }
+);
+
+const TransactionDetailsModal = dynamic(
+  () => import('@/components/admin/transactions/modals/transaction-details'),
+  { ssr: false }
+);
+
+const UpdateTransactionStatusModal = dynamic(
+  () => import('@/components/admin/transactions/modals/update-transaction-status'),
   { ssr: false }
 );
 
@@ -408,7 +420,6 @@ const AdminAllTransactionsPage = () => {
     transactionId: 0,
     currentStatus: '',
   });
-  const [newStatus, setNewStatus] = useState('');
 
   const [approveConfirmDialog, setApproveConfirmDialog] = useState<{
     open: boolean;
@@ -439,20 +450,6 @@ const AdminAllTransactionsPage = () => {
     open: false,
   });
 
-  const [balanceForm, setBalanceForm] = useState({
-    username: '',
-    amount: '',
-    action: 'add',
-    notes: '',
-  });
-
-  const [usernameSearching, setUsernameSearching] = useState(false);
-  const [userFound, setUserFound] = useState<{
-    id: number;
-    username: string;
-    name: string;
-    email: string;
-  } | null>(null);
   const [balanceSubmitting, setBalanceSubmitting] = useState(false);
 
 
@@ -682,7 +679,7 @@ const AdminAllTransactionsPage = () => {
         return (
           <div className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 rounded-full w-fit">
             <FaTimesCircle className="h-3 w-3 text-red-500 dark:text-red-400" />
-            <span className="text-xs font-medium text-red-700 dark:text-red-300">Cancel</span>
+            <span className="text-xs font-medium text-red-700 dark:text-red-300">Cancelled</span>
           </div>
         );
       default:
@@ -725,74 +722,33 @@ const AdminAllTransactionsPage = () => {
     setAddDeductBalanceDialog({ open: true });
   };
 
-  const searchUsername = async (username: string) => {
-    if (!username.trim()) {
-      setUserFound(null);
+  const handleBalanceSubmit = async (formData: {
+    username: string;
+    amount: string;
+    action: 'add' | 'deduct';
+    notes: string;
+  }) => {
+    if (!formData.username || !formData.amount) {
+      showToast('Please fill in all required fields', 'error');
       return;
     }
 
-    try {
-      setUsernameSearching(true);
-      const response = await fetch(`/api/admin/users/search?q=${encodeURIComponent(username)}`);
-      const result = await response.json();
-
-      console.log('Search result for:', username, result);
-
-      if (result.users && result.users.length > 0) {
-
-        const exactMatch = result.users.find((user: any) =>
-          user.username?.toLowerCase() === username.toLowerCase()
-        );
-        const foundUser = exactMatch || result.users[0];
-        console.log('Found user:', foundUser);
-        setUserFound(foundUser);
-      } else {
-        console.log('No users found for:', username);
-        setUserFound(null);
-      }
-    } catch (error) {
-      console.error('Error searching username:', error);
-      setUserFound(null);
-    } finally {
-      setUsernameSearching(false);
-    }
-  };
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (balanceForm.username.trim()) {
-        searchUsername(balanceForm.username.trim());
-      } else {
-        setUserFound(null);
-      }
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [balanceForm.username]);
-
-  const handleBalanceSubmit = async () => {
-    if (!balanceForm.username || !balanceForm.amount || !userFound) {
-      showToast('Please fill in all required fields and ensure user is found', 'error');
-      return;
-    }
-
-    if (parseFloat(balanceForm.amount) <= 0) {
+    if (parseFloat(formData.amount) <= 0) {
       showToast('Amount must be greater than 0', 'error');
       return;
     }
 
     try {
-      setBalanceSubmitting(true);
       const response = await fetch('/api/admin/users/balance', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: balanceForm.username,
-          amount: parseFloat(balanceForm.amount),
-          action: balanceForm.action,
-          notes: balanceForm.notes,
+          username: formData.username,
+          amount: parseFloat(formData.amount),
+          action: formData.action,
+          notes: formData.notes,
           adminCurrency: currency,
         }),
       });
@@ -802,14 +758,11 @@ const AdminAllTransactionsPage = () => {
       if (result.success) {
         showToast(
           result.message || `Successfully ${
-            balanceForm.action === 'add' ? 'added' : 'deducted'
-          } balance ${balanceForm.action === 'add' ? 'to' : 'from'} ${balanceForm.username}`,
+            formData.action === 'add' ? 'added' : 'deducted'
+          } balance ${formData.action === 'add' ? 'to' : 'from'} ${formData.username}`,
           'success'
         );
         setAddDeductBalanceDialog({ open: false });
-        setBalanceForm({ username: '', amount: '', action: 'add', notes: '' });
-        setUserFound(null);
-
         fetchTransactions();
       } else {
         showToast(result.error || 'Failed to update user balance', 'error');
@@ -817,8 +770,6 @@ const AdminAllTransactionsPage = () => {
     } catch (error) {
       console.error('Error updating user balance:', error);
       showToast('Error updating user balance', 'error');
-    } finally {
-      setBalanceSubmitting(false);
     }
   };
 
@@ -995,7 +946,6 @@ const AdminAllTransactionsPage = () => {
     currentStatus: string
   ) => {
     setUpdateStatusDialog({ open: true, transactionId, currentStatus });
-    setNewStatus(currentStatus);
   };
 
   return (
@@ -1257,199 +1207,32 @@ const AdminAllTransactionsPage = () => {
                     </div>
                   )}
                 </div>
-                {viewDetailsDialog.open && viewDetailsDialog.transaction && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[600px] max-w-[90vw] mx-4 max-h-[80vh] overflow-y-auto">
-                      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                        Transaction Details
-                      </h3>
-
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Transaction ID
-                            </label>
-                            <div className="font-mono text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {viewDetailsDialog.transaction.transactionId ||
-                                'Not assigned'}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Internal ID
-                            </label>
-                            <div className="font-mono text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {formatID(viewDetailsDialog.transaction.id)}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              User
-                            </label>
-                            <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {viewDetailsDialog.transaction.user?.username ||
-                                viewDetailsDialog.transaction.user?.email ||
-                                'N/A'}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Phone
-                            </label>
-                            <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {viewDetailsDialog.transaction.phone || 'N/A'}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Amount
-                            </label>
-                            <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded font-semibold text-gray-900 dark:text-gray-100">
-                              <PriceDisplay
-                                amount={viewDetailsDialog.transaction.bdt_amount || viewDetailsDialog.transaction.amount}
-                                originalCurrency={viewDetailsDialog.transaction.currency === 'USD' || viewDetailsDialog.transaction.currency === 'USDT' ? 'USD' : 'BDT'}
-                              />
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Payment Method
-                            </label>
-                            <div className="text-xs font-medium p-2 text-gray-700 dark:text-gray-300">
-                              {displayMethod(viewDetailsDialog.transaction)}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Status
-                          </label>
-                          <div className="flex items-center gap-2 mt-1">
-                            {getStatusIcon(
-                              viewDetailsDialog.transaction.admin_status ||
-                                viewDetailsDialog.transaction.status
-                            )}
-                            <span className="text-sm font-medium capitalize text-gray-900 dark:text-gray-100">
-                              {viewDetailsDialog.transaction.admin_status ||
-                                viewDetailsDialog.transaction.status}
-                            </span>
-                          </div>
-                        </div>
-
-                        {viewDetailsDialog.transaction.notes && (
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Notes
-                            </label>
-                            <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {viewDetailsDialog.transaction.notes}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Created
-                            </label>
-                            <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {formatDateTime(
-                                viewDetailsDialog.transaction.createdAt
-                              )}
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Updated
-                            </label>
-                            <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                              {formatDateTime(
-                                viewDetailsDialog.transaction.updatedAt
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end mt-6">
-                        <button
-                          onClick={() =>
-                            setViewDetailsDialog({
-                              open: false,
-                              transaction: null,
-                            })
-                          }
-                          className="btn btn-secondary"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {updateStatusDialog.open && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 max-w-md mx-4">
-                      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                        Update Transaction Status
-                      </h3>
-                      <div className="mb-4">
-                        <label className="form-label mb-2 dark:text-gray-300">
-                          Select New Status
-                        </label>
-                        <select
-                          value={newStatus}
-                          onChange={(e) => setNewStatus(e.target.value)}
-                          className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Success">Success</option>
-                          <option value="Cancelled">Cancelled</option>
-                        </select>
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => {
-                            setUpdateStatusDialog({
-                              open: false,
-                              transactionId: 0,
-                              currentStatus: '',
-                            });
-                            setNewStatus('');
-                          }}
-                          className="btn btn-secondary"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => {
-                            handleStatusUpdate(
-                              updateStatusDialog.transactionId,
-                              newStatus
-                            );
-                            setUpdateStatusDialog({
-                              open: false,
-                              transactionId: 0,
-                              currentStatus: '',
-                            });
-                            setNewStatus('');
-                          }}
-                          className="btn btn-primary"
-                        >
-                          Update
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <TransactionDetailsModal
+                  isOpen={viewDetailsDialog.open}
+                  transaction={viewDetailsDialog.transaction}
+                  onClose={() =>
+                    setViewDetailsDialog({
+                      open: false,
+                      transaction: null,
+                    })
+                  }
+                  formatID={formatID}
+                  displayMethod={displayMethod}
+                  formatDateTime={formatDateTime}
+                />
+                <UpdateTransactionStatusModal
+                  isOpen={updateStatusDialog.open}
+                  transactionId={updateStatusDialog.transactionId}
+                  currentStatus={updateStatusDialog.currentStatus}
+                  onClose={() => {
+                    setUpdateStatusDialog({
+                      open: false,
+                      transactionId: 0,
+                      currentStatus: '',
+                    });
+                  }}
+                  onUpdate={handleStatusUpdate}
+                />
                 <ApproveTransactionModal
                   open={approveConfirmDialog.open}
                   transaction={approveConfirmDialog.transaction}
@@ -1483,164 +1266,19 @@ const AdminAllTransactionsPage = () => {
                   formatTransactionCurrency={formatTransactionCurrency}
                   displayMethod={displayMethod}
                 />
-                {addDeductBalanceDialog.open && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px] max-w-[90vw] mx-4">
-                      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                        Add/Deduct User Balance
-                      </h3>
-
-                      <div className="space-y-4 mb-6">
-                        <div>
-                          <label className="form-label mb-2 dark:text-gray-300">Username <span className="text-red-500 dark:text-red-400">*</span></label>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              placeholder="Enter username"
-                              value={balanceForm.username}
-                              onChange={(e) => {
-                                setBalanceForm((prev) => ({
-                                  ...prev,
-                                  username: e.target.value,
-                                }));
-                                if (!e.target.value.trim()) {
-                                  setUserFound(null);
-                                } else {
-
-                                  setTimeout(() => {
-                                    if (e.target.value === balanceForm.username) {
-                                      searchUsername(e.target.value);
-                                    }
-                                  }, 500);
-                                }
-                              }}
-                              className="form-field w-full px-4 py-3 pr-10 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                            />
-                            {usernameSearching && (
-                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--primary)]"></div>
-                              </div>
-                            )}
-                          </div>
-                          {userFound && (
-                            <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full"></div>
-                                <span className="text-sm text-green-700 dark:text-green-300 font-medium">
-                                  User found: {userFound.username}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                          {balanceForm.username && !usernameSearching && !userFound && (
-                            <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-red-500 dark:bg-red-400 rounded-full"></div>
-                                <span className="text-sm text-red-700 dark:text-red-300">
-                                  User not found
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className="form-label mb-2 dark:text-gray-300">Action <span className="text-red-500 dark:text-red-400">*</span></label>
-                          <select
-                            value={balanceForm.action}
-                            onChange={(e) =>
-                              setBalanceForm((prev) => ({
-                                ...prev,
-                                action: e.target.value,
-                              }))
-                            }
-                            className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
-                          >
-                            <option value="add">Add Balance</option>
-                            <option value="deduct">Deduct Balance</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="form-label mb-2 dark:text-gray-300">Amount ({currency}) <span className="text-red-500 dark:text-red-400">*</span></label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 font-medium">
-                              {balanceForm.action === 'deduct' ? '-' : ''}{currentCurrencyData?.symbol || '$'}
-                            </span>
-                            <input
-                              type="number"
-                              placeholder="0.00"
-                              value={balanceForm.amount}
-                              onChange={(e) =>
-                                setBalanceForm((prev) => ({
-                                  ...prev,
-                                  amount: e.target.value,
-                                }))
-                              }
-                              className="form-field w-full pl-8 pr-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              min="0"
-                              step="0.01"
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="form-label mb-2 dark:text-gray-300">Notes</label>
-                          <input
-                            type="text"
-                            placeholder="Add notes (optional)"
-                            value={balanceForm.notes}
-                            onChange={(e) =>
-                              setBalanceForm((prev) => ({
-                                ...prev,
-                                notes: e.target.value,
-                              }))
-                            }
-                            className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3 justify-end">
-                        <button
-                          onClick={() => {
-                            setAddDeductBalanceDialog({ open: false });
-                            setBalanceForm({
-                              username: '',
-                              amount: '',
-                              action: 'add',
-                              notes: '',
-                            });
-                            setUserFound(null);
-                            setUsernameSearching(false);
-                            setBalanceSubmitting(false);
-                          }}
-                          className="btn btn-secondary"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleBalanceSubmit}
-                          disabled={!balanceForm.username || !balanceForm.amount || !userFound || balanceSubmitting}
-                          className="btn btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {balanceSubmitting ? (
-                            <>
-                              {balanceForm.action === 'add' ? 'Adding...' : 'Deducting...'}
-                            </>
-                          ) : (
-                            <>
-                              <FaDollarSign className="h-4 w-4" />
-                              {balanceForm.action === 'add'
-                                ? 'Add Balance'
-                                : 'Deduct Balance'}
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <AddDeductUserBalanceModal
+                  isOpen={addDeductBalanceDialog.open}
+                  onClose={() => {
+                    setAddDeductBalanceDialog({ open: false });
+                    setBalanceSubmitting(false);
+                  }}
+                  onSubmit={async (formData) => {
+                    setBalanceSubmitting(true);
+                    await handleBalanceSubmit(formData);
+                    setBalanceSubmitting(false);
+                  }}
+                  isLoading={balanceSubmitting}
+                />
               </React.Fragment>
             )}
           </div>
