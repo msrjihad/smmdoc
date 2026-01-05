@@ -3,22 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   FaPlus,
-  FaEdit,
-  FaTrash,
-  FaEye,
-  FaEyeSlash,
   FaSearch,
   FaBullhorn,
   FaExclamationTriangle,
   FaInfoCircle,
   FaCheckCircle,
-  FaClock,
-  FaCalendarAlt,
-  FaUsers,
   FaTimes,
-  FaSave,
-  FaGripVertical,
-  FaEllipsisH,
   FaSync,
 } from 'react-icons/fa';
 
@@ -26,6 +16,10 @@ import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { getUserDetails } from '@/lib/actions/getUser';
 import { useSelector } from 'react-redux';
+import AnnouncementsTable from '@/components/admin/announcements/announcements-table';
+import CreateNewAnnouncementModal from '@/components/admin/announcements/modals/create-new-announcement';
+import EditAnnouncementModal from '@/components/admin/announcements/modals/edit-announcement';
+import DeleteAnnouncementModal from '@/components/admin/announcements/modals/delete-announcement';
 
 interface PaginationInfo {
   page: number;
@@ -36,11 +30,6 @@ interface PaginationInfo {
   hasPrev: boolean;
 }
 
-interface PaginationProps {
-  pagination: PaginationInfo;
-  onPageChange: (newPage: number) => void;
-  isLoading: boolean;
-}
 
 const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   <div className={`${size} ${className} relative`}>
@@ -50,30 +39,6 @@ const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   </div>
 );
 
-const useClickOutside = (
-  ref: React.RefObject<HTMLElement | null>,
-  handler: () => void
-) => {
-  useEffect(() => {
-    const listener = (event: MouseEvent | TouchEvent) => {
-      if (!ref.current || !event.target || !(event.target instanceof Node)) {
-        return;
-      }
-      if (ref.current.contains(event.target)) {
-        return;
-      }
-      handler();
-    };
-
-    document.addEventListener('mousedown', listener);
-    document.addEventListener('touchstart', listener);
-
-    return () => {
-      document.removeEventListener('mousedown', listener);
-      document.removeEventListener('touchstart', listener);
-    };
-  }, [ref, handler]);
-};
 
 const AnnouncementsSkeleton = () => {
   const rows = Array.from({ length: 5 });
@@ -835,75 +800,6 @@ const AnnouncementsPage = () => {
     }
   };
 
-  const AnnouncementActions = ({ announcement }: { announcement: Announcement }) => {
-    const dropdownRef = React.useRef<HTMLDivElement>(null);
-    const [isOpen, setIsOpen] = useState(false);
-
-    useClickOutside(dropdownRef, () => setIsOpen(false));
-
-    return (
-      <div className="relative" ref={dropdownRef}>
-        <button
-          className="btn btn-secondary p-2"
-          title="More Actions"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <FaEllipsisH className="h-3 w-3" />
-        </button>
-
-        {isOpen && (
-          <div className="absolute right-0 top-8 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-            <div className="py-1">
-              <button
-                onClick={() => {
-                  handleToggleStatus(announcement.id, announcement.status);
-                  setIsOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-2"
-              >
-                {announcement.status === 'active' ? (
-                  <>
-                    <FaEyeSlash className="h-3 w-3" />
-                    Deactivate
-                  </>
-                ) : (
-                  <>
-                    <FaEye className="h-3 w-3" />
-                    Activate
-                  </>
-                )}
-              </button>
-              {announcement.status !== 'expired' && (
-                <>
-                  <button
-                    onClick={() => {
-                      startEditing(announcement);
-                      setIsOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-2"
-                  >
-                    <FaEdit className="h-3 w-3" />
-                    Edit
-                  </button>
-                  <hr className="my-1 dark:border-gray-700" />
-                </>
-              )}
-              <button
-                onClick={() => {
-                  setShowDeleteConfirm(announcement.id);
-                  setIsOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
-              >
-                <FaTrash className="h-3 w-3" />
-                Delete
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="page-container">
@@ -1080,489 +976,63 @@ const AnnouncementsPage = () => {
                 )}
               </div>
             ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm min-w-[1200px]">
-                <thead className="sticky top-0 bg-white dark:bg-[var(--card-bg)] border-b dark:border-gray-700 z-10">
-                  <tr>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      Order
-                    </th>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      ID
-                    </th>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      Type
-                    </th>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      Title
-                    </th>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      Action Button
-                    </th>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      Audience
-                    </th>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      Views
-                    </th>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      Start
-                    </th>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      End
-                    </th>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      Visibility
-                    </th>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      Status
-                    </th>
-                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedAnnouncements.map((announcement, index) => (
-                    <React.Fragment key={announcement.id}>
-                      {draggedAnnouncement && draggedAnnouncement !== announcement.id && (
-                        <tr
-                          className={`transition-all duration-200 ${
-                            dropTargetAnnouncement === announcement.id && dropPosition === 'before'
-                              ? 'h-2 bg-blue-100 dark:bg-blue-900/30 border-2 border-dashed border-blue-400 dark:border-blue-500'
-                              : 'h-0'
-                          }`}
-                          onDragOver={(e) => handleDragOver(e, announcement.id)}
-                          onDragLeave={handleDragLeave}
-                          onDrop={(e) => handleDrop(e, announcement.id)}
-                        >
-                          <td colSpan={12}></td>
-                        </tr>
-                      )}
-                      <tr
-                        className={`border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)] transition-colors duration-200 ${
-                          draggedAnnouncement === announcement.id ? 'opacity-50' : ''
-                        } ${announcement.isSticky ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''}`}
-                        onDragOver={(e) => handleDragOver(e, announcement.id)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, announcement.id)}
-                      >
-                        <td className="py-3 pl-3 pr-1">
-                          <div
-                            className="cursor-move"
-                            title="Drag to reorder announcement"
-                            draggable={true}
-                            onDragStart={(e) => handleDragStart(e, announcement.id)}
-                            onDragEnd={handleDragEnd}
-                            style={{
-                              userSelect: 'none',
-                              WebkitUserSelect: 'none',
-                            }}
-                          >
-                            <FaGripVertical className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <div className="font-mono text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded">
-                            {announcement.id}
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium border capitalize ${getTypeBadgeStyle(announcement.type)}`}>
-                            {announcement.type}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <div className="max-w-xs">
-                            <div className="font-medium text-sm flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                              {announcement.title}
-                              {announcement.isSticky && (
-                                <span className="inline-block px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded-full">
-                                  Pinned
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                              {announcement.content}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          {announcement.buttonEnabled && announcement.buttonText && announcement.buttonLink ? (
-                            <a
-                              href={announcement.buttonLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                            >
-                              {announcement.buttonText}
-                            </a>
-                          ) : (
-                            <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-1">
-                            <FaUsers className="h-3 w-3 text-gray-400 dark:text-gray-500" />
-                            <span className="text-xs text-gray-900 dark:text-gray-100">
-                              {(announcement.targetedAudience === 'all' || announcement.targetedAudience === 'users') 
-                                ? 'Users' 
-                                : announcement.targetedAudience.charAt(0).toUpperCase() + announcement.targetedAudience.slice(1)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
-                            {announcement.views}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <div className="text-xs text-gray-900 dark:text-gray-100">
-                            {formatDate(announcement.startDate)}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {formatTime(announcement.startDate)}
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          {announcement.endDate ? (
-                            <>
-                              <div className="text-xs text-gray-900 dark:text-gray-100">
-                                {formatDate(announcement.endDate)}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {formatTime(announcement.endDate)}
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          <span className="text-xs capitalize text-gray-900 dark:text-gray-100">
-                            {(announcement as any).visibility === 'all_pages' ? 'All Pages' : 'Dashboard'}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(announcement.status)}`}>
-                            {announcement.status.charAt(0).toUpperCase() + announcement.status.slice(1)}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <AnnouncementActions announcement={announcement} />
-                        </td>
-                      </tr>
-                      {draggedAnnouncement && draggedAnnouncement !== announcement.id && (
-                        <tr
-                          className={`transition-all duration-200 ${
-                            dropTargetAnnouncement === announcement.id && dropPosition === 'after'
-                              ? 'h-2 bg-blue-100 dark:bg-blue-900/30 border-2 border-dashed border-blue-400 dark:border-blue-500'
-                              : 'h-0'
-                          }`}
-                          onDragOver={(e) => handleDragOver(e, announcement.id)}
-                          onDragLeave={handleDragLeave}
-                          onDrop={(e) => handleDrop(e, announcement.id)}
-                        >
-                          <td colSpan={12}></td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
-                </div>
-                <Pagination
-                  pagination={pagination}
-                  onPageChange={(newPage) => setPagination(prev => ({ ...prev, page: newPage }))}
-                  isLoading={announcementsLoading}
-                />
-              </>
+              <AnnouncementsTable
+                announcements={paginatedAnnouncements}
+                pagination={pagination}
+                announcementsLoading={announcementsLoading}
+                draggedAnnouncement={draggedAnnouncement}
+                dropTargetAnnouncement={dropTargetAnnouncement}
+                dropPosition={dropPosition}
+                formatDate={formatDate}
+                formatTime={formatTime}
+                getTypeBadgeStyle={getTypeBadgeStyle}
+                getStatusColor={getStatusColor}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+                onToggleStatus={handleToggleStatus}
+                onEdit={startEditing}
+                onDelete={(id) => setShowDeleteConfirm(id)}
+                onPageChange={(newPage) => setPagination(prev => ({ ...prev, page: newPage }))}
+              />
             )}
           </div>
         </div>
       </div>
-      {(showCreateModal || editingAnnouncement) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                  {editingAnnouncement ? 'Edit Announcement' : 'Create New Announcement'}
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setEditingAnnouncement(null);
-                    resetForm();
-                  }}
-                  className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <FaTimes className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="form-label mb-2">Title *</label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                    placeholder="Enter announcement title..."
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label mb-2">Content (Optional)</label>
-                  <textarea
-                    value={formData.content}
-                    onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                    rows={4}
-                    className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 resize-vertical"
-                    placeholder="Enter announcement content..."
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label mb-2">Type</label>
-                    <select
-                      value={formData.type}
-                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
-                      className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
-                    >
-                      <option value="info">Info</option>
-                      <option value="warning">Warning</option>
-                      <option value="success">Success</option>
-                      <option value="critical">Critical</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="form-label mb-2">Targeted Audience</label>
-                    <select
-                      value={formData.targetedAudience}
-                      onChange={(e) => setFormData(prev => ({ ...prev, targetedAudience: e.target.value as any }))}
-                      className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
-                    >
-                      <option value="users">Users</option>
-                      <option value="admins">Admins</option>
-                      <option value="moderators">Moderators</option>
-                    </select>
-                  </div>
-                </div>
-
-                {editingAnnouncement && editingAnnouncement.status === 'active' ? (
-                  <div>
-                    <label className="form-label mb-2">End Date (Optional)</label>
-                    <input
-                      type="datetime-local"
-                      value={formData.endDate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                      className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                    />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="form-label mb-2">Start Date</label>
-                      <input
-                        type="datetime-local"
-                        value={formData.startDate}
-                        onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                        className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="form-label mb-2">End Date (Optional)</label>
-                      <input
-                        type="datetime-local"
-                        value={formData.endDate}
-                        onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                        className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="form-label mb-2">Visibility</label>
-                  <select
-                    value={formData.visibility}
-                    onChange={(e) => setFormData(prev => ({ ...prev, visibility: e.target.value as 'dashboard' | 'all_pages' }))}
-                    className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
-                  >
-                    <option value="dashboard">Dashboard</option>
-                    <option value="all_pages">All Pages</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 mb-4">
-                    <input
-                      type="checkbox"
-                      checked={formData.buttonEnabled}
-                      onChange={(e) => setFormData(prev => ({ ...prev, buttonEnabled: e.target.checked }))}
-                      className="w-4 h-4 text-[var(--primary)] bg-gray-100 border-gray-300 rounded focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                    />
-                    <span className="form-label">Enable Action Button</span>
-                  </label>
-
-                  {formData.buttonEnabled && (
-                    <div className="space-y-4 pl-6 border-l-2 border-blue-200 dark:border-blue-800">
-                      <div>
-                        <label className="form-label mb-2">Button Text *</label>
-                        <input
-                          type="text"
-                          value={formData.buttonText}
-                          onChange={(e) => setFormData(prev => ({ ...prev, buttonText: e.target.value }))}
-                          className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                          placeholder="e.g., Learn More, Get Started, Download"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="form-label mb-2">Button Link *</label>
-                        <input
-                          type="url"
-                          value={formData.buttonLink}
-                          onChange={(e) => setFormData(prev => ({ ...prev, buttonLink: e.target.value }))}
-                          className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                          placeholder="https://example.com or /internal-page"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.isSticky}
-                      onChange={(e) => setFormData(prev => ({ ...prev, isSticky: e.target.checked }))}
-                      className="w-4 h-4 text-[var(--primary)] bg-gray-100 border-gray-300 rounded focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                    />
-                    <span className="form-label">Pin this announcement</span>
-                  </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Pinned announcements will appear at the top of the list
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setEditingAnnouncement(null);
-                    resetForm();
-                  }}
-                  className="btn btn-secondary px-4 py-2"
-                  disabled={isLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={editingAnnouncement ? handleEditAnnouncement : handleCreateAnnouncement}
-                  className="btn btn-primary flex items-center gap-2 px-4 py-2"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Saving...' : (editingAnnouncement ? 'Update' : 'Create')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                  <FaTrash className="h-5 w-5 text-red-600 dark:text-red-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Delete Announcement</h3>
-              </div>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Are you sure you want to delete this announcement? This action cannot be undone.
-              </p>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(null)}
-                  className="btn btn-secondary px-4 py-2"
-                  disabled={isLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleDeleteAnnouncement(showDeleteConfirm)}
-                  className="btn bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 px-6 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isLoading}
-                >
-                  <FaTrash className="h-4 w-4" />
-                  {isLoading ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <CreateNewAnnouncementModal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          resetForm();
+        }}
+        onConfirm={handleCreateAnnouncement}
+        formData={formData}
+        onFormDataChange={setFormData}
+        isLoading={isLoading}
+      />
+      <EditAnnouncementModal
+        isOpen={!!editingAnnouncement}
+        onClose={() => {
+          setEditingAnnouncement(null);
+          resetForm();
+        }}
+        onConfirm={handleEditAnnouncement}
+        formData={formData}
+        onFormDataChange={setFormData}
+        editingAnnouncement={editingAnnouncement}
+        isLoading={isLoading}
+      />
+      <DeleteAnnouncementModal
+        isOpen={!!showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(null)}
+        onConfirm={() => showDeleteConfirm && handleDeleteAnnouncement(showDeleteConfirm)}
+        isLoading={isLoading}
+      />
     </div>
   );
 };
 
-const Pagination: React.FC<PaginationProps> = ({
-  pagination,
-  onPageChange,
-  isLoading,
-}) => (
-  <div className="flex flex-col md:flex-row items-center justify-between pt-4 pb-0 border-t dark:border-gray-700">
-    <div className="text-sm text-gray-600 dark:text-gray-400">
-      {isLoading ? (
-        <div className="flex items-center gap-2">
-          <span>Loading pagination...</span>
-        </div>
-      ) : (
-        `Showing ${(
-          (pagination.page - 1) * pagination.limit +
-          1
-        ).toLocaleString()} to ${Math.min(
-          pagination.page * pagination.limit,
-          pagination.total
-        ).toLocaleString()} of ${pagination.total.toLocaleString()} announcements`
-      )}
-    </div>
-    <div className="flex items-center gap-2 mt-4 md:mt-0">
-      <button
-        onClick={() => onPageChange(Math.max(1, pagination.page - 1))}
-        disabled={!pagination.hasPrev || isLoading}
-        className="btn btn-secondary disabled:opacity-50"
-      >
-        Previous
-      </button>
-      <span className="text-sm text-gray-600 dark:text-gray-400">
-        {isLoading ? (
-          <GradientSpinner size="w-4 h-4" />
-        ) : (
-          `Page ${pagination.page} of ${pagination.totalPages}`
-        )}
-      </span>
-      <button
-        onClick={() =>
-          onPageChange(Math.min(pagination.totalPages, pagination.page + 1))
-        }
-        disabled={!pagination.hasNext || isLoading}
-        className="btn btn-secondary disabled:opacity-50"
-      >
-        Next
-      </button>
-    </div>
-  </div>
-);
 
 export default AnnouncementsPage;
