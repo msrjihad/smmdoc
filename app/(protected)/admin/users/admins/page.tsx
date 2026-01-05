@@ -5,15 +5,9 @@ import dynamic from 'next/dynamic';
 import {
     FaCheckCircle,
     FaClock,
-    FaCrown,
-    FaEdit,
-    FaEllipsisH,
     FaSearch,
     FaSync,
     FaTimes,
-    FaTimesCircle,
-    FaTrash,
-    FaUserCheck,
     FaUserShield,
 } from 'react-icons/fa';
 
@@ -21,7 +15,8 @@ import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
-import { PriceDisplay } from '@/components/price-display';
+import EditAdminModal from '@/components/admin/users/admins/modals/edit-admin-modal';
+import AdminsTable from '@/components/admin/users/admins/admins-table';
 
 const ChangeRoleModal = dynamic(
   () => import('@/components/admin/users/role-modal'),
@@ -182,20 +177,6 @@ interface PaginationInfo {
   hasPrev: boolean;
 }
 
-interface AdminActionsProps {
-  admin: Admin;
-  onEdit: (adminId: string) => void;
-  onChangeRole: (adminId: string, currentRole: string) => void;
-  onDelete: (adminId: string) => void;
-  isLoading: boolean;
-}
-
-interface PaginationProps {
-  pagination: PaginationInfo;
-  onPageChange: (newPage: number) => void;
-  isLoading: boolean;
-}
-
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -217,13 +198,6 @@ interface UpdateStatusModalProps {
 }
 
 
-interface EditAdminModalProps {
-  isOpen: boolean;
-  admin: Admin | null;
-  onClose: () => void;
-  onSave: (adminData: Partial<Admin>) => void;
-  isLoading: boolean;
-}
 
 const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -241,30 +215,6 @@ const useDebounce = (value: string, delay: number) => {
   return debouncedValue;
 };
 
-const useClickOutside = (
-  ref: React.RefObject<HTMLElement | null>,
-  handler: () => void
-) => {
-  useEffect(() => {
-    const listener = (event: MouseEvent | TouchEvent) => {
-      if (!ref.current || !event.target || !(event.target instanceof Node)) {
-        return;
-      }
-      if (ref.current.contains(event.target)) {
-        return;
-      }
-      handler();
-    };
-
-    document.addEventListener('mousedown', listener);
-    document.addEventListener('touchstart', listener);
-
-    return () => {
-      document.removeEventListener('mousedown', listener);
-      document.removeEventListener('touchstart', listener);
-    };
-  }, [ref, handler]);
-};
 
 const AdminsListPage = () => {
   const { appName } = useAppNameWithFallback();
@@ -543,14 +493,6 @@ const AdminsListPage = () => {
     return icons[status as keyof typeof icons] || icons.inactive;
   };
 
-  const getRoleIcon = (role: string) => {
-    const icons = {
-      super_admin: <FaCrown className="h-3 w-3 text-yellow-500 dark:text-yellow-400" />,
-      admin: null,
-      moderator: <FaUserShield className="h-3 w-3 text-purple-500 dark:text-purple-400" />,
-    };
-    return icons[role as keyof typeof icons] || null;
-  };
 
   const formatCurrency = useCallback((amount: number) => {
     return `$${amount.toLocaleString('en-US', {
@@ -871,191 +813,21 @@ const AdminsListPage = () => {
                 </p>
               </div>
             ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm min-w-[1400px]">
-                    <thead className="sticky top-0 bg-white dark:bg-[var(--card-bg)] border-b dark:border-gray-700 z-10">
-                      <tr>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          ID
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Username
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Email
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Role
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Balance
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Registered Date
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Last Login
-                        </th>
-                        <th
-                          className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {admins.map((admin) => (
-                        <tr
-                          key={admin.id}
-                          className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)] transition-colors duration-200"
-                        >
-                          <td className="p-3">
-                            <div className="font-mono text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded">
-                              {admin.id?.toString().slice(-8) || 'null'}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div
-                              className="font-medium text-sm text-gray-900 dark:text-gray-100"
-                            >
-                              {admin.username || 'null'}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div
-                              className="text-sm text-gray-900 dark:text-gray-100"
-                            >
-                              {admin.email || 'null'}
-                            </div>
-                            <div className="flex items-center gap-1 mt-1">
-                              {admin.emailVerified ? (
-                                <>
-                                  <FaCheckCircle className="h-3 w-3 text-green-500 dark:text-green-400" />
-                                  <span className="text-xs text-green-600 dark:text-green-400">
-                                    Verified
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  <FaTimesCircle className="h-3 w-3 text-red-500 dark:text-red-400" />
-                                  <span className="text-xs text-red-600 dark:text-red-400">
-                                    Unverified
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-2">
-                              {getRoleIcon(admin.role)}
-                              <span
-                                className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                  admin.role === 'super_admin'
-                                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
-                                    : admin.role === 'admin'
-                                    ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                                    : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                                }`}
-                              >
-                                {admin.role === 'super_admin'
-                                  ? 'SUPER ADMIN'
-                                  : admin.role === 'admin'
-                                  ? 'Admin'
-                                  : 'MODERATOR'}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div className="text-left">
-                              <div
-                                className="font-semibold text-sm text-gray-900 dark:text-gray-100"
-                              >
-                                <PriceDisplay
-                                  amount={admin.balance || 0}
-                                  originalCurrency="USD"
-                                  className="font-semibold text-sm text-gray-900 dark:text-gray-100"
-                                />
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div>
-                              <div
-                                className="text-xs text-gray-600 dark:text-gray-400"
-                              >
-                                {admin.createdAt
-                                  ? formatDate(admin.createdAt)
-                                  : 'null'}
-                              </div>
-                              <div
-                                className="text-xs text-gray-600 dark:text-gray-400"
-                              >
-                                {admin.createdAt
-                                  ? formatTime(admin.createdAt)
-                                  : 'null'}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <div>
-                              {admin.lastLoginAt ? (
-                                <>
-                                  <div
-                                    className="text-xs text-gray-600 dark:text-gray-400"
-                                  >
-                                    {formatDate(admin.lastLoginAt)}
-                                  </div>
-                                  <div
-                                    className="text-xs text-gray-600 dark:text-gray-400"
-                                  >
-                                    {formatTime(admin.lastLoginAt)}
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  Never
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <AdminActions
-                              admin={admin}
-                              onEdit={handleEditAdmin}
-                              onChangeRole={openChangeRoleDialog}
-                              onDelete={(adminId) => {
-                                setAdminToDelete(adminId);
-                                setDeleteDialogOpen(true);
-                              }}
-                              isLoading={actionLoading === admin.id.toString()}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination
-                  pagination={pagination}
-                  onPageChange={handlePageChange}
-                  isLoading={adminsLoading}
-                />
-              </>
+              <AdminsTable
+                admins={admins}
+                formatDate={formatDate}
+                formatTime={formatTime}
+                onEdit={handleEditAdmin}
+                onChangeRole={openChangeRoleDialog}
+                onDelete={(adminId) => {
+                  setAdminToDelete(adminId);
+                  setDeleteDialogOpen(true);
+                }}
+                actionLoading={actionLoading}
+                pagination={pagination}
+                onPageChange={handlePageChange}
+                adminsLoading={adminsLoading}
+              />
             )}
           </div>
         </div>
@@ -1161,119 +933,6 @@ const AdminsListPage = () => {
   );
 };
 
-const AdminActions: React.FC<AdminActionsProps> = ({
-  admin,
-  onEdit,
-  onChangeRole,
-  onDelete,
-  isLoading,
-}) => {
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
-  const [isOpen, setIsOpen] = useState(false);
-
-  useClickOutside(dropdownRef, () => setIsOpen(false));
-
-  return (
-    <div className="flex items-center gap-1">
-      <button
-        onClick={() => onEdit(admin.id.toString())}
-        className="btn btn-secondary p-2"
-        title="Edit Admin"
-        disabled={isLoading}
-      >
-        <FaEdit className="h-3 w-3" />
-      </button>
-
-      <div className="relative" ref={dropdownRef}>
-        <button
-          className="btn btn-secondary p-2"
-          title="More Actions"
-          onClick={() => setIsOpen(!isOpen)}
-          disabled={isLoading}
-        >
-          <FaEllipsisH className="h-3 w-3" />
-        </button>
-
-        {isOpen && (
-          <div className="absolute right-0 top-8 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-            <div className="py-1">
-              <button
-                onClick={() => {
-                  onChangeRole(admin.id.toString(), admin.role);
-                  setIsOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-2"
-              >
-                <FaUserCheck className="h-3 w-3" />
-                Change Role
-              </button>
-              <hr className="my-1 dark:border-gray-700" />
-              <button
-                onClick={() => {
-                  onDelete(admin.id.toString());
-                  setIsOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
-              >
-                <FaTrash className="h-3 w-3" />
-                Delete Admin
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const Pagination: React.FC<PaginationProps> = ({
-  pagination,
-  onPageChange,
-  isLoading,
-}) => (
-  <div className="flex flex-col md:flex-row items-center justify-between pt-4 pb-6 border-t dark:border-gray-700">
-    <div className="text-sm text-gray-600 dark:text-gray-400">
-      {isLoading ? (
-        <div className="flex items-center gap-2">
-          <span>Loading pagination...</span>
-        </div>
-      ) : (
-        `Showing ${(
-          (pagination.page - 1) * pagination.limit +
-          1
-        ).toLocaleString()} to ${Math.min(
-          pagination.page * pagination.limit,
-          pagination.total
-        ).toLocaleString()} of ${pagination.total.toLocaleString()} admins`
-      )}
-    </div>
-    <div className="flex items-center gap-2 mt-4 md:mt-0">
-      <button
-        onClick={() => onPageChange(Math.max(1, pagination.page - 1))}
-        disabled={!pagination.hasPrev || isLoading}
-        className="btn btn-secondary disabled:opacity-50"
-      >
-        Previous
-      </button>
-      <span className="text-sm text-gray-600 dark:text-gray-400">
-        {isLoading ? (
-          <GradientSpinner size="w-4 h-4" />
-        ) : (
-          `Page ${pagination.page.toLocaleString()} of ${pagination.totalPages.toLocaleString()}`
-        )}
-      </span>
-      <button
-        onClick={() =>
-          onPageChange(Math.min(pagination.totalPages, pagination.page + 1))
-        }
-        disabled={!pagination.hasNext || isLoading}
-        className="btn btn-secondary disabled:opacity-50"
-      >
-        Next
-      </button>
-    </div>
-  </div>
-);
 
 const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   isOpen,
@@ -1371,150 +1030,5 @@ const UpdateStatusModal: React.FC<UpdateStatusModalProps> = ({
 };
 
 
-const EditAdminModal: React.FC<EditAdminModalProps> = ({
-  isOpen,
-  admin,
-  onClose,
-  onSave,
-  isLoading,
-}) => {
-  const [formData, setFormData] = useState<Partial<Admin>>({});
-
-  React.useEffect(() => {
-    if (admin) {
-      setFormData({
-        username: admin.username,
-        email: admin.email,
-        name: admin.name || '',
-        status: admin.status,
-        password: '',
-      });
-    }
-  }, [admin]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
-
-  const handleInputChange = (field: keyof Admin, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const generatePassword = () => {
-    const length = 12;
-    const charset =
-      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-    let password = '';
-    for (let i = 0; i < length; i++) {
-      password += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    setFormData((prev) => ({ ...prev, password: password }));
-  };
-
-
-  if (!isOpen || !admin) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-[500px] max-w-[90vw] mx-4 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Edit Admin</h3>
-
-        <div className="space-y-4">
-          <div className="mb-4">
-            <label className="form-label mb-2 text-gray-700 dark:text-gray-300">Username</label>
-            <input
-              type="text"
-              value={formData.username || ''}
-              onChange={(e) => handleInputChange('username', e.target.value)}
-              className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-              placeholder="Enter username"
-              disabled={isLoading}
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="form-label mb-2 text-gray-700 dark:text-gray-300">Email</label>
-            <input
-              type="email"
-              value={formData.email || ''}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-              placeholder="Enter email address"
-              disabled={isLoading}
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="form-label mb-2 text-gray-700 dark:text-gray-300">Full Name</label>
-            <input
-              type="text"
-              value={formData.name || ''}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-              placeholder="Enter full name"
-              disabled={isLoading}
-            />
-          </div>
-          <div className="mb-4">
-            <label className="form-label mb-2 text-gray-700 dark:text-gray-300">Password</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={formData.password || ''}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                className="form-field w-full px-4 py-3 pr-12 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                placeholder="Leave blank to keep current password"
-                disabled={isLoading}
-              />
-              <button
-                type="button"
-                onClick={generatePassword}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-200"
-                title="Generate random password"
-                disabled={isLoading}
-              >
-                <FaSync className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Leave blank to keep current password, or click the refresh icon to
-              generate a new one
-            </p>
-          </div>
-          <div className="mb-4">
-            <label className="form-label mb-2 text-gray-700 dark:text-gray-300">Status</label>
-            <select
-              value={formData.status || 'active'}
-              onChange={(e) => handleInputChange('status', e.target.value)}
-              className="form-field w-full pl-4 pr-10 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer"
-              disabled={isLoading}
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="flex gap-2 justify-end pt-6">
-          <button
-            onClick={onClose}
-            className="btn btn-secondary"
-            disabled={isLoading}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onSave(formData)}
-            className="btn btn-primary"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Updating...' : 'Update'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default AdminsListPage;

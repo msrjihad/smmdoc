@@ -1,11 +1,8 @@
 ﻿import { auth } from '@/auth';
+import { ActivityLogger, getClientIP } from '@/lib/activity-logger';
 import { db } from '@/lib/db';
-import { randomBytes } from 'crypto';
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-
-function generateApiKey(): string {
-  return randomBytes(32).toString('hex');
-}
 
 export async function POST(
   req: NextRequest,
@@ -25,11 +22,11 @@ export async function POST(
       );
     }
 
-    const { id  } = await params;
+    const { id } = await params;
 
     const existingUser = await db.users.findUnique({
       where: { id: Number(id) },
-      select: { id: true, username: true, apiKey: true }
+      select: { id: true, username: true, email: true, apiKey: true }
     });
 
     if (!existingUser) {
@@ -43,32 +40,53 @@ export async function POST(
       );
     }
 
-    const newApiKey = generateApiKey();
+    const apiKey = `${crypto.randomBytes(16).toString('hex')}`;
 
     const updatedUser = await db.users.update({
       where: { id: Number(id) },
-      data: { apiKey: newApiKey },
+      data: { 
+        apiKey: apiKey,
+        updatedAt: new Date()
+      },
       select: {
         id: true,
-        username: true,
-        email: true,
         apiKey: true,
         updatedAt: true,
       }
     });
 
-    return NextResponse.json({
-      success: true,
-      data: updatedUser,
-      message: 'New API key generated successfully',
-      error: null
-    });
+    try {
+      const username = existingUser.username || existingUser.email?.split('@')[0] || `user${existingUser.id}`;
+      const ipAddress = getClientIP(req);
+      await ActivityLogger.apiKeyGenerated(
+        existingUser.id,
+        username,
+        ipAddress
+      );
+    } catch (error) {
+      console.error('Failed to log API key generation activity:', error);
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          apiKey: updatedUser.apiKey,
+          createdAt: updatedUser.updatedAt,
+          updatedAt: updatedUser.updatedAt,
+          id: '1',
+          userId: existingUser.id.toString()
+        },
+        error: null
+      },
+      { status: 200 }
+    );
 
   } catch (error) {
     console.error('Error generating API key:', error);
     return NextResponse.json(
       {
-        error: 'Failed to generate API key: ' + (error instanceof Error ? error.message : 'Unknown error'),
+        error: 'Failed to generate API key',
         success: false,
         data: null
       },

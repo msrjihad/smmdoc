@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     const searchBy = searchParams.get('searchBy') || 'all';
     const action = searchParams.get('action') || '';
     const userId = searchParams.get('userId') || '';
+    const role = searchParams.get('role') || '';
 
     const offset = (page - 1) * limit;
 
@@ -89,6 +90,17 @@ export async function GET(request: NextRequest) {
       const userIdInt = parseInt(userId);
       if (!isNaN(userIdInt)) {
         where.userId = userIdInt;
+      }
+    }
+
+    if (role) {
+      where.user = {
+        role: role
+      };
+      if (!userId) {
+        where.userId = {
+          not: null
+        };
       }
     }
 
