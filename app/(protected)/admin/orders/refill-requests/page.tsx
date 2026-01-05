@@ -1120,7 +1120,7 @@ const RefillOrdersPage = () => {
           setRefillDialogOpen(false);
           setSelectedOrder(null);
           setRefillInfo(null);
-        }}
+                    }}
         onCreateRefill={handleCreateRefill}
       />
       <RefillRequestDetailsModal

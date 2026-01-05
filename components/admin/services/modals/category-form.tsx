@@ -58,6 +58,8 @@ export const CreateCategoryForm = ({
   showToast,
   onRefresh,
   refreshAllData,
+  isOpen,
+  isClosing,
 }: {
   categoryId?: string;
   onClose: () => void;
@@ -67,6 +69,8 @@ export const CreateCategoryForm = ({
   ) => void;
   onRefresh?: () => void;
   refreshAllData?: () => Promise<void>;
+  isOpen?: boolean;
+  isClosing?: boolean;
 }) => {
   const isEditMode = !!categoryId;
   const { data: categoriesData } = useGetCategories();
@@ -173,11 +177,14 @@ export const CreateCategoryForm = ({
     });
   };
 
-  return (
+  const formContent = (
     <div className="w-full max-w-md">
       <div className="flex items-center justify-between p-6">
-        <h3 className="text-lg font-semibold">
-          {isEditMode ? "Edit Category" : "Create New Category"}
+        <h3
+          className="text-lg font-semibold"
+          style={{ color: 'var(--text-primary)' }}
+        >
+          {isEditMode ? 'Edit Category' : 'Create New Category'}
         </h3>
         <button
           onClick={handleClose}
@@ -187,7 +194,6 @@ export const CreateCategoryForm = ({
           <FaTimes className="h-5 w-5" />
         </button>
       </div>
-
       <div className="px-6 pb-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <FormItem>
@@ -262,4 +268,32 @@ export const CreateCategoryForm = ({
       </div>
     </div>
   );
+
+  // If modal props are provided, wrap with modal structure
+  if (isOpen !== undefined) {
+    return (
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
+          isClosing
+            ? 'modal-backdrop-exit'
+            : 'modal-backdrop-enter'
+        }`}
+        onClick={onClose}
+      >
+        <div
+          className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto mx-4 ${
+            isClosing
+              ? 'modal-content-exit'
+              : 'modal-content-enter'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {formContent}
+        </div>
+      </div>
+    );
+  }
+
+  // Otherwise return form content directly
+  return formContent;
 };

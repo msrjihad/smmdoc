@@ -55,7 +55,7 @@ const fetcher = (url: string) => axiosInstance.get(url).then((res) => res.data);
 
 const CreateCategoryForm = dynamic(
   () =>
-    import('@/components/admin/services/category-form').then(
+    import('@/components/admin/services/modals/category-form').then(
       (m) => m.CreateCategoryForm
     ),
   { ssr: false }
@@ -64,7 +64,7 @@ const CreateCategoryForm = dynamic(
 
 const DeleteCategoryModal = dynamic(
   () =>
-    import('@/components/admin/services/delete-category-modal').then(
+    import('@/components/admin/services/modals/delete-category').then(
       (m) => m.DeleteCategoryModal
     ),
   { ssr: false }
@@ -72,7 +72,7 @@ const DeleteCategoryModal = dynamic(
 
 const ServiceForm = dynamic(
   () =>
-    import('@/components/admin/services/service-form').then(
+    import('@/components/admin/services/modals/service-form').then(
       (m) => m.CreateServiceForm
     ),
   { ssr: false }
@@ -88,7 +88,7 @@ const ServicesTable = dynamic(
 
 const DeleteConfirmationModal = dynamic(
   () =>
-    import('@/components/admin/services/delete-confirmation-modal').then(
+    import('@/components/admin/services/modals/delete-confirmation').then(
       (m) => m.DeleteConfirmationModal
     ),
   { ssr: false }
@@ -96,7 +96,7 @@ const DeleteConfirmationModal = dynamic(
 
 const DeleteServicesAndCategoriesModal = dynamic(
   () =>
-    import('@/components/admin/services/delete-services-and-categories-modal').then(
+    import('@/components/admin/services/modals/delete-services-and-categories').then(
       (m) => m.DeleteServicesAndCategoriesModal
     ),
   { ssr: false }
@@ -2733,187 +2733,75 @@ function AdminServicesPage() {
           </div>
         </div>
         {editServiceModal.open && (
-          <div
-            className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
-              editServiceModal.closing
-                ? 'modal-backdrop-exit'
-                : 'modal-backdrop-enter'
-            }`}
-            onClick={handleCloseEditModal}
-          >
-            <div
-              className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-4 ${
-                editServiceModal.closing
-                  ? 'modal-content-exit'
-                  : 'modal-content-enter'
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ServiceForm
-                serviceId={editServiceModal.serviceId}
-                onClose={handleCloseEditModal}
-                showToast={showToast}
-                refreshAllData={refreshAllData}
-              />
-            </div>
-          </div>
+          <ServiceForm
+            serviceId={editServiceModal.serviceId}
+            onClose={handleCloseEditModal}
+            showToast={showToast}
+            refreshAllData={refreshAllData}
+            isOpen={editServiceModal.open}
+            isClosing={editServiceModal.closing}
+          />
         )}
         {createServiceModal && (
-          <div
-            className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
-              createServiceModalClosing
-                ? 'modal-backdrop-exit'
-                : 'modal-backdrop-enter'
-            }`}
-            onClick={handleCloseCreateModal}
-          >
-            <div
-              className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-4 ${
-                createServiceModalClosing
-                  ? 'modal-content-exit'
-                  : 'modal-content-enter'
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ServiceForm
-                onClose={handleCloseCreateModal}
-                showToast={showToast}
-                onRefresh={refreshAllData}
-                refreshAllDataWithServices={refreshAllDataWithServices}
-              />
-            </div>
-          </div>
+          <ServiceForm
+            onClose={handleCloseCreateModal}
+            showToast={showToast}
+            onRefresh={refreshAllData}
+            refreshAllDataWithServices={refreshAllDataWithServices}
+            isOpen={createServiceModal}
+            isClosing={createServiceModalClosing}
+          />
         )}
         {createCategoryModal && (
-          <div
-            className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
-              createCategoryModalClosing
-                ? 'modal-backdrop-exit'
-                : 'modal-backdrop-enter'
-            }`}
-            onClick={handleCloseCategoryModal}
-          >
-            <div
-              className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto mx-4 ${
-                createCategoryModalClosing
-                  ? 'modal-content-exit'
-                  : 'modal-content-enter'
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <CreateCategoryForm
-                onClose={handleCloseCategoryModal}
-                showToast={showToast}
-                onRefresh={refreshAllData}
-              />
-            </div>
-          </div>
+          <CreateCategoryForm
+            onClose={handleCloseCategoryModal}
+            showToast={showToast}
+            onRefresh={refreshAllData}
+            isOpen={createCategoryModal}
+            isClosing={createCategoryModalClosing}
+          />
         )}
         {editCategoryModal.open && (
-          <div
-            className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
-              editCategoryModal.closing
-                ? 'modal-backdrop-exit'
-                : 'modal-backdrop-enter'
-            }`}
-            onClick={handleCloseEditCategoryModal}
-          >
-            <div
-              className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto mx-4 ${
-                editCategoryModal.closing
-                  ? 'modal-content-exit'
-                  : 'modal-content-enter'
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <CreateCategoryForm
-                categoryId={editCategoryModal.categoryId}
-                onClose={handleCloseEditCategoryModal}
-                showToast={showToast}
-                refreshAllData={refreshAllData}
-              />
-            </div>
-          </div>
+          <CreateCategoryForm
+            categoryId={editCategoryModal.categoryId}
+            onClose={handleCloseEditCategoryModal}
+            showToast={showToast}
+            refreshAllData={refreshAllData}
+            isOpen={editCategoryModal.open}
+            isClosing={editCategoryModal.closing}
+          />
         )}
         {deleteConfirmationModal && (
-          <div
-            className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
-              deleteConfirmationModalClosing
-                ? 'modal-backdrop-exit'
-                : 'modal-backdrop-enter'
-            }`}
-            onClick={handleCloseDeleteConfirmation}
-          >
-            <div
-              className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto mx-4 ${
-                deleteConfirmationModalClosing
-                  ? 'modal-content-exit'
-                  : 'modal-content-enter'
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <DeleteConfirmationModal
-                onClose={handleCloseDeleteConfirmation}
-                onConfirm={deleteSelectedServices}
-                selectedCount={selectedServices.length}
-              />
-            </div>
-          </div>
+          <DeleteConfirmationModal
+            onClose={handleCloseDeleteConfirmation}
+            onConfirm={deleteSelectedServices}
+            selectedCount={selectedServices.length}
+            isOpen={deleteConfirmationModal}
+            isClosing={deleteConfirmationModalClosing}
+          />
         )}
         {deleteServicesAndCategoriesModal && (
-          <div
-            className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
-              deleteServicesAndCategoriesModalClosing
-                ? 'modal-backdrop-exit'
-                : 'modal-backdrop-enter'
-            }`}
-            onClick={handleCloseDeleteServicesAndCategoriesConfirmation}
-          >
-            <div
-              className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto mx-4 ${
-                deleteServicesAndCategoriesModalClosing
-                  ? 'modal-content-exit'
-                  : 'modal-content-enter'
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <DeleteServicesAndCategoriesModal
-                onClose={handleCloseDeleteServicesAndCategoriesConfirmation}
-                onConfirm={deleteSelectedServicesAndCategories}
-                selectedServiceCount={selectedServices.length}
-                selectedCategoryCount={selectedCategories.length}
-              />
-            </div>
-          </div>
+          <DeleteServicesAndCategoriesModal
+            onClose={handleCloseDeleteServicesAndCategoriesConfirmation}
+            onConfirm={deleteSelectedServicesAndCategories}
+            selectedServiceCount={selectedServices.length}
+            selectedCategoryCount={selectedCategories.length}
+            isOpen={deleteServicesAndCategoriesModal}
+            isClosing={deleteServicesAndCategoriesModalClosing}
+          />
         )}
         {deleteCategoryModal.open && (
-          <div
-            className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
-              deleteCategoryModal.closing
-                ? 'modal-backdrop-exit'
-                : 'modal-backdrop-enter'
-            }`}
-            onClick={handleCloseDeleteCategoryModal}
-          >
-            <div
-              className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto mx-4 ${
-                deleteCategoryModal.closing
-                  ? 'modal-content-exit'
-                  : 'modal-content-enter'
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <DeleteCategoryModal
-                onClose={handleCloseDeleteCategoryModal}
-                onConfirm={deleteCategory}
-                categoryName={deleteCategoryModal.categoryName}
-                categoryId={typeof deleteCategoryModal.categoryId === 'string' ? parseInt(deleteCategoryModal.categoryId) : deleteCategoryModal.categoryId}
-                isUpdating={isUpdating}
-                servicesCount={deleteCategoryModal.servicesCount}
-                categoriesData={categoriesData}
-              />
-            </div>
-          </div>
+          <DeleteCategoryModal
+            onClose={handleCloseDeleteCategoryModal}
+            onConfirm={deleteCategory}
+            categoryName={deleteCategoryModal.categoryName}
+            categoryId={typeof deleteCategoryModal.categoryId === 'string' ? parseInt(deleteCategoryModal.categoryId) : deleteCategoryModal.categoryId}
+            isUpdating={isUpdating}
+            servicesCount={deleteCategoryModal.servicesCount}
+            categoriesData={categoriesData}
+            isOpen={deleteCategoryModal.open}
+            isClosing={deleteCategoryModal.closing}
+          />
         )}
       </div>
     </div>

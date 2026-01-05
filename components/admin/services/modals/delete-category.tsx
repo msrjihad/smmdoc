@@ -10,6 +10,8 @@ export const DeleteCategoryModal = ({
   isUpdating,
   servicesCount,
   categoriesData,
+  isOpen,
+  isClosing,
 }: {
   onClose: () => void;
   onConfirm: (action: "delete" | "move", targetCategoryId?: string) => void;
@@ -18,6 +20,8 @@ export const DeleteCategoryModal = ({
   isUpdating: boolean;
   servicesCount: number;
   categoriesData: any;
+  isOpen?: boolean;
+  isClosing?: boolean;
 }) => {
   const [deleteAction, setDeleteAction] = useState<"delete" | "move">("delete");
   const [targetCategoryId, setTargetCategoryId] = useState<string>("");
@@ -32,7 +36,7 @@ export const DeleteCategoryModal = ({
     onConfirm(deleteAction, targetCategoryId || undefined);
   };
 
-  return (
+  const modalContent = (
     <div className="w-full max-w-lg">
       <div className="flex items-center justify-between p-6">
         <h3
@@ -185,4 +189,32 @@ export const DeleteCategoryModal = ({
       </div>
     </div>
   );
+
+  // If modal props are provided, wrap with modal structure
+  if (isOpen !== undefined) {
+    return (
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
+          isClosing
+            ? 'modal-backdrop-exit'
+            : 'modal-backdrop-enter'
+        }`}
+        onClick={onClose}
+      >
+        <div
+          className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto mx-4 ${
+            isClosing
+              ? 'modal-content-exit'
+              : 'modal-content-enter'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {modalContent}
+        </div>
+      </div>
+    );
+  }
+
+  // Otherwise return content directly
+  return modalContent;
 };

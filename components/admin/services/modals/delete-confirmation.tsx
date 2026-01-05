@@ -6,14 +6,18 @@ interface DeleteConfirmationModalProps {
   onClose: () => void;
   onConfirm: () => void;
   selectedCount: number;
+  isOpen?: boolean;
+  isClosing?: boolean;
 }
 
 export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   onClose,
   onConfirm,
   selectedCount,
+  isOpen,
+  isClosing,
 }) => {
-  return (
+  const modalContent = (
     <div className="w-full max-w-md">
       <div className="flex items-center justify-between p-6">
         <h3
@@ -61,4 +65,32 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
       </div>
     </div>
   );
+
+  // If modal props are provided, wrap with modal structure
+  if (isOpen !== undefined) {
+    return (
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
+          isClosing
+            ? 'modal-backdrop-exit'
+            : 'modal-backdrop-enter'
+        }`}
+        onClick={onClose}
+      >
+        <div
+          className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto mx-4 ${
+            isClosing
+              ? 'modal-content-exit'
+              : 'modal-content-enter'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {modalContent}
+        </div>
+      </div>
+    );
+  }
+
+  // Otherwise return content directly
+  return modalContent;
 };

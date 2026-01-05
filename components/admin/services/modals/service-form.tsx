@@ -82,13 +82,17 @@ export const CreateServiceForm: React.FC<{
   onRefresh?: () => void;
   refreshAllData?: () => Promise<void>;
   refreshAllDataWithServices?: () => Promise<void>;
+  isOpen?: boolean;
+  isClosing?: boolean;
 }> = ({ 
   serviceId, 
   onClose, 
   showToast, 
   onRefresh, 
   refreshAllData,
-  refreshAllDataWithServices 
+  refreshAllDataWithServices,
+  isOpen,
+  isClosing
 }) => {
   const isEditMode = !!serviceId;
 
@@ -777,7 +781,7 @@ export const CreateServiceForm: React.FC<{
     );
   }
 
-  return (
+  const formContent = (
     <div className="w-full max-w-6xl">
       <div className="flex items-center justify-between p-6">
         <h3
@@ -1282,4 +1286,32 @@ export const CreateServiceForm: React.FC<{
       </div>
     </div>
   );
+
+  // If modal props are provided, wrap with modal structure
+  if (isOpen !== undefined) {
+    return (
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${
+          isClosing
+            ? 'modal-backdrop-exit'
+            : 'modal-backdrop-enter'
+        }`}
+        onClick={onClose}
+      >
+        <div
+          className={`bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto mx-4 ${
+            isClosing
+              ? 'modal-content-exit'
+              : 'modal-content-enter'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {formContent}
+        </div>
+      </div>
+    );
+  }
+
+  // Otherwise return form content directly
+  return formContent;
 };

@@ -969,7 +969,7 @@ const CancelRequestsPage = () => {
                 onPageChange={handlePageChange}
                 getStatusIcon={getStatusIcon}
               />
-            )}
+                          )}
                 <ApproveCancelRequestModal
               isOpen={approveDialog.open}
               requestId={approveDialog.requestId}
@@ -993,7 +993,7 @@ const CancelRequestsPage = () => {
               onDeclineRequest={(requestId) => {
                                   setViewDialog({ open: false, request: null });
                 openDeclineDialog(requestId);
-              }}
+                                }}
             />
             <DeclineCancelRequestModal
               isOpen={declineDialog.open}
