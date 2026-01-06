@@ -221,7 +221,7 @@ const FavoriteServicesTable: React.FC = () => {
 
     const grouped: Record<string, Service[]> = {};
     Object.values(groupedById)
-      .filter(({ services }) => services.length > 0) // Only include categories with at least one service
+      .filter(({ services }) => services.length > 0)
       .sort((a, b) => {
 
         const idDiff = (a.category.id || 999) - (b.category.id || 999);

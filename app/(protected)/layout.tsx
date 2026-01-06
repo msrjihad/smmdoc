@@ -3,6 +3,7 @@
 import Header from '@/components/header/page';
 import SideBar from '@/components/dashboard/sidebar';
 import Announcements from '@/components/dashboard/announcements';
+import MobileBottomNav from '@/components/dashboard/mobile-bottom-nav';
 import { AuthGuard } from '@/components/protected/auth-guard';
 import { RouteGuard } from '@/components/admin/route-guard';
 import { useSession } from 'next-auth/react';
@@ -48,7 +49,7 @@ export default function ProtectedLayout({
           <Header />
         </div>
 
-        <main className="w-full mt-16 lg:mt-20">
+        <main className="w-full mt-16 lg:mt-20 pb-16 lg:pb-0">
           <div
             className={
               isDashboard
@@ -76,6 +77,7 @@ export default function ProtectedLayout({
           </div>
         </main>
       </div>
+      <MobileBottomNav />
     </div>
   );
 }

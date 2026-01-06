@@ -1750,3 +1750,10 @@ body {
 .jodit-editor-dark-bg .jodit-wysiwyg h6 {
   color: #f3f4f6 !important;
 }
+
+/* Mobile notification panel offset */
+@media (max-width: 640px) {
+  .mobile-notification-offset {
+    transform: translateX(8px) !important;
+  }
+}

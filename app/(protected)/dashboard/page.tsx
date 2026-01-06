@@ -407,7 +407,7 @@ const DashboardPage = () => {
                   </p>
                 )}
               </div>
-              <div className="ml-4">
+              <div className="ml-4 hidden sm:block">
                 <Link
                   href="/add-funds"
                   className={`btn btn-primary flex items-center gap-2`}

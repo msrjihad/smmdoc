@@ -162,7 +162,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-72 sm:w-80 header-theme-transition shadow-sm max-w-[calc(100vw-2rem)]"
+        className="w-72 sm:w-80 header-theme-transition shadow-sm max-w-[calc(100vw-2rem)] mobile-notification-offset"
         style={{
           backgroundColor: 'var(--dropdown-bg)',
           border: `1px solid var(--header-border)`,

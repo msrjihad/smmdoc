@@ -1,9 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
-// Helper function to convert BigInt values to numbers for JSON serialization
 function convertBigIntToNumber(obj: any): any {
   if (obj === null || obj === undefined) {
     return obj;
@@ -144,7 +141,6 @@ export async function GET(request: Request) {
       }),
     ]);
     
-    // Convert BigInt values to numbers before serialization
     const convertedServices = convertBigIntToNumber(services);
     const convertedTotal = typeof total === 'bigint' ? Number(total) : total;
     const convertedCategories = convertBigIntToNumber(allCategories);
