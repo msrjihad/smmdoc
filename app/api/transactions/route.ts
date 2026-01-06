@@ -50,7 +50,6 @@ export async function GET(request: NextRequest) {
         where.OR = [
           { transactionId: { contains: search } },
           { invoiceId: { contains: search } },
-          { senderNumber: { contains: search } },
           { user: { name: { contains: search } } },
           { user: { email: { contains: search } } },
         ];
@@ -61,7 +60,6 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { transactionId: { contains: search } },
         { invoiceId: { contains: search } },
-        { senderNumber: { contains: search } },
       ];
     }
 
@@ -131,7 +129,6 @@ export async function GET(request: NextRequest) {
             transactionId: true,
             createdAt: true,
             updatedAt: true,
-            senderNumber: true,
             currency: true,
             userId: true,
             user: {
@@ -204,8 +201,7 @@ export async function GET(request: NextRequest) {
         createdAt: transaction.createdAt?.toISOString() || new Date().toISOString(),
         updatedAt: transaction.updatedAt?.toISOString() || transaction.createdAt?.toISOString() || new Date().toISOString(),
         type: 'deposit',
-        phone: transaction.senderNumber || '',
-        sender_number: transaction.senderNumber || '',
+        phone: '',
         currency: transaction.currency || 'BDT',
         userId: transaction.userId,
         user: transaction.user ? {

@@ -336,7 +336,6 @@ interface PendingTransaction {
   username?: string;
   amount: number;
   transaction_id?: string;
-  sender_number?: string;
   status: string;
   admin_status: string;
   method?: string;

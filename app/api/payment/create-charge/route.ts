@@ -53,9 +53,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     console.log('Request body:', body);
 
-    if (!body.amount || !body.phone) {
+    if (!body.amount) {
       return NextResponse.json(
-        { error: 'Amount and phone number are required' },
+        { error: 'Amount is required' },
         { status: 400, headers: corsHeaders }
       );
     }
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         full_name: session.user.name || 'User',
         email: session.user.email || 'user@example.com',
         amount: Math.round(paymentAmount).toString(),
-        phone: body.phone,
+        phone: body.phone || '0000000000', // Phone will be extracted from invoiceId later via verify-payment
         metadata: {
           user_id: session.user.id,
           original_currency: currency,
@@ -164,7 +164,6 @@ export async function POST(req: NextRequest) {
           where: {
             userId: session.user.id,
             amount: amountUSD.toString(),
-            senderNumber: body.phone,
             createdAt: {
               gte: thirtySecondsAgo,
             },
@@ -297,7 +296,6 @@ export async function POST(req: NextRequest) {
               where: {
                 userId: session.user.id,
                 amount: amountUSD.toString(),
-                senderNumber: body.phone,
                 createdAt: {
                   gte: thirtySecondsAgo,
                 },
@@ -357,7 +355,6 @@ export async function POST(req: NextRequest) {
                 name: session.user.name || '',
                 status: 'Processing',
                 paymentGateway: gatewayName,
-                senderNumber: body.phone,
                 userId: session.user.id,
                 currency: 'USD',
               },

@@ -74,7 +74,6 @@ export async function POST(req: NextRequest) {
       let verificationStatus = 'PENDING';
       let verificationData: any = null;
       let finalTransactionId = transaction_id;
-      let finalPhone = phone;
 
       if (verificationResponse.ok) {
         verificationData = await verificationResponse.json();
@@ -82,9 +81,6 @@ export async function POST(req: NextRequest) {
 
         if (verificationData.transaction_id) {
           finalTransactionId = verificationData.transaction_id;
-        }
-        if (verificationData.sender_number) {
-          finalPhone = verificationData.sender_number;
         }
 
         if (
@@ -120,7 +116,6 @@ export async function POST(req: NextRequest) {
               data: {
                 status: 'Success',
                 transactionId: finalTransactionId || payment.transactionId,
-                senderNumber: finalPhone || payment.senderNumber,
                 paymentMethod: verificationData?.payment_method || payment.paymentMethod || 'UddoktaPay',
               },
             });
@@ -239,7 +234,6 @@ export async function POST(req: NextRequest) {
           where: { invoiceId: invoice_id },
           data: {
             transactionId: finalTransactionId,
-            senderNumber: finalPhone,
           },
         });
 
@@ -256,7 +250,7 @@ export async function POST(req: NextRequest) {
           currency: 'BDT',
           date: new Date().toLocaleDateString(),
           userId: payment.userId.toString(),
-          phone: finalPhone,
+          phone: undefined,
           supportEmail: supportEmail,
           whatsappNumber: whatsappNumber,
         });
@@ -283,7 +277,6 @@ export async function POST(req: NextRequest) {
           data: {
             status: 'Cancelled',
             transactionId: finalTransactionId,
-            senderNumber: finalPhone,
           },
         });
 

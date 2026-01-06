@@ -29,9 +29,7 @@ export async function POST(req: NextRequest) {
       status,
       metadata,
       payment_method,
-      sender_number,
       fee,
-      date,
       full_name,
       charged_amount
     } = webhookData;
@@ -40,7 +38,6 @@ export async function POST(req: NextRequest) {
       invoice_id,
       transaction_id,
       payment_method,
-      sender_number,
       status,
       amount,
       charged_amount
@@ -86,10 +83,8 @@ export async function POST(req: NextRequest) {
             status: paymentStatus,
             transactionId: transaction_id || payment.transactionId,
             paymentMethod: payment_method || payment.paymentMethod || null,
-            senderNumber: sender_number || payment.senderNumber || null,
             gatewayFee: fee !== undefined ? fee : payment.gatewayFee,
             name: full_name || payment.name,
-            transactionDate: date ? new Date(date) : payment.transactionDate,
             amount: charged_amount !== undefined ? charged_amount : payment.amount,
           }
         });

@@ -24,7 +24,6 @@ interface Transaction {
   bdt_amount?: number;
   currency: string;
   phone?: string;
-  sender_number?: string;
   method?: string;
   payment_method?: string;
   paymentGateway?: string;
@@ -78,9 +77,6 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
             </th>
             <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
               Amount
-            </th>
-            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
-              Phone
             </th>
             <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
               Payment Method
@@ -145,11 +141,6 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                   originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency === 'BDT' ? 'BDT' : 'USD')}
                   className="font-semibold text-sm"
                 />
-              </td>
-              <td className="p-3">
-                <span className="text-sm text-gray-900 dark:text-gray-100">
-                  {transaction.phone || transaction.sender_number || 'N/A'}
-                </span>
               </td>
               <td className="p-3">
                 <div className="text-xs font-medium text-gray-700 dark:text-gray-300">

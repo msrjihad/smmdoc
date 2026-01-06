@@ -22,7 +22,6 @@ export async function GET(req: NextRequest) {
           paymentGateway: true,
           paymentMethod: true,
           transactionId: true,
-          senderNumber: true,
           currency: true,
           createdAt: true,
           updatedAt: true,

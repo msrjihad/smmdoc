@@ -34,10 +34,7 @@ export async function GET(req: NextRequest) {
       
       payment = await db.addFunds.findFirst({
         where: {
-          OR: [
-            { referenceId: invoice_id },
-            { transactionId: invoice_id },
-          ],
+          transactionId: invoice_id,
         },
         include: {
           user: true,
@@ -45,7 +42,7 @@ export async function GET(req: NextRequest) {
       });
       
       if (payment) {
-        console.log("Found payment by referenceId/transactionId. Updating invoiceId to gateway invoice_id...");
+        console.log("Found payment by transactionId. Updating invoiceId to gateway invoice_id...");
         try {
           await db.addFunds.update({
             where: { id: payment.id },
@@ -97,12 +94,10 @@ export async function GET(req: NextRequest) {
           status: payment.status,
           transaction_id: payment.transactionId,
           payment_method: payment.paymentMethod,
-          phone_number: payment.senderNumber,
-          sender_number: payment.senderNumber,
+          phone_number: null,
           gatewayFee: payment.gatewayFee,
           name: payment.name,
           email: payment.email,
-          transactionDate: payment.transactionDate,
           createdAt: payment.createdAt,
           updatedAt: payment.updatedAt,
           userId: payment.userId,
@@ -161,26 +156,20 @@ export async function GET(req: NextRequest) {
           const responseInvoiceId = responseData.invoice_id;
           const responseTransactionId = responseData.transaction_id;
           const responsePaymentMethod = responseData.payment_method;
-          const responseSenderNumber = responseData.sender_number;
           const responseFee = responseData.fee;
           const responseChargedAmount = responseData.charged_amount;
-          const responseDate = responseData.date;
           const responseFullName = responseData.full_name;
           const responseEmail = responseData.email;
           const responseAmount = responseData.amount;
           
-          console.log('=== UddoktaPay Verify Payment API Response Fields ===');
-          console.log('According to API docs (https://uddoktapay.readme.io/reference/verify-payment-api-guideline):');
           console.log('  - invoice_id:', responseInvoiceId);
           console.log('  - transaction_id:', responseTransactionId);
           console.log('  - payment_method:', responsePaymentMethod);
-          console.log('  - sender_number:', responseSenderNumber);
           console.log('  - fee:', responseFee);
           console.log('  - charged_amount:', responseChargedAmount);
           console.log('  - amount:', responseAmount);
           console.log('  - full_name:', responseFullName);
           console.log('  - email:', responseEmail);
-          console.log('  - date:', responseDate);
           console.log('  - status:', responseData.status);
           console.log('  - metadata:', responseData.metadata);
           console.log('====================================================');
@@ -205,14 +194,12 @@ export async function GET(req: NextRequest) {
           console.log('  - invoice_id:', responseData.invoice_id);
           console.log('  - transaction_id:', responseData.transaction_id);
           console.log('  - payment_method:', responseData.payment_method);
-          console.log('  - sender_number:', responseData.sender_number);
           console.log('  - status:', responseData.status);
           console.log('  - amount:', responseData.amount);
           console.log('  - charged_amount:', responseData.charged_amount);
           console.log('  - fee:', responseData.fee);
           console.log('  - full_name:', responseData.full_name);
           console.log('  - email:', responseData.email);
-          console.log('  - date:', responseData.date);
           console.log('========================================================');
 
           if (responseData.status === 'ERROR') {
@@ -292,23 +279,15 @@ export async function GET(req: NextRequest) {
           invoice_id: verificationData.invoice_id,
           transaction_id: verificationData.transaction_id,
           payment_method: verificationData.payment_method,
-          sender_number: verificationData.sender_number,
           status: verificationData.status,
           amount: verificationData.amount,
           charged_amount: verificationData.charged_amount,
           fee: verificationData.fee,
           full_name: verificationData.full_name,
           email: verificationData.email,
-          date: verificationData.date
         });
       }
 
-      if (verificationData && !verificationData.sender_number) {
-        verificationData.sender_number = verificationData.senderNumber || 
-                                        verificationData.phone ||
-                                        verificationData.sender_phone ||
-                                        null;
-      }
 
       if (verificationResponse && verificationResponse.ok && verificationData) {
         if (verificationData.status === 'ERROR') {
@@ -345,7 +324,6 @@ export async function GET(req: NextRequest) {
           verificationData = verificationData || {};
           verificationData.transaction_id = apiTransactionId || verificationData.transaction_id || null;
           verificationData.payment_method = apiPaymentMethod || verificationData.payment_method || null;
-          verificationData.sender_number = verificationData.sender_number || null;
         } else {
           const errorText = await verificationResponse.text();
           console.error('UddoktaPay verification API error:', errorText);
@@ -445,23 +423,20 @@ export async function GET(req: NextRequest) {
         verificationData_keys: verificationData ? Object.keys(verificationData) : []
       });
       
-      const phoneNumberToSave = verificationData?.sender_number || payment.senderNumber || null;
+      const phoneNumberToSave = null;
       const gatewayFeeToSave = verificationData?.fee !== undefined ? verificationData.fee : payment.gatewayFee;
       const bdtAmountToSave = verificationData?.charged_amount !== undefined ? verificationData.charged_amount : payment.amount;
       const nameToSave = verificationData?.full_name || payment.name || null;
       const emailToSave = verificationData?.email || payment.email || null;
-      const transactionDateToSave = verificationData?.date ? new Date(verificationData.date) : payment.transactionDate;
       
       console.log('Values to save (direct API → DB mapping):', {
         status: paymentStatus,
         transactionId: transactionIdToSave,
         paymentMethod: paymentMethodToSave,
-        senderNumber: phoneNumberToSave,
         gatewayFee: gatewayFeeToSave,
         amount: bdtAmountToSave,
         name: nameToSave,
         email: emailToSave,
-        transactionDate: transactionDateToSave,
         source_breakdown: {
           apiTransactionId: apiTransactionId || 'null',
           apiPaymentMethod: apiPaymentMethod || 'null',
@@ -496,12 +471,10 @@ export async function GET(req: NextRequest) {
                 status: paymentStatus,
                 transactionId: transactionIdToSave,
                 paymentMethod: paymentMethodToSave,
-                senderNumber: phoneNumberToSave,
                 gatewayFee: gatewayFeeToSave,
                 amount: bdtAmountToSave,
                 name: nameToSave,
                 email: emailToSave,
-                transactionDate: transactionDateToSave,
             }
           });
           
@@ -533,12 +506,10 @@ export async function GET(req: NextRequest) {
               status: paymentStatus,
               transactionId: transactionIdToSave,
               paymentMethod: paymentMethodToSave,
-              senderNumber: phoneNumberToSave,
               gatewayFee: gatewayFeeToSave,
               amount: bdtAmountToSave,
               name: nameToSave,
               email: emailToSave,
-              transactionDate: transactionDateToSave,
             }
           });
         }
@@ -610,12 +581,10 @@ export async function GET(req: NextRequest) {
             status: completePayment.status,
             transaction_id: completePayment.transactionId,
             payment_method: completePayment.paymentMethod,
-            phone_number: completePayment.senderNumber,
-            sender_number: completePayment.senderNumber,
+            phone_number: null,
             gatewayFee: completePayment.gatewayFee,
             name: completePayment.name,
             email: completePayment.email,
-            transactionDate: completePayment.transactionDate,
             createdAt: completePayment.createdAt,
             updatedAt: completePayment.updatedAt,
             userId: completePayment.userId,
@@ -626,7 +595,7 @@ export async function GET(req: NextRequest) {
             status: finalStatus,
             transaction_id: finalTransactionIdToReturn,
             payment_method: updatedPayment.paymentMethod,
-            phone_number: updatedPayment.senderNumber || null,
+            phone_number: null,
           },
         });
       } catch (redirectError) {
@@ -674,12 +643,10 @@ export async function GET(req: NextRequest) {
           status: paymentStatus,
           transactionId: transactionIdToSave,
           paymentMethod: paymentMethodToSave,
-          senderNumber: verificationData?.sender_number || payment.senderNumber || null,
           gatewayFee: verificationData?.fee !== undefined ? verificationData.fee : payment.gatewayFee,
           amount: verificationData?.charged_amount !== undefined ? verificationData.charged_amount : payment.amount,
           name: verificationData?.full_name || payment.name || null,
           email: verificationData?.email || payment.email || null,
-          transactionDate: verificationData?.date ? new Date(verificationData.date) : payment.transactionDate,
         }
       });
       
@@ -769,12 +736,10 @@ export async function GET(req: NextRequest) {
             status: finalPaymentData.status,
             transaction_id: finalPaymentData.transactionId,
             payment_method: finalPaymentData.paymentMethod,
-            phone_number: finalPaymentData.senderNumber,
-            sender_number: finalPaymentData.senderNumber,
+            phone_number: null,
             gatewayFee: finalPaymentData.gatewayFee,
             name: finalPaymentData.name,
             email: finalPaymentData.email,
-            transactionDate: finalPaymentData.transactionDate,
             createdAt: finalPaymentData.createdAt,
             updatedAt: finalPaymentData.updatedAt,
             userId: finalPaymentData.userId,
@@ -785,7 +750,7 @@ export async function GET(req: NextRequest) {
             status: updatedPayment.status,
             transaction_id: updatedPayment.transactionId,
             payment_method: updatedPayment.paymentMethod,
-            phone_number: updatedPayment.senderNumber || null,
+            phone_number: null,
           },
         });
       } else {
@@ -808,12 +773,10 @@ export async function GET(req: NextRequest) {
             status: finalPaymentData.status,
             transaction_id: finalPaymentData.transactionId,
             payment_method: finalPaymentData.paymentMethod,
-            phone_number: finalPaymentData.senderNumber,
-            sender_number: finalPaymentData.senderNumber,
+            phone_number: null,
             gatewayFee: finalPaymentData.gatewayFee,
             name: finalPaymentData.name,
             email: finalPaymentData.email,
-            transactionDate: finalPaymentData.transactionDate,
             createdAt: finalPaymentData.createdAt,
             updatedAt: finalPaymentData.updatedAt,
             userId: finalPaymentData.userId,
@@ -839,6 +802,381 @@ export async function GET(req: NextRequest) {
     }
   } catch (error) {
     console.error("Error verifying payment:", error);
+    return NextResponse.json(
+      { 
+        error: "Failed to verify payment", 
+        status: "FAILED",
+        message: "An unexpected error occurred during verification",
+        details: String(error) 
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// POST method handler - extracts data using POST method
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const invoice_id = body.invoice_id;
+    const from_redirect = body.from_redirect === true || body.from_redirect === "true";
+    
+    console.log("Verifying payment for invoice_id (POST method):", invoice_id, "from_redirect:", from_redirect);
+    console.log("Note: invoice_id is extracted from request body. All payment data (transaction_id, payment_method, etc.) will be fetched from Verify Payment API using invoice_id only");
+
+    if (!invoice_id) {
+      return NextResponse.json(
+        { error: "Invoice ID is required", status: "FAILED" },
+        { status: 400 }
+      );
+    }
+
+    // Reuse the same logic as GET method by creating a mock request with query params
+    // or better yet, extract the common logic into a shared function
+    // For now, we'll duplicate the logic but read from body instead of query params
+    
+    let payment = await db.addFunds.findUnique({
+      where: {
+        invoiceId: invoice_id,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    console.log("Payment record found by gateway invoice_id (POST):", payment);
+    
+    if (!payment) {
+      console.log("Payment not found by gateway invoice_id. Trying alternative lookups...");
+      
+      payment = await db.addFunds.findFirst({
+        where: {
+          transactionId: invoice_id,
+        },
+        include: {
+          user: true,
+        },
+      });
+      
+      if (payment) {
+        console.log("Found payment by transactionId. Updating invoiceId to gateway invoice_id...");
+        try {
+          await db.addFunds.update({
+            where: { id: payment.id },
+            data: { invoiceId: invoice_id }
+          });
+          payment = await db.addFunds.findUnique({
+            where: { invoiceId: invoice_id },
+            include: { user: true },
+          });
+        } catch (updateError) {
+          console.error("Error updating payment invoice_id:", updateError);
+        }
+      }
+    }
+    
+    if (payment && payment.transactionId && payment.transactionId === invoice_id) {
+      console.log('CRITICAL: Found corrupted data - transaction_id equals invoice_id! Fixing...');
+      await db.addFunds.update({
+        where: { invoiceId: invoice_id },
+        data: { transactionId: null }
+      });
+      const fixedPayment = await db.addFunds.findUnique({
+        where: { invoiceId: invoice_id },
+        include: { user: true },
+      });
+      if (fixedPayment) {
+        payment.transactionId = null;
+      }
+    }
+
+    if (!payment) {
+      console.error("Payment record not found for invoice_id:", invoice_id);
+      return NextResponse.json({ 
+        error: "Payment record not found", 
+        status: "FAILED",
+        message: `No payment record found with invoice ID: ${invoice_id}`,
+        invoice_id: invoice_id
+      }, { status: 404 });
+    }
+
+    if (payment.status === "Success") {
+      return NextResponse.json({ 
+        message: "Payment already verified",
+        status: "COMPLETED",
+        payment: {
+          id: payment.id,
+          invoice_id: payment.invoiceId,
+          amount: payment.amount,
+          status: payment.status,
+          transaction_id: payment.transactionId,
+          payment_method: payment.paymentMethod,
+          phone_number: null,
+          gatewayFee: payment.gatewayFee,
+          name: payment.name,
+          email: payment.email,
+          createdAt: payment.createdAt,
+          updatedAt: payment.updatedAt,
+          userId: payment.userId,
+        }
+      });
+    }
+    
+    // Get gateway API credentials and verify URL
+    const { getPaymentGatewayApiKey, getPaymentGatewayVerifyUrl } = await import('@/lib/payment-gateway-config');
+    const apiKey = await getPaymentGatewayApiKey();
+    const baseUrl = await getPaymentGatewayVerifyUrl();
+    
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Payment gateway API key not configured. Please configure it in admin settings.", status: "FAILED" },
+        { status: 500 }
+      );
+    }
+    
+    console.log(`Making API request to payment gateway (POST): ${baseUrl} with invoice_id: ${invoice_id}`);
+    
+    let verificationData: any = null;
+    let isSuccessful = false;
+    let paymentStatus = "Processing";
+    let apiTransactionId: string | null = null;
+    let apiPaymentMethod: string | null = null;
+    
+    try {
+      let verificationResponse;
+      let attempts = from_redirect ? 3 : 1;
+      let delay = 1000;
+      
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        if (attempt > 1) {
+          console.log(`Retry attempt ${attempt} for transaction_id (waiting ${delay}ms)...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2;
+        }
+        
+        verificationResponse = await fetch(baseUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'RT-UDDOKTAPAY-API-KEY': apiKey,
+          },
+          body: JSON.stringify({ invoice_id }),
+        });
+
+        if (verificationResponse.ok) {
+          const responseData: any = await verificationResponse.json();
+          console.log(`=== UddoktaPay Verify Payment API response (POST, attempt ${attempt}) ===`);
+          console.log('Full response:', JSON.stringify(responseData, null, 2));
+          
+          const responseInvoiceId = responseData.invoice_id;
+          const responseTransactionId = responseData.transaction_id;
+          const responsePaymentMethod = responseData.payment_method;
+          
+          if (responseTransactionId && responseTransactionId !== invoice_id) {
+            apiTransactionId = responseTransactionId;
+            console.log(`✓ Transaction ID extracted from API response.transaction_id: ${apiTransactionId}`);
+          } else if (responseTransactionId === invoice_id) {
+            console.log('⚠ WARNING: API returned transaction_id matching invoice_id - ignoring');
+          }
+          
+          if (responsePaymentMethod) {
+            apiPaymentMethod = responsePaymentMethod;
+            console.log(`✓ Payment Method extracted from API response.payment_method: ${apiPaymentMethod}`);
+          }
+          
+          if (responseData.status === 'ERROR') {
+            console.log('API returned ERROR status:', responseData.message || 'Unknown error');
+            verificationData = responseData;
+            break;
+          }
+
+          if (!verificationData) {
+            verificationData = { ...responseData };
+          } else {
+            verificationData = { ...verificationData, ...responseData };
+          }
+          
+          verificationData.transaction_id = apiTransactionId || verificationData.transaction_id || responseData.transaction_id || null;
+          verificationData.payment_method = apiPaymentMethod || verificationData.payment_method || responseData.payment_method || null;
+          
+          if (apiTransactionId) {
+            console.log(`✓ Got valid transaction_id from API, breaking retry loop`);
+            break;
+          } else if (attempt >= attempts) {
+            console.log(`Final attempt completed. Using verificationData as is.`);
+            break;
+          }
+        } else {
+          try {
+            const errorData = await verificationResponse.json();
+            console.log('API returned HTTP error:', verificationResponse.status, errorData);
+            
+            if (errorData.transaction_id && errorData.transaction_id !== invoice_id) {
+              apiTransactionId = errorData.transaction_id;
+            }
+            if (errorData.payment_method) {
+              apiPaymentMethod = errorData.payment_method;
+            }
+            
+            if (errorData.status === 'ERROR') {
+              verificationData = errorData;
+              break;
+            }
+          } catch (e) {
+            console.log('Could not parse error response as JSON');
+          }
+        }
+      }
+
+      if (verificationData) {
+        if (!verificationData.payment_method) {
+          verificationData.payment_method = verificationData.paymentMethod || 
+                                           verificationData.payment_method_name ||
+                                           verificationData.method ||
+                                           null;
+        }
+        
+      }
+
+      if (verificationResponse && verificationResponse.ok && verificationData) {
+        if (verificationData.status === 'ERROR') {
+          console.log('Payment verification returned ERROR status:', verificationData.message || 'Unknown error');
+          paymentStatus = "Cancelled";
+          isSuccessful = false;
+        } else if (verificationData.status === 'COMPLETED' || verificationData.status === 'SUCCESS') {
+          isSuccessful = true;
+          paymentStatus = "Success";
+        } else if (verificationData.status === 'PENDING') {
+          paymentStatus = "Processing";
+        } else if (verificationData.status === 'CANCELLED' || verificationData.status === 'FAILED') {
+          paymentStatus = "Cancelled";
+        } else {
+          paymentStatus = "Processing";
+        }
+      } else {
+        paymentStatus = payment.status || "Processing";
+      }
+      
+      // Update payment record with data from gateway
+      if (from_redirect && payment.user) {
+        console.log('Payment redirected - updating with fetched transaction details from Verify Payment API (POST)');
+        
+        let transactionIdToSave = apiTransactionId || 
+                                 verificationData?.transaction_id || 
+                                 payment.transactionId || 
+                                 null;
+        
+        if (transactionIdToSave && transactionIdToSave === invoice_id) {
+          console.log('WARNING: transaction_id matches invoice_id - this is wrong! Setting to null instead.');
+          transactionIdToSave = null;
+        }
+        
+        const paymentMethodToSave = apiPaymentMethod || 
+                                     verificationData?.payment_method || 
+                                     payment.paymentMethod || 
+                                     null;
+        
+        const phoneNumberToSave = null;
+        const gatewayFeeToSave = verificationData?.fee !== undefined ? verificationData.fee : payment.gatewayFee;
+        const bdtAmountToSave = verificationData?.charged_amount !== undefined ? verificationData.charged_amount : payment.amount;
+        const nameToSave = verificationData?.full_name || payment.name || null;
+        const emailToSave = verificationData?.email || payment.email || null;
+        
+        try {
+          if (paymentStatus === "Success") {
+            await db.$transaction(async (prisma) => {
+              await prisma.addFunds.update({
+                where: { invoiceId: invoice_id },
+                data: {
+                  status: paymentStatus,
+                  transactionId: transactionIdToSave,
+                  paymentMethod: paymentMethodToSave,
+                  gatewayFee: gatewayFeeToSave,
+                  amount: bdtAmountToSave,
+                  name: nameToSave,
+                  email: emailToSave,
+                }
+              });
+
+              await prisma.users.update({
+                where: { id: payment.userId },
+                data: {
+                  balance: { increment: parseFloat(bdtAmountToSave.toString()) },
+                  balanceUSD: { increment: parseFloat(bdtAmountToSave.toString()) },
+                }
+              });
+            });
+
+            try {
+              await sendTransactionSuccessNotification(payment.userId, payment.id, payment.amount.toString());
+            } catch (notifError) {
+              console.error('Error sending success notification:', notifError);
+            }
+          } else {
+            await db.addFunds.update({
+              where: { invoiceId: invoice_id },
+              data: {
+                status: paymentStatus,
+                transactionId: transactionIdToSave,
+                paymentMethod: paymentMethodToSave,
+                gatewayFee: gatewayFeeToSave,
+                amount: bdtAmountToSave,
+                name: nameToSave,
+                email: emailToSave,
+              }
+            });
+          }
+        } catch (updateError) {
+          console.error('Error updating payment record:', updateError);
+        }
+      }
+      
+      // Return the updated payment data
+      const updatedPayment = await db.addFunds.findUnique({
+        where: { invoiceId: invoice_id },
+        include: { user: true },
+      });
+
+      return NextResponse.json({
+        status: paymentStatus === "Success" ? "COMPLETED" : paymentStatus === "Cancelled" ? "CANCELLED" : "PENDING",
+        message: paymentStatus === "Success" ? "Payment verified successfully" : "Payment verification in progress",
+        payment: updatedPayment ? {
+          id: updatedPayment.id,
+          invoice_id: updatedPayment.invoiceId,
+          amount: updatedPayment.amount,
+          status: updatedPayment.status,
+          transaction_id: updatedPayment.transactionId,
+          payment_method: updatedPayment.paymentMethod,
+          phone_number: null,
+          gatewayFee: updatedPayment.gatewayFee,
+          name: updatedPayment.name,
+          email: updatedPayment.email,
+          createdAt: updatedPayment.createdAt,
+          updatedAt: updatedPayment.updatedAt,
+          userId: updatedPayment.userId,
+        } : null
+      });
+      
+    } catch (gatewayError) {
+      console.error("Error calling payment gateway:", gatewayError);
+      return NextResponse.json({
+        status: "PENDING",
+        message: "Payment verification in progress",
+        payment: {
+          id: payment.id,
+          invoice_id: payment.invoiceId,
+          amount: payment.amount,
+          status: payment.status,
+          transaction_id: payment.transactionId,
+          payment_method: payment.paymentMethod,
+          phone_number: null,
+        }
+      });
+    }
+    
+  } catch (error) {
+    console.error("Error verifying payment (POST):", error);
     return NextResponse.json(
       { 
         error: "Failed to verify payment", 

@@ -133,7 +133,6 @@ export async function POST(
           status: 'Success',
           paymentGateway: 'Admin Refund',
           paymentMethod: 'Refund',
-          transactionDate: new Date(),
         }
       });
 

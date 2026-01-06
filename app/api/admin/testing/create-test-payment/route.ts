@@ -63,7 +63,6 @@ export async function POST(req: NextRequest) {
         userId: testUser.id,
         status: 'Processing',
         paymentGateway: 'Test Gateway',
-        senderNumber: phone,
         email: testUser.email || '',
       }
     });

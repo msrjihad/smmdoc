@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { transactionId: { contains: search, mode: 'insensitive' } },
         { invoiceId: { contains: search, mode: 'insensitive' } },
-        { senderNumber: { contains: search, mode: 'insensitive' } },
         { paymentMethod: { contains: search, mode: 'insensitive' } },
       ];
     }
@@ -59,7 +58,6 @@ export async function GET(request: NextRequest) {
           paymentGateway: true,
           paymentMethod: true,
           transactionId: true,
-          senderNumber: true,
           currency: true,
           createdAt: true,
           updatedAt: true,
@@ -82,7 +80,6 @@ export async function GET(request: NextRequest) {
       id: tx.id,
       transactionId: tx.transactionId,
       paymentMethod: tx.paymentMethod,
-      senderNumber: tx.senderNumber,
       paymentGateway: tx.paymentGateway,
       allFields: Object.keys(tx),
       fullTransaction: tx
@@ -144,11 +141,6 @@ export async function GET(request: NextRequest) {
                                        verificationData.method ||
                                        null;
 
-          const extractedSenderNumber = verificationData.sender_number || 
-                                      verificationData.senderNumber || 
-                                      verificationData.phone ||
-                                      verificationData.sender_phone ||
-                                      null;
 
           let newStatus = transaction.status;
           if (verificationData.status === 'COMPLETED' || verificationData.status === 'SUCCESS') {
@@ -174,9 +166,6 @@ export async function GET(request: NextRequest) {
             updateData.paymentMethod = extractedPaymentMethod;
           }
           
-          if (extractedSenderNumber && extractedSenderNumber !== transaction.senderNumber) {
-            updateData.senderNumber = extractedSenderNumber;
-          }
 
           if (newStatus !== transaction.status) {
             updateData.status = newStatus;
@@ -193,9 +182,6 @@ export async function GET(request: NextRequest) {
             }
             if (updateData.paymentMethod) {
               transaction.paymentMethod = updateData.paymentMethod;
-            }
-            if (updateData.senderNumber) {
-              transaction.senderNumber = updateData.senderNumber;
             }
             if (updateData.status) {
               transaction.status = updateData.status;
@@ -234,7 +220,6 @@ export async function GET(request: NextRequest) {
             paymentGateway: true,
             paymentMethod: true,
             transactionId: true,
-            senderNumber: true,
             currency: true,
             createdAt: true,
             updatedAt: true,
@@ -278,7 +263,6 @@ export async function GET(request: NextRequest) {
         rawTransactionId: transaction.transactionId,
         finalTransactionId,
         paymentMethod: transaction.paymentMethod,
-        senderNumber: transaction.senderNumber,
         paymentGateway: transaction.paymentGateway,
         dbStatus,
         mappedStatus,
@@ -290,7 +274,6 @@ export async function GET(request: NextRequest) {
           transactionId: transaction.transactionId,
           paymentMethod: transaction.paymentMethod,
           paymentGateway: transaction.paymentGateway,
-          senderNumber: transaction.senderNumber,
         }
       });
       
@@ -309,8 +292,7 @@ export async function GET(request: NextRequest) {
         payment_method: transaction.paymentMethod || 'UddoktaPay',
         transaction_id: finalTransactionId,
         createdAt: transaction.createdAt.toISOString(),
-        sender_number: transaction.senderNumber || '',
-        phone: transaction.senderNumber || '',
+        phone: '',
         currency: transaction.currency || 'USD',
       };
     });

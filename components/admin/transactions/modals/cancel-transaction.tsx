@@ -17,7 +17,6 @@ interface Transaction {
   bdt_amount?: number;
   currency: string;
   phone?: string;
-  sender_number?: string;
   method?: string;
   payment_method?: string;
   paymentGateway?: string;
@@ -122,7 +121,7 @@ const CancelTransactionModal: React.FC<CancelTransactionModalProps> = ({
                 Phone:
               </span>
               <span className="text-gray-900 dark:text-gray-100">
-                {transaction.sender_number || transaction.phone || 'N/A'}
+                {transaction.phone || 'N/A'}
               </span>
             </div>
           </div>

@@ -27,7 +27,6 @@ interface PendingTransaction {
   username?: string;
   amount: number;
   transaction_id?: string;
-  sender_number?: string;
   status: string;
   admin_status: string;
   method?: string;
@@ -312,7 +311,7 @@ const PendingTransactions = React.memo(function PendingTransactions({
                   <span
                     className="text-sm text-gray-900 dark:text-gray-100"
                   >
-                    {transaction.sender_number || 'N/A'}
+                    {'N/A'}
                   </span>
                 </td>
                 <td className="p-3">
@@ -420,7 +419,7 @@ const PendingTransactions = React.memo(function PendingTransactions({
                     Phone
                   </div>
                   <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
-                    {transaction.sender_number || 'N/A'}
+                    {'N/A'}
                   </div>
                 </div>
               </div>

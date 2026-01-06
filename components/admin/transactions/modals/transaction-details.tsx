@@ -17,7 +17,6 @@ interface Transaction {
   bdt_amount?: number;
   currency: string;
   phone: string;
-  sender_number?: string;
   method: string;
   payment_method?: string;
   paymentGateway?: string;

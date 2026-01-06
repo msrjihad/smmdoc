@@ -84,7 +84,6 @@ export async function POST(req: NextRequest) {
               data: {
                 status: "Success",
                 transactionId: transaction_id,
-                senderNumber: phone,
               }
             });
             
@@ -220,7 +219,6 @@ export async function POST(req: NextRequest) {
           where: { invoiceId: invoice_id },
           data: {
             transactionId: transaction_id,
-            senderNumber: phone,
             status: "Processing"
           }
         });
@@ -267,7 +265,6 @@ export async function POST(req: NextRequest) {
           data: {
             status: "Cancelled",
             transactionId: transaction_id,
-            senderNumber: phone,
           }
         });
         

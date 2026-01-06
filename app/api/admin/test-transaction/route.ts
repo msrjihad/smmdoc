@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
         name: 'Test User',
         status: 'Processing',
         paymentGateway: 'Test Gateway',
-        senderNumber: '01712345678',
         transactionId: `TXN-${Date.now()}`,
         userId: session.user.id,
         currency: 'USD',

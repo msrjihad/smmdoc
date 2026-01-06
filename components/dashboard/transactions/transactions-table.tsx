@@ -13,8 +13,6 @@ type Transaction = {
   payment_method?: string;
   transaction_id?: string | null;
   createdAt: string;
-  reference_id?: string;
-  sender_number?: string;
   phone?: string;
   currency?: string;
 };
@@ -90,16 +88,13 @@ export function TransactionsTable({
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[var(--card-bg)]">
               <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                Sl. No.
+                ID
               </th>
               <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
                 Transaction ID
               </th>
               <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
                 Amount
-              </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                Phone Number
               </th>
               <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
                 Method
@@ -114,7 +109,6 @@ export function TransactionsTable({
           </thead>
           <tbody>
             {transactions.map((transaction, index) => {
-              const serialNumber = (page - 1) * limit + index + 1;
               return (
                 <tr
                   key={transaction.id}
@@ -122,7 +116,7 @@ export function TransactionsTable({
                 >
                   <td className="py-3 px-4">
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {serialNumber}
+                      {transaction.id}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -136,11 +130,6 @@ export function TransactionsTable({
                         amount={transaction.amount}
                         originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency === 'BDT' ? 'BDT' : 'USD')}
                       />
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {transaction.phone || transaction.sender_number || 'N/A'}
                     </span>
                   </td>
                   <td className="py-3 px-4">

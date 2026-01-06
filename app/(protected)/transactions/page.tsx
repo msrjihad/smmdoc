@@ -57,7 +57,6 @@ type Transaction = {
   transaction_id?: string | null;
   createdAt: string;
   reference_id?: string;
-  sender_number?: string;
   phone?: string;
   currency?: string;
 };
@@ -253,20 +252,52 @@ export default function TransactionsPage() {
 
       setTimeout(async () => {
         try {
-          const verifyUrl = `/api/payment/verify-payment?invoice_id=${invoiceId}&from_redirect=true`;
+          const verifyUrl = `/api/payment/verify-payment`;
 
           try {
             const verifyResponse = await fetch(verifyUrl, {
-              method: 'GET',
+              method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
+              body: JSON.stringify({ 
+                invoice_id: invoiceId,
+                from_redirect: true 
+              }),
             });
 
             if (!verifyResponse.ok) {
-              console.warn(`Verify-payment API returned ${verifyResponse.status}. Showing invoice info only.`);
+              console.warn(`Verify-payment API returned ${verifyResponse.status}.`);
+              
+              if (verifyResponse.status === 404) {
+                try {
+                  const errorData = await verifyResponse.json().catch(() => ({}));
+                  console.warn('Payment record not found, ensuring it exists:', errorData);
+                  
+                  const ensureResponse = await fetch('/api/payment/ensure-record', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ invoice_id: invoiceId }),
+                  });
+
+                  if (ensureResponse.ok) {
+                    const ensureData = await ensureResponse.json();
+                    console.log('Payment record ensured:', ensureData);
+                  } else {
+                    const ensureErrorText = await ensureResponse.text();
+                    console.warn('Failed to ensure payment record:', ensureErrorText);
+                  }
+                } catch (ensureError) {
+                  console.error('Error ensuring payment record:', ensureError);
+                }
+              } else {
+                console.warn(`Verify-payment failed with status ${verifyResponse.status}, not calling ensure-record`);
+              }
+              
               showToast(
-                `Payment submitted! Invoice ID: ${invoiceId}. Please check your transaction list.`,
+                `Payment submitted! Invoice ID: ${invoiceId}. Please check your transaction list..`,
                 'info'
               );
               fetchTransactions(true);
@@ -284,7 +315,7 @@ export default function TransactionsPage() {
             const apiTransactionId = paymentData.transaction_id;
             const apiPaymentMethod = paymentData.payment_method;
             const paymentAmount = paymentData.amount || paymentData.usdAmount;
-            const paymentPhone = paymentData.phone_number || paymentData.sender_number;
+            const paymentPhone = paymentData.phone_number || null;
             const paymentDate = paymentData.transactionDate || paymentData.createdAt;
             const paymentFee = paymentData.gatewayFee;
             const paymentName = paymentData.name;
@@ -336,7 +367,30 @@ export default function TransactionsPage() {
 
             fetchTransactions(true);
           } catch (fetchError) {
-            console.error('Error calling verify-payment API (GET method):', fetchError);
+            console.error('Error calling verify-payment API (POST method):', fetchError);
+            
+            if (fetchError instanceof TypeError && fetchError.message.includes('fetch')) {
+              console.warn('Network error detected, attempting to ensure payment record exists');
+              try {
+                const ensureResponse = await fetch('/api/payment/ensure-record', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ invoice_id: invoiceId }),
+                });
+
+                if (ensureResponse.ok) {
+                  const ensureData = await ensureResponse.json();
+                  console.log('Payment record ensured after network error:', ensureData);
+                } else {
+                  console.warn('Failed to ensure payment record:', await ensureResponse.text());
+                }
+              } catch (ensureError) {
+                console.error('Error ensuring payment record:', ensureError);
+              }
+            }
+            
             showToast(
               `Payment submitted! Invoice ID: ${invoiceId}. Please check your transaction list.`,
               'info'
@@ -481,7 +535,6 @@ export default function TransactionsPage() {
               status === 'success' ? 'Payment Gateway' : 'Manual Payment',
             transaction_id: transactionId || null,
             createdAt: new Date().toISOString(),
-            sender_number: phone || 'N/A',
             phone: phone || 'N/A',
           };
 
@@ -526,7 +579,6 @@ export default function TransactionsPage() {
             status === 'success' ? 'Payment Gateway' : 'Manual Payment',
           transaction_id: transactionId || null,
           createdAt: new Date().toISOString(),
-          sender_number: phone || 'N/A',
           phone: phone || 'N/A',
         };
         fallbackTransactions.push(newTransaction);

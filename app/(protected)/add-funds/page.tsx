@@ -335,7 +335,7 @@ export default function AddFundsPage() {
             ? parseFloat(values.amountUSD || '0') * currentRate
             : parseFloat(values.amountBDT || '0');
 
-        if (!user?.name || !user?.email || !values.phone || amountInBDT <= 0) {
+        if (!user?.name || !user?.email || amountInBDT <= 0) {
           showToast('Please fill in all required information', 'error');
           isSubmittingRef.current = false;
           setIsSubmitting(false);
@@ -378,14 +378,6 @@ export default function AddFundsPage() {
           return;
         }
 
-        const cleanedPhone = values.phone.replace(/\D/g, '');
-        if (!cleanedPhone || cleanedPhone.length < 10) {
-          showToast('Please enter a valid phone number', 'error');
-          isSubmittingRef.current = false;
-          setIsSubmitting(false);
-          return;
-        }
-
         const amountValue = activeCurrency === 'USD' 
           ? parseFloat(values.amountUSD || '0')
           : parseFloat(values.amountBDT || '0');
@@ -406,7 +398,6 @@ export default function AddFundsPage() {
           userId: user?.id,
           full_Name: user?.name || 'John Doe',
           email: user?.email || 'customer@example.com',
-          phone: cleanedPhone,
           requestId: requestId,
         };
 
@@ -428,24 +419,23 @@ export default function AddFundsPage() {
           return;
         }
 
-        if (res.data && res.data.payment_url) {
-          if (res.data.invoice_id) {
-            const paymentSession = {
-              invoice_id: res.data.invoice_id,
-              amount: finalAmount.toString(),
-              user_id: user?.id,
-              phone: values.phone.replace(/\D/g, ''),
-              timestamp: Date.now(),
-            };
-            sessionStorage.setItem(
-              'payment_invoice_id',
-              res.data.invoice_id
-            );
-            localStorage.setItem(
-              'uddoktapay_session',
-              JSON.stringify(paymentSession)
-            );
-          }
+          if (res.data && res.data.payment_url) {
+            if (res.data.invoice_id) {
+              const paymentSession = {
+                invoice_id: res.data.invoice_id,
+                amount: finalAmount.toString(),
+                user_id: user?.id,
+                timestamp: Date.now(),
+              };
+              sessionStorage.setItem(
+                'payment_invoice_id',
+                res.data.invoice_id
+              );
+              localStorage.setItem(
+                'uddoktapay_session',
+                JSON.stringify(paymentSession)
+              );
+            }
 
           showToast('Redirecting to payment page...', 'success');
 
@@ -717,25 +707,6 @@ export default function AddFundsPage() {
                     </div>
                   )}
                 </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Phone Number</label>
-                <input
-                  type="tel"
-                  autoComplete="tel"
-                  placeholder="Enter your phone number"
-                  className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                  disabled={isPending}
-                  value={form.watch('phone') || ''}
-                  onChange={(e) =>
-                    form.setValue('phone', e.target.value, { shouldValidate: true })
-                  }
-                />
-                {form.formState.errors.phone && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {form.formState.errors.phone.message}
-                  </p>
-                )}
               </div>
               <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-800/90 rounded-lg p-6 border border-blue-200 dark:border-gray-700">
                 <div className="flex justify-between items-center mb-2">

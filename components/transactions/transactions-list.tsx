@@ -16,7 +16,6 @@ type Transaction = {
   transaction_id?: string | null;
   createdAt: string;
   reference_id?: string;
-  sender_number?: string;
   phone?: string;
   currency?: string;
 };
@@ -109,7 +108,7 @@ export function TransactionsList({
                 </td>
                 <td className="py-3 px-4">
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {transaction.phone || transaction.sender_number || 'N/A'}
+                    {transaction.phone || 'N/A'}
                   </span>
                 </td>
                 <td className="py-3 px-4">

@@ -261,8 +261,7 @@ export async function GET(
       payment_method: transaction.paymentMethod || 'UddoktaPay',
       transaction_id: transaction.transactionId || transaction.id.toString(),
       createdAt: transaction.createdAt.toISOString(),
-      sender_number: transaction.senderNumber || null,
-      phone: transaction.senderNumber || null,
+      phone: null,
       currency: transaction.currency || 'USD',
       admin_status: transaction.status,
     };
