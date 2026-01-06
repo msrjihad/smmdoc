@@ -1,4 +1,5 @@
 ﻿import { db } from '@/lib/db';
+import { sendTransactionSuccessNotification } from '@/lib/notifications/user-notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -114,6 +115,16 @@ export async function POST(req: NextRequest) {
           });
           
           console.log(`User ${payment.userId} balance updated after successful payment. New balance: ${user.balance}`);
+
+          try {
+            await sendTransactionSuccessNotification(
+              payment.userId,
+              updatedPayment.id,
+              Number(payment.usdAmount)
+            );
+          } catch (notifError) {
+            console.error('Error sending transaction success notification:', notifError);
+          }
         }
         
         return { updatedPayment };

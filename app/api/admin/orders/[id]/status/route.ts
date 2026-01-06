@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { serializeOrder } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 import { updateAffiliateCommissionForOrder } from '@/lib/affiliate-commission-helper';
+import { sendOrderStatusChangedNotification } from '@/lib/notifications/user-notifications';
 
 export async function PUT(
   req: NextRequest,
@@ -251,7 +252,16 @@ export async function PUT(
       balanceAdjusted: balanceUpdate !== null,
       timestamp: new Date().toISOString()
     });
-    
+
+    if ((status === 'completed' || status === 'cancelled') && currentOrder.status !== status) {
+      sendOrderStatusChangedNotification(
+        user.id,
+        orderId,
+        status as 'completed' | 'cancelled'
+      ).catch(err => {
+        console.error('Failed to send order status changed notification:', err);
+      });
+    }
     
     return NextResponse.json({
       success: true,
@@ -319,12 +329,30 @@ export async function PATCH(
       );
     }
 
-    const updatedOrder = await db.$transaction(async (prisma) => {
-      const currentOrder = await prisma.newOrders.findUnique({
-        where: { id: orderId },
-        select: { qty: true }
-      });
+    const orderBeforeUpdate = await db.newOrders.findUnique({
+      where: { id: orderId },
+      select: { 
+        status: true, 
+        userId: true,
+        qty: true
+      }
+    });
 
+    if (!orderBeforeUpdate) {
+      return NextResponse.json(
+        {
+          error: 'Order not found',
+          success: false,
+          data: null
+        },
+        { status: 404 }
+      );
+    }
+
+    const previousStatus = orderBeforeUpdate.status;
+    const userId = orderBeforeUpdate.userId;
+
+    const updatedOrder = await db.$transaction(async (prisma) => {
       const updateData: any = {
         status,
         updatedAt: new Date()
@@ -332,7 +360,7 @@ export async function PATCH(
 
       if (status === 'completed') {
         updateData.remains = BigInt(0);
-        updateData.startCount = currentOrder?.qty || BigInt(0);
+        updateData.startCount = orderBeforeUpdate?.qty || BigInt(0);
       }
 
       const order = await prisma.newOrders.update({
@@ -363,6 +391,16 @@ export async function PATCH(
 
       return order;
     });
+
+    if ((status === 'completed' || status === 'cancelled') && previousStatus !== status) {
+      sendOrderStatusChangedNotification(
+        userId,
+        orderId,
+        status as 'completed' | 'cancelled'
+      ).catch(err => {
+        console.error('Failed to send order status changed notification:', err);
+      });
+    }
 
     return NextResponse.json({
       success: true,

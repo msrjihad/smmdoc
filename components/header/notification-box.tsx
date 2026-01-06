@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   FaBell,
   FaShoppingCart,
@@ -10,6 +10,8 @@ import {
   FaUserCog,
   FaCog,
   FaMoneyBillWave,
+  FaPlug,
+  FaBriefcase,
 } from 'react-icons/fa';
 import {
   DropdownMenu,
@@ -34,44 +36,172 @@ interface HeaderNotificationBoxProps {
 }
 
 const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProps) => {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [displayCount, setDisplayCount] = useState(5);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [seenUnreadCount, setSeenUnreadCount] = useState(0);
+  const [seenNotificationIds, setSeenNotificationIds] = useState<Set<number>>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('seenNotificationIds');
+      if (stored) {
+        try {
+          const ids = JSON.parse(stored);
+          return new Set(ids);
+        } catch (e) {
+          return new Set();
+        }
+      }
+    }
+    return new Set();
+  });
+  const openRef = useRef(open);
+  const displayCountRef = useRef(displayCount);
 
-  const fetchNotifications = async () => {
+  const fetchUnreadCount = async () => {
     try {
-      setNotificationsLoading(true);
-      setNotificationsError(null);
-      const response = await fetch('/api/notifications');
+      const response = await fetch('/api/notifications/count');
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
+
+  const fetchNotifications = async (limit: number = 5, offset: number = 0, append: boolean = false) => {
+    try {
+      if (!append) {
+        setNotificationsLoading(true);
+      }
+      setNotificationsError(null);
+      const response = await fetch(`/api/notifications?limit=${limit}&offset=${offset}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (append) {
+          setNotifications(prev => {
+            const newNotifications = data.notifications || [];
+            if (open) {
+              const newIds = newNotifications.map((n: Notification) => n.id);
+              setSeenNotificationIds(prevSeen => new Set([...prevSeen, ...newIds]));
+            }
+            return [...prev, ...newNotifications];
+          });
+        } else {
+          setNotifications(data.notifications || []);
+        }
+        setHasMore(data.hasMore || false);
+        setTotalCount(data.totalCount || 0);
+        setUnreadCount(data.unreadCount || 0);
       } else {
         setNotificationsError('Failed to load notifications');
-        setNotifications([]);
+        if (!append) {
+          setNotifications([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
       setNotificationsError('Error loading notifications');
-      setNotifications([]);
+      if (!append) {
+        setNotifications([]);
+      }
     } finally {
-      setNotificationsLoading(false);
+      if (!append) {
+        setNotificationsLoading(false);
+      }
+    }
+  };
+
+  const loadMoreNotifications = async () => {
+    if (loadingMore || !hasMore) return;
+    
+    setLoadingMore(true);
+    try {
+      const currentOffset = notifications.length;
+      const response = await fetch(`/api/notifications?limit=5&offset=${currentOffset}`);
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(prev => {
+          const newNotifications = data.notifications || [];
+          if (open) {
+            const newIds = newNotifications.map((n: Notification) => n.id);
+            setSeenNotificationIds(prevSeen => new Set([...prevSeen, ...newIds]));
+          }
+          return [...prev, ...newNotifications];
+        });
+        setHasMore(data.hasMore || false);
+        setTotalCount(data.totalCount || 0);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error('Error loading more notifications:', error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 30000);
-    return () => clearInterval(interval);
+    openRef.current = open;
+  }, [open]);
+
+  useEffect(() => {
+    displayCountRef.current = displayCount;
+  }, [displayCount]);
+
+  useEffect(() => {
+    fetchNotifications(5, 0, false);
+    fetchUnreadCount();
+    
+    const countInterval = setInterval(() => {
+      if (!openRef.current) {
+        fetchUnreadCount();
+      }
+    }, 1000);
+    
+    const notificationsInterval = setInterval(() => {
+      if (!openRef.current) {
+        fetchNotifications(displayCountRef.current, 0, false);
+      }
+    }, 5000);
+    
+    return () => {
+      clearInterval(countInterval);
+      clearInterval(notificationsInterval);
+    };
   }, []);
 
   useEffect(() => {
     if (open) {
-      fetchNotifications();
+      setDisplayCount(5);
+      fetchNotifications(5, 0, false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (open && !notificationsLoading) {
+      setSeenUnreadCount(unreadCount);
+    }
+  }, [open, notificationsLoading, unreadCount]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const idsArray = Array.from(seenNotificationIds);
+      localStorage.setItem('seenNotificationIds', JSON.stringify(idsArray));
+    }
+  }, [seenNotificationIds]);
+
+  useEffect(() => {
+    if (open && notifications.length > 0 && !notificationsLoading) {
+      const currentIds = new Set(notifications.map(n => n.id));
+      setSeenNotificationIds(currentIds);
+    }
+  }, [open, notifications, notificationsLoading]);
 
   const markNotificationAsRead = async (notificationId: number) => {
     try {
@@ -84,6 +214,14 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
             notif.id === notificationId ? { ...notif, read: true } : notif
           )
         );
+        setSeenNotificationIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(notificationId);
+          return newSet;
+        });
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        setSeenUnreadCount(prev => Math.min(prev, Math.max(0, unreadCount - 1)));
+        fetchUnreadCount();
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -97,13 +235,19 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
       });
       if (response.ok) {
         setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+        setSeenNotificationIds(new Set());
+        setUnreadCount(0);
+        setSeenUnreadCount(0);
+        fetchUnreadCount();
       }
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const newUnreadCount = Math.max(0, unreadCount - seenUnreadCount);
+  const unreadDotCount = notifications.filter(n => !n.read).length;
+  const displayUnreadCount = open ? 0 : newUnreadCount;
 
   const formatNotificationTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -117,13 +261,45 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
     return date.toLocaleDateString();
   };
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (type: string, title?: string) => {
+    if (title === 'New Service Added') {
+      return { 
+        icon: FaBriefcase, 
+        bgColor: 'bg-green-100 dark:bg-green-900/30', 
+        iconColor: 'text-green-600 dark:text-green-400' 
+      };
+    }
+    
+    if (title === 'Service Updated') {
+      return {
+        icon: FaBriefcase,
+        bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+        iconColor: 'text-blue-600 dark:text-blue-400'
+      };
+    }
+    
+    if (title && title.includes('is Pending')) {
+      return {
+        icon: FaWallet,
+        bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+        iconColor: 'text-yellow-600 dark:text-yellow-400'
+      };
+    }
+    
+    if (title && title.includes('has been cancelled')) {
+      return {
+        icon: FaShoppingCart,
+        bgColor: 'bg-red-100 dark:bg-red-900/30',
+        iconColor: 'text-red-600 dark:text-red-400'
+      };
+    }
+    
     const iconMap: { [key: string]: { icon: any; bgColor: string; iconColor: string } } = {
       order: { icon: FaShoppingCart, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
       payment: { icon: FaWallet, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
       ticket: { icon: FaTicketAlt, bgColor: 'bg-purple-100 dark:bg-purple-900/30', iconColor: 'text-purple-600 dark:text-purple-400' },
       user: { icon: FaUserCog, bgColor: 'bg-orange-100 dark:bg-orange-900/30', iconColor: 'text-orange-600 dark:text-orange-400' },
-      system: { icon: FaCog, bgColor: 'bg-red-100 dark:bg-red-900/30', iconColor: 'text-red-600 dark:text-red-400' },
+      system: { icon: FaPlug, bgColor: 'bg-red-100 dark:bg-red-900/30', iconColor: 'text-red-600 dark:text-red-400' },
       revenue: { icon: FaMoneyBillWave, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
       default: { icon: FaBell, bgColor: 'bg-blue-100 dark:bg-blue-900/30', iconColor: 'text-blue-600 dark:text-blue-400' },
     };
@@ -135,7 +311,8 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
       markNotificationAsRead(notification.id);
     }
     if (notification.link) {
-      window.location.href = notification.link;
+      onOpenChange(false);
+      router.push(notification.link);
     }
   };
 
@@ -153,9 +330,9 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
             className="h-4 w-4 sm:h-4 sm:w-4"
             style={{ color: 'var(--header-text)' }}
           />
-          {unreadCount > 0 && (
+          {displayUnreadCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-              {unreadCount > 99 ? '99+' : unreadCount}
+              {displayUnreadCount > 99 ? '99+' : displayUnreadCount}
             </span>
           )}
         </button>
@@ -178,7 +355,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
           >
             Notifications
           </h3>
-          {unreadCount > 0 && (
+          {unreadDotCount > 0 && (
             <button 
               className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
               onClick={markAllAsRead}
@@ -211,7 +388,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
             <div className="p-4 text-center">
               <p className="text-sm text-red-500 dark:text-red-400">{notificationsError}</p>
               <button
-                onClick={fetchNotifications}
+                onClick={() => fetchNotifications(5, 0, false)}
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-2"
               >
                 Retry
@@ -225,62 +402,64 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
               </p>
             </div>
           ) : (
-            <div className="p-2">
-              {notifications.map((notification) => {
-                const { icon: IconComponent, bgColor, iconColor } = getNotificationIcon(notification.type || 'default');
-                return (
-                  <div
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(notification)}
-                    className="flex items-start gap-3 p-3 rounded-lg mb-2 hover:opacity-80 transition-all duration-200 cursor-pointer"
-                    style={{ backgroundColor: 'var(--dropdown-hover)' }}
+            <>
+              <div className="p-2">
+                {notifications.map((notification) => {
+                  const { icon: IconComponent, bgColor, iconColor } = getNotificationIcon(notification.type || 'default', notification.title);
+                  return (
+                    <div
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className="flex items-start gap-3 p-3 rounded-lg mb-2 hover:opacity-80 transition-all duration-200 cursor-pointer"
+                      style={{ backgroundColor: 'var(--dropdown-hover)' }}
+                    >
+                      <div className={`w-8 h-8 rounded-full ${bgColor} flex items-center justify-center flex-shrink-0`}>
+                        <IconComponent className={`h-4 w-4 ${iconColor}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-sm font-medium mb-1"
+                          style={{ color: 'var(--header-text)' }}
+                        >
+                          {notification.title}
+                        </p>
+                        <p
+                          className="text-xs mb-2"
+                          style={{ color: 'var(--header-text)', opacity: 0.7 }}
+                        >
+                          {notification.message}
+                        </p>
+                        <span
+                          className="text-xs"
+                          style={{ color: 'var(--header-text)', opacity: 0.5 }}
+                        >
+                          {formatNotificationTime(notification.createdAt || notification.created_at || new Date().toISOString())}
+                        </span>
+                      </div>
+                      {!notification.read && (
+                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {hasMore && (
+                <div
+                  className="p-3 text-center border-t"
+                  style={{ borderTop: `1px solid var(--header-border)` }}
+                >
+                  <button
+                    onClick={loadMoreNotifications}
+                    disabled={loadingMore}
+                    className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <div className={`w-8 h-8 rounded-full ${bgColor} flex items-center justify-center flex-shrink-0`}>
-                      <IconComponent className={`h-4 w-4 ${iconColor}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-sm font-medium mb-1"
-                        style={{ color: 'var(--header-text)' }}
-                      >
-                        {notification.title}
-                      </p>
-                      <p
-                        className="text-xs mb-2"
-                        style={{ color: 'var(--header-text)', opacity: 0.7 }}
-                      >
-                        {notification.message}
-                      </p>
-                      <span
-                        className="text-xs"
-                        style={{ color: 'var(--header-text)', opacity: 0.5 }}
-                      >
-                        {formatNotificationTime(notification.createdAt || notification.created_at || new Date().toISOString())}
-                      </span>
-                    </div>
-                    {!notification.read && (
-                      <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    {loadingMore ? 'Loading...' : 'Show more'}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
-
-        {notifications.length > 0 && (
-          <div
-            className="p-3 text-center border-t"
-            style={{ borderTop: `1px solid var(--header-border)` }}
-          >
-            <Link
-              href="/notifications"
-              className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              See all notifications
-            </Link>
-          </div>
-        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

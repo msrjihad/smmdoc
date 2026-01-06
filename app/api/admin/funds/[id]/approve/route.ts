@@ -2,6 +2,7 @@
 import { db } from '@/lib/db';
 import { emailTemplates } from '@/lib/email-templates';
 import { sendMail } from '@/lib/nodemailer';
+import { sendTransactionSuccessNotification } from '@/lib/notifications/user-notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(
@@ -82,6 +83,17 @@ export async function POST(
 
         console.log(`User ${transaction.userId} balance updated. New balance: ${user.balance}`);
       });
+
+      // Send success notification (outside transaction to avoid rollback on notification failure)
+      try {
+        await sendTransactionSuccessNotification(
+          transaction.userId,
+          transactionId,
+          Number(transaction.usdAmount)
+        );
+      } catch (notifError) {
+        console.error('Error sending transaction success notification:', notifError);
+      }
 
       if (transaction.user.email) {
         const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');

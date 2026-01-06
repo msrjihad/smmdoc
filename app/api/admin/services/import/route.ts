@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { convertToUSD } from '@/lib/currency-utils';
 import { NextRequest, NextResponse } from 'next/server';
+import { sendNewServiceNotification } from '@/lib/notifications/user-notifications';
 
 const API_TIMEOUT = 30000;
 const MAX_RETRIES = 3;
@@ -1247,6 +1248,10 @@ export async function PUT(req: NextRequest) {
               }),
               packageType: packageType,
             },
+          });
+
+          sendNewServiceNotification(newService.id, newService.name).catch(err => {
+            console.error('Failed to send new service notification:', err);
           });
 
           importedCount++;

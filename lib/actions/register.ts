@@ -9,6 +9,7 @@ import { generateVerificationCode } from "../tokens";
 import { signUpSchema, createSignUpSchema } from "../validators/auth.validator";
 import { verifyReCAPTCHA, getReCAPTCHASettings } from "../recaptcha";
 import { processAffiliateReferral } from "../affiliate-referral-helper";
+import { sendWelcomeNotification } from "../notifications/user-notifications";
 
 export const register = async (values: any & { recaptchaToken?: string }) => {
   console.log('Received values:', values);
@@ -93,6 +94,10 @@ export const register = async (values: any & { recaptchaToken?: string }) => {
     });
 
     await processAffiliateReferral(newUser.id);
+
+    sendWelcomeNotification(newUser.id).catch(err => {
+      console.error('Failed to send welcome notification:', err);
+    });
 
     if (emailConfirmationEnabled) {
       const verificationToken = await generateVerificationCode(email);

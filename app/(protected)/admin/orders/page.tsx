@@ -257,10 +257,12 @@ const AdminOrdersPage = () => {
     open: boolean;
     orderId: string | number;
     currentStatus: string;
+    isSelfService?: boolean;
   }>({
     open: false,
     orderId: '',
     currentStatus: '',
+    isSelfService: false,
   });
   const [markPartialDialog, setMarkPartialDialog] = useState<{
     open: boolean;
@@ -885,7 +887,9 @@ const AdminOrdersPage = () => {
   };
 
   const openUpdateStatusDialog = (orderId: string | number, currentStatus: string) => {
-    setUpdateStatusDialog({ open: true, orderId, currentStatus });
+    const order = orders.find(o => o.id === Number(orderId));
+    const isSelfService = order ? !order.service?.providerId : false;
+    setUpdateStatusDialog({ open: true, orderId, currentStatus, isSelfService });
   };
 
   const openRequestCancelOrderDialog = (orderId: number) => {
@@ -1430,11 +1434,12 @@ const AdminOrdersPage = () => {
       />
       <UpdateOrderStatusModal
         isOpen={updateStatusDialog.open}
-        onClose={() => setUpdateStatusDialog({ open: false, orderId: '', currentStatus: '' })}
+        onClose={() => setUpdateStatusDialog({ open: false, orderId: '', currentStatus: '', isSelfService: false })}
         orderId={updateStatusDialog.orderId}
         currentStatus={updateStatusDialog.currentStatus}
+        isSelfService={updateStatusDialog.isSelfService}
         onSuccess={() => {
-          setUpdateStatusDialog({ open: false, orderId: '', currentStatus: '' });
+          setUpdateStatusDialog({ open: false, orderId: '', currentStatus: '', isSelfService: false });
           refreshOrders();
           refreshStats();
           showToast('Order status updated successfully');

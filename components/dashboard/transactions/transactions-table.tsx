@@ -8,6 +8,7 @@ type Transaction = {
   id: number;
   invoice_id: number;
   amount: number;
+  usdAmount?: number;
   status: 'Success' | 'Processing' | 'Cancelled' | 'Failed';
   method: string;
   payment_method?: string;
@@ -133,8 +134,8 @@ export function TransactionsTable({
                   <td className="py-3 px-4">
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       <PriceDisplay
-                        amount={transaction.amount}
-                        originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency === 'BDT' ? 'BDT' : 'USD')}
+                        amount={transaction.usdAmount ?? transaction.amount}
+                        originalCurrency="USD"
                       />
                     </span>
                   </td>

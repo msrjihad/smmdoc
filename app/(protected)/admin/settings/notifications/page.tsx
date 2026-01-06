@@ -92,6 +92,7 @@ interface UserNotifications {
   orderStatusChangedEnabled: boolean;
   newServiceEnabled: boolean;
   serviceUpdatesEnabled: boolean;
+  transactionAlertEnabled: boolean;
 }
 
 interface AdminNotifications {
@@ -118,7 +119,8 @@ const NotificationSettingsPage = () => {
     setPageTitle('Notification Settings', appName);
   }, [appName]);
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSavingUserNotifications, setIsSavingUserNotifications] = useState(false);
+  const [isSavingAdminNotifications, setIsSavingAdminNotifications] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [toast, setToast] = useState<{
     message: string;
@@ -131,6 +133,7 @@ const NotificationSettingsPage = () => {
     orderStatusChangedEnabled: true,
     newServiceEnabled: true,
     serviceUpdatesEnabled: true,
+    transactionAlertEnabled: true,
   });
 
   const [adminNotifications, setAdminNotifications] = useState<AdminNotifications>({
@@ -182,7 +185,7 @@ const NotificationSettingsPage = () => {
   };
 
   const saveUserNotifications = async () => {
-    setIsLoading(true);
+    setIsSavingUserNotifications(true);
     try {
       const response = await fetch('/api/admin/user-notifications', {
         method: 'POST',
@@ -199,12 +202,12 @@ const NotificationSettingsPage = () => {
       console.error('Error saving user notification settings:', error);
       showToast('Error saving user notification settings', 'error');
     } finally {
-      setIsLoading(false);
+      setIsSavingUserNotifications(false);
     }
   };
 
   const saveAdminNotifications = async () => {
-    setIsLoading(true);
+    setIsSavingAdminNotifications(true);
     try {
       const response = await fetch('/api/admin/admin-notifications', {
         method: 'POST',
@@ -221,7 +224,7 @@ const NotificationSettingsPage = () => {
       console.error('Error saving admin notification settings:', error);
       showToast('Error saving admin notification settings', 'error');
     } finally {
-      setIsLoading(false);
+      setIsSavingAdminNotifications(false);
     }
   };
 
@@ -488,10 +491,10 @@ const NotificationSettingsPage = () => {
 
               <button
                 onClick={saveAdminNotifications}
-                disabled={isLoading}
+                disabled={isSavingAdminNotifications}
                 className="btn btn-primary w-full"
               >
-                {isLoading ? <ButtonLoader /> : 'Save Admin Notifications'}
+                {isSavingAdminNotifications ? 'Saving...' : 'Save Admin Notifications'}
               </button>
             </div>
           </div>
@@ -599,12 +602,31 @@ const NotificationSettingsPage = () => {
                 />
               </div>
 
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="form-label mb-1">Transaction Alert</label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Notify users about transaction alerts
+                  </p>
+                </div>
+                <Switch
+                  checked={userNotifications.transactionAlertEnabled}
+                  onClick={() =>
+                    setUserNotifications(prev => ({
+                      ...prev,
+                      transactionAlertEnabled: !prev.transactionAlertEnabled
+                    }))
+                  }
+                  title="Toggle transaction alert notifications"
+                />
+              </div>
+
               <button
                 onClick={saveUserNotifications}
-                disabled={isLoading}
+                disabled={isSavingUserNotifications}
                 className="btn btn-primary w-full"
               >
-                {isLoading ? <ButtonLoader /> : 'Save User Notifications'}
+                {isSavingUserNotifications ? 'Saving...' : 'Save User Notifications'}
               </button>
             </div>
           </div>

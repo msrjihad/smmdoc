@@ -51,6 +51,7 @@ type Transaction = {
   id: number;
   invoice_id: number;
   amount: number;
+  usdAmount?: number;
   status: 'Success' | 'Processing' | 'Cancelled' | 'Failed';
   method: string;
   payment_method?: string;
@@ -117,7 +118,12 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('all');
+  // Initialize activeTab from URL parameter if present
+  const statusParamFromUrl = searchParams.get('status');
+  const initialTab = (statusParamFromUrl && ['all', 'success', 'pending', 'failed'].includes(statusParamFromUrl)) 
+    ? statusParamFromUrl 
+    : 'all';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [page, setPage] = useState(1);
@@ -555,6 +561,18 @@ export default function TransactionsPage() {
     }
   }, [isInitialLoad]);
 
+  // Set activeTab from URL status parameter on mount and when URL changes
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam && ['all', 'success', 'pending', 'failed'].includes(statusParam)) {
+      setActiveTab(statusParam);
+    } else if (!statusParam && activeTab !== 'all') {
+      // If no status param and tab is not 'all', reset to 'all'
+      setActiveTab('all');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const handleViewDetails = (invoiceId: string) => {
     showToast(`Viewing details for ${invoiceId}`, 'info');
   };
@@ -579,6 +597,11 @@ export default function TransactionsPage() {
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setPage(1);
+    // Update URL to reflect the active tab
+    const newUrl = tab === 'all' 
+      ? '/transactions' 
+      : `/transactions?status=${tab}`;
+    router.replace(newUrl, { scroll: false });
   };
 
   const handleRefresh = async () => {

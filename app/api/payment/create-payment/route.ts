@@ -2,6 +2,7 @@
 import { db } from '@/lib/db';
 import { convertCurrency, fetchCurrencyData } from '@/lib/currency-utils';
 import { getPaymentGatewayName } from '@/lib/payment-gateway-config';
+import { sendTransactionPendingNotification } from '@/lib/notifications/user-notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -195,6 +196,12 @@ export async function POST(req: NextRequest) {
           });
 
           console.log(`✓ Payment record created with gateway invoice_id: ${gatewayInvoiceId}`);
+
+          try {
+            await sendTransactionPendingNotification(session.user.id, payment.id);
+          } catch (notifError) {
+            console.error('Error sending transaction pending notification:', notifError);
+          }
         } catch (createError: any) {
           console.error('Error creating payment record:', createError);
           

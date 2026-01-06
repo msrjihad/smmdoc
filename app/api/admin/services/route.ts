@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth-helpers';
 import { NextResponse } from 'next/server';
 import { serializeServices, serializeService } from '@/lib/utils';
+import { sendNewServiceNotification } from '@/lib/notifications/user-notifications';
 
 export async function GET(request: Request) {
   try {
@@ -466,6 +467,12 @@ export async function POST(request: Request) {
       data: createData,
     });
     console.log('Service created successfully:', newService.id);
+
+    if (!createData.providerId) {
+      sendNewServiceNotification(newService.id, newService.name).catch(err => {
+        console.error('Failed to send new service notification:', err);
+      });
+    }
 
     const serializedService = serializeService(newService);
 

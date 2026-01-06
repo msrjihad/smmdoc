@@ -1,4 +1,5 @@
 ﻿import { db } from '@/lib/db';
+import { sendTransactionSuccessNotification } from '@/lib/notifications/user-notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
@@ -726,6 +727,22 @@ export async function GET(req: NextRequest) {
             });
             
             console.log(`User ${payment.userId} balance updated. New balance: ${user.balance}. Original amount: ${originalAmount}, Bonus: ${bonusAmount}, Total added: ${totalAmountToAdd}`);
+
+            const updatedPayment = await prisma.addFunds.findUnique({
+              where: { invoiceId: invoice_id },
+            });
+
+            if (updatedPayment) {
+              try {
+                await sendTransactionSuccessNotification(
+                  payment.userId,
+                  updatedPayment.id,
+                  Number(payment.usdAmount)
+                );
+              } catch (notifError) {
+                console.error('Error sending transaction success notification:', notifError);
+              }
+            }
           });
           
           console.log("Transaction completed successfully");

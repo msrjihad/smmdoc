@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { validateOrderByType, getServiceTypeConfig } from '@/lib/service-types';
 import { ProviderOrderForwarder } from '@/lib/utils/provider-order-forwarder';
 import { convertFromUSD, convertToUSD, fetchCurrencyData } from '@/lib/currency-utils';
+import { sendNewOrderNotification } from '@/lib/notifications/user-notifications';
 
 export async function POST(request: Request) {
   try {
@@ -911,6 +912,18 @@ export async function POST(request: Request) {
       );
     } catch (error) {
       console.error('Failed to log order creation activity:', error);
+    }
+
+    for (const order of result) {
+      if (order.service?.name) {
+        sendNewOrderNotification(
+          parseInt(session.user.id),
+          order.id,
+          order.service.name
+        ).catch(err => {
+          console.error('Failed to send new order notification:', err);
+        });
+      }
     }
 
     const serializeOrder = (order: any) => {

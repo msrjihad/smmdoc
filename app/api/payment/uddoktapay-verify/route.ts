@@ -2,6 +2,7 @@
 import { emailTemplates, transactionEmailTemplates } from '@/lib/email-templates';
 import { sendMail } from '@/lib/nodemailer';
 import { logSMS, sendSMS, smsTemplates } from '@/lib/sms';
+import { sendTransactionSuccessNotification } from '@/lib/notifications/user-notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -108,6 +109,22 @@ export async function POST(req: NextRequest) {
             });
             
             console.log(`User ${payment.userId} balance updated. New balance: ${user.balance}`);
+
+            const updatedPayment = await prisma.addFunds.findUnique({
+              where: { invoiceId: invoice_id },
+            });
+
+            if (updatedPayment) {
+              try {
+                await sendTransactionSuccessNotification(
+                  payment.userId,
+                  updatedPayment.id,
+                  Number(payment.usdAmount)
+                );
+              } catch (notifError) {
+                console.error('Error sending transaction success notification:', notifError);
+              }
+            }
           });
 
           if (payment.user.email) {

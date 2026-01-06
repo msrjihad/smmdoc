@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
         userNotifOrderStatusChanged: userNotifications.orderStatusChangedEnabled ?? false,
         userNotifNewService: userNotifications.newServiceEnabled ?? false,
         userNotifServiceUpdates: userNotifications.serviceUpdatesEnabled ?? false,
+        userNotifTransactionAlert: userNotifications.transactionAlertEnabled ?? false,
         updatedAt: new Date(),
       },
       create: {
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
         userNotifOrderStatusChanged: userNotifications.orderStatusChangedEnabled ?? false,
         userNotifNewService: userNotifications.newServiceEnabled ?? false,
         userNotifServiceUpdates: userNotifications.serviceUpdatesEnabled ?? false,
+        userNotifTransactionAlert: userNotifications.transactionAlertEnabled ?? false,
       },
     });
 

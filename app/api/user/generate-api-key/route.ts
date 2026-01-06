@@ -3,6 +3,7 @@ import { ActivityLogger, getClientIP } from '@/lib/activity-logger';
 import { db } from '@/lib/db';
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
+import { sendApiKeyChangedNotification } from '@/lib/notifications/user-notifications';
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,6 +46,10 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       console.error('Failed to log API key generation activity:', error);
     }
+
+    sendApiKeyChangedNotification(parseInt(session.user.id), false).catch(err => {
+      console.error('Failed to send API key changed notification:', err);
+    });
 
     return NextResponse.json(
       {

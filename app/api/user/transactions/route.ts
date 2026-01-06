@@ -310,6 +310,7 @@ export async function GET(request: NextRequest) {
         id: transaction.id,
         invoice_id: transaction.invoiceId || transaction.id,
         amount: amount,
+        usdAmount: usdAmount,
         status: mappedStatus,
         method: transaction.paymentGateway || 'UddoktaPay',
         payment_method: transaction.paymentMethod || 'UddoktaPay',

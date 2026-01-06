@@ -21,6 +21,7 @@ export async function GET() {
           orderStatusChangedEnabled: false,
           newServiceEnabled: false,
           serviceUpdatesEnabled: false,
+          transactionAlertEnabled: false,
         },
         adminNotifications: {
           apiBalanceAlertsEnabled: false,
@@ -47,6 +48,7 @@ export async function GET() {
         orderStatusChangedEnabled: integrationSettings.userNotifOrderStatusChanged ?? false,
         newServiceEnabled: integrationSettings.userNotifNewService ?? false,
         serviceUpdatesEnabled: integrationSettings.userNotifServiceUpdates ?? false,
+        transactionAlertEnabled: integrationSettings.userNotifTransactionAlert ?? false,
       },
       adminNotifications: {
         apiBalanceAlertsEnabled: integrationSettings.adminNotifApiBalanceAlerts ?? false,

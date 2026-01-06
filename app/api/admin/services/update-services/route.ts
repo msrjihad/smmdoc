@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { serializeService } from '@/lib/utils';
+import { sendServiceUpdateNotification } from '@/lib/notifications/user-notifications';
 
 function getClientIP(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -334,6 +335,16 @@ export async function PUT(request: Request) {
       } catch (logError) {
         console.error('Failed to log service update:', logError);
       }
+    }
+
+    if (Object.keys(changes).length > 0) {
+      sendServiceUpdateNotification(
+        parseInt(id),
+        currentService.name,
+        changes
+      ).catch(err => {
+        console.error('Failed to send service update notification:', err);
+      });
     }
 
     return NextResponse.json({

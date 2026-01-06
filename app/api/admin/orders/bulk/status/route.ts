@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { sendOrderStatusChangedNotification } from '@/lib/notifications/user-notifications';
 
 export async function PATCH(req: NextRequest) {
   try {
@@ -66,6 +67,13 @@ export async function PATCH(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const previousOrders = (status === 'completed' || status === 'cancelled') 
+      ? await db.newOrders.findMany({
+          where: { id: { in: orderIdNumbers } },
+          select: { id: true, userId: true, status: true }
+        })
+      : [];
 
     const updateData: any = {
       status,
@@ -246,6 +254,20 @@ export async function PATCH(req: NextRequest) {
       newStatus: status,
       timestamp: new Date().toISOString()
     });
+
+    if ((status === 'completed' || status === 'cancelled') && previousOrders.length > 0) {
+      for (const order of previousOrders) {
+        if (order.status !== status) {
+          sendOrderStatusChangedNotification(
+            order.userId,
+            order.id,
+            status as 'completed' | 'cancelled'
+          ).catch(err => {
+            console.error(`Failed to send notification for order ${order.id}:`, err);
+          });
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,

@@ -860,7 +860,7 @@ const DashboardPage = () => {
                 </Link>
 
                 <Link
-                  href="/support-tickets/history"
+                  href="/my-orders"
                   className={`btn btn-secondary w-full flex items-center justify-center gap-2`}
                   >
                   <FaHistory className="w-4 h-4" />

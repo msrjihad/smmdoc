@@ -1,6 +1,7 @@
 import { Adapter, AdapterAccount, AdapterUser, VerificationToken } from 'next-auth/adapters'
 import { db } from '@/lib/db'
 import { processAffiliateReferral } from '@/lib/affiliate-referral-helper'
+import { sendWelcomeNotification } from '@/lib/notifications/user-notifications'
 
 const toAdapterUser = (u: any): AdapterUser => ({
   id: String(u.id),
@@ -27,6 +28,10 @@ export const CustomAdapter = (): Adapter => ({
     
     processAffiliateReferral(u.id).catch(err => {
       console.error('Error processing affiliate referral in createUser:', err)
+    })
+    
+    sendWelcomeNotification(u.id).catch(err => {
+      console.error('Failed to send welcome notification:', err)
     })
     
     return toAdapterUser(u)

@@ -726,6 +726,7 @@ model Users {
   announcements                                 Announcements[]
   dismissedAnnouncements                        DismissedAnnouncements[]
   viewedAnnouncements                           ViewedAnnouncements[]
+  notifications                                 Notifications[]
 
   @@map("users")
 }
@@ -803,6 +804,7 @@ model IntegrationSettings {
   userNotifOrderStatusChanged       Boolean  @default(false)
   userNotifNewService               Boolean  @default(false)
   userNotifServiceUpdates           Boolean  @default(false)
+  userNotifTransactionAlert         Boolean  @default(false)
   adminNotifApiBalanceAlerts        Boolean  @default(false)
   adminNotifSupportTickets          Boolean  @default(false)
   adminNotifNewMessages             Boolean  @default(false)
@@ -1034,6 +1036,24 @@ model ViewedAnnouncements {
   @@index([userId])
   @@index([announcementId])
   @@map("viewed_announcements")
+}
+
+model Notifications {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String   @db.Text
+  type      String   @default("system")
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 enum CategoryPosition {

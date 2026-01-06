@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { serializeOrder } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
+import { sendOrderStatusChangedNotification } from '@/lib/notifications/user-notifications';
 
 export async function GET(
   req: NextRequest,
@@ -341,6 +342,16 @@ export async function PUT(
 
       return order;
     });
+
+    if (body.status && (body.status === 'completed' || body.status === 'cancelled') && currentOrder.status !== body.status) {
+      sendOrderStatusChangedNotification(
+        updatedOrder.user.id,
+        orderId,
+        body.status as 'completed' | 'cancelled'
+      ).catch(err => {
+        console.error('Failed to send order status changed notification:', err);
+      });
+    }
     
     console.log(`Admin ${session.user.email} updated order ${id}`, {
       orderId: id,

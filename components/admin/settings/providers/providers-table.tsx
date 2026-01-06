@@ -86,7 +86,6 @@ const ProvidersTable: React.FC<ProvidersTableProps> = ({
 
   return (
     <>
-      {/* Desktop Table View */}
       <div className="hidden md:block">
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-white dark:bg-[var(--card-bg)] border-b dark:border-gray-700 z-10">
@@ -210,7 +209,6 @@ const ProvidersTable: React.FC<ProvidersTableProps> = ({
         </table>
       </div>
 
-      {/* Mobile Card View */}
       <div className="md:hidden space-y-4">
         {filteredProviders.map((provider, index) => (
           <div key={provider.id || `provider-${provider.name}-${index}`} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
@@ -303,4 +301,3 @@ const ProvidersTable: React.FC<ProvidersTableProps> = ({
 };
 
 export default ProvidersTable;
-

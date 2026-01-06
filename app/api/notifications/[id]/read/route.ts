@@ -1,4 +1,5 @@
 ﻿import { requireAuth } from '@/lib/auth-helpers';
+import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function PUT(
@@ -7,6 +8,7 @@ export async function PUT(
 ) {
   try {
     const session = await requireAuth();
+    const userId = parseInt(session.user.id);
     const { id } = await params;
     const notificationId = parseInt(id);
 
@@ -16,6 +18,25 @@ export async function PUT(
         { status: 400 }
       );
     }
+
+    const notification = await db.notifications.findFirst({
+      where: {
+        id: notificationId,
+        userId: userId,
+      },
+    });
+
+    if (!notification) {
+      return NextResponse.json(
+        { success: false, message: 'Notification not found' },
+        { status: 404 }
+      );
+    }
+
+    await db.notifications.update({
+      where: { id: notificationId },
+      data: { read: true },
+    });
 
     return NextResponse.json({
       success: true,

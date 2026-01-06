@@ -5,6 +5,7 @@ interface UpdateOrderStatusModalProps {
   onClose: () => void;
   orderId: string | number;
   currentStatus: string;
+  isSelfService?: boolean;
   onSuccess?: () => void;
   showToast?: (message: string, type: 'success' | 'error') => void;
 }
@@ -14,6 +15,7 @@ const UpdateOrderStatusModal: React.FC<UpdateOrderStatusModalProps> = ({
   onClose,
   orderId,
   currentStatus,
+  isSelfService = false,
   onSuccess,
   showToast,
 }) => {
@@ -23,35 +25,43 @@ const UpdateOrderStatusModal: React.FC<UpdateOrderStatusModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       const normalizedStatus = currentStatus?.toLowerCase().trim();
-      if (normalizedStatus === 'pending' || normalizedStatus === 'inprogress' || normalizedStatus === 'processing') {
+      if (isSelfService && (normalizedStatus === 'in_progress' || normalizedStatus === 'inprogress')) {
+        setNewStatus('completed');
+      } else if (normalizedStatus === 'pending' || normalizedStatus === 'inprogress' || normalizedStatus === 'processing') {
         setNewStatus('completed');
       } else {
         setNewStatus(currentStatus);
       }
     }
-  }, [isOpen, currentStatus]);
+  }, [isOpen, currentStatus, isSelfService]);
 
   if (!isOpen) return null;
 
   const normalizedStatus = currentStatus?.toLowerCase().trim();
   
-  const canCancel = ['pending', 'completed', 'processing', 'partial', 'fail', 'cancelled'].includes(normalizedStatus);
-  const canComplete = ['pending', 'inprogress', 'in_progress', 'processing'].includes(normalizedStatus);
-  const canInProgress = ['pending', 'processing'].includes(normalizedStatus);
+  let availableStatuses: string[] = [];
+  let showAllOptions = false;
   
-  const availableStatuses: string[] = [];
-  
-  if (canCancel) {
-    availableStatuses.push('cancelled');
+  if (isSelfService && (normalizedStatus === 'in_progress' || normalizedStatus === 'inprogress')) {
+    availableStatuses = ['cancelled', 'completed'];
+    showAllOptions = false;
+  } else {
+    const canCancel = ['pending', 'completed', 'processing', 'partial', 'fail', 'cancelled'].includes(normalizedStatus);
+    const canComplete = ['pending', 'inprogress', 'in_progress', 'processing'].includes(normalizedStatus);
+    const canInProgress = ['pending', 'processing'].includes(normalizedStatus);
+    
+    if (canCancel) {
+      availableStatuses.push('cancelled');
+    }
+    if (canComplete) {
+      availableStatuses.push('completed');
+    }
+    if (canInProgress) {
+      availableStatuses.push('in_progress');
+    }
+    
+    showAllOptions = availableStatuses.length === 0;
   }
-  if (canComplete) {
-    availableStatuses.push('completed');
-  }
-  if (canInProgress) {
-    availableStatuses.push('in_progress');
-  }
-  
-  const showAllOptions = availableStatuses.length === 0;
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
@@ -129,7 +139,7 @@ const UpdateOrderStatusModal: React.FC<UpdateOrderStatusModalProps> = ({
                   <option value="cancelled">Cancel & Refund</option>
                 )}
                 {availableStatuses.includes('completed') && (
-                  <option value="completed">Complete</option>
+                  <option value="completed">Completed</option>
                 )}
                 {availableStatuses.includes('in_progress') && (
                   <option value="in_progress">In Progress</option>
