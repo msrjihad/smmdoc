@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
         console.log(`Payment ${invoice_id} status updated to ${paymentStatus}`);
         
         if (paymentStatus === "Success" && payment.user) {
-          const originalAmount = payment.amount || Number(payment.usdAmount) || 0;
+          const originalAmount = Number(payment.amount) || 0;
 
           const user = await prisma.users.update({
             where: { id: payment.userId },
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
                 increment: originalAmount
               },
               balanceUSD: {
-                increment: Number(payment.usdAmount)
+                increment: originalAmount
               },
               total_deposit: {
                 increment: originalAmount
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
             await sendTransactionSuccessNotification(
               payment.userId,
               updatedPayment.id,
-              Number(payment.usdAmount)
+              originalAmount
             );
           } catch (notifError) {
             console.error('Error sending transaction success notification:', notifError);
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
           invoice_id,
           status: paymentStatus,
           transaction_id: result.updatedPayment.transactionId,
-          amount: result.updatedPayment.usdAmount
+          amount: result.updatedPayment.amount
         }
       });
     } catch (dbError) {

@@ -76,20 +76,19 @@ export async function POST(
         const user = await prisma.users.update({
           where: { id: transaction.userId },
           data: {
-            balance: { increment: Number(transaction.usdAmount) },
-            total_deposit: { increment: Number(transaction.usdAmount) }
+            balance: { increment: Number(transaction.amount) },
+            total_deposit: { increment: Number(transaction.amount) }
           }
         });
 
         console.log(`User ${transaction.userId} balance updated. New balance: ${user.balance}`);
       });
 
-      // Send success notification (outside transaction to avoid rollback on notification failure)
       try {
         await sendTransactionSuccessNotification(
           transaction.userId,
           transactionId,
-          Number(transaction.usdAmount)
+          Number(transaction.amount)
         );
       } catch (notifError) {
         console.error('Error sending transaction success notification:', notifError);
@@ -104,7 +103,7 @@ export async function POST(
           userName: transaction.user.name || 'Customer',
           userEmail: transaction.user.email,
           transactionId: modifiedTransactionId?.trim() || transaction.transactionId || 'N/A',
-          amount: transaction.usdAmount.toString(),
+          amount: transaction.amount.toString(),
           currency: transaction.currency || 'BDT',
           date: new Date().toLocaleDateString(),
           userId: transaction.userId.toString(),
@@ -125,7 +124,9 @@ export async function POST(
         data: {
           id: transaction.id,
           status: 'approved',
-          amount: transaction.usdAmount,
+          amount: typeof transaction.amount === 'object' && transaction.amount !== null
+            ? Number(transaction.amount)
+            : Number(transaction.amount || 0),
           userId: transaction.userId,
           transactionId: modifiedTransactionId?.trim() || transaction.transactionId
         }

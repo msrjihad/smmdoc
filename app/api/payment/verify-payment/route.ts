@@ -94,7 +94,6 @@ export async function GET(req: NextRequest) {
           id: payment.id,
           invoice_id: payment.invoiceId,
           amount: payment.amount,
-          usdAmount: payment.usdAmount,
           status: payment.status,
           transaction_id: payment.transactionId,
           payment_method: payment.paymentMethod,
@@ -506,7 +505,7 @@ export async function GET(req: NextRequest) {
             }
           });
           
-            const originalAmount = payment.amount || Number(payment.usdAmount) || 0;
+            const originalAmount = Number(payment.amount) || 0;
           const userSettings = await prisma.userSettings.findFirst();
           let bonusAmount = 0;
 
@@ -520,7 +519,7 @@ export async function GET(req: NextRequest) {
             where: { id: payment.userId },
             data: {
               balance: { increment: totalAmountToAdd },
-                balanceUSD: { increment: Number(payment.usdAmount) },
+                balanceUSD: { increment: originalAmount },
               total_deposit: { increment: originalAmount }
             }
           });
@@ -608,7 +607,6 @@ export async function GET(req: NextRequest) {
             id: completePayment.id,
             invoice_id: completePayment.invoiceId,
             amount: completePayment.amount,
-            usdAmount: completePayment.usdAmount,
             status: completePayment.status,
             transaction_id: completePayment.transactionId,
             payment_method: completePayment.paymentMethod,
@@ -624,7 +622,7 @@ export async function GET(req: NextRequest) {
           } : {
             id: updatedPayment.id,
             invoice_id: updatedPayment.invoiceId,
-            amount: updatedPayment.usdAmount,
+            amount: updatedPayment.amount,
             status: finalStatus,
             transaction_id: finalTransactionIdToReturn,
             payment_method: updatedPayment.paymentMethod,
@@ -706,7 +704,7 @@ export async function GET(req: NextRequest) {
               }
             });
             
-            const originalAmount = payment.amount || Number(payment.usdAmount) || 0;
+            const originalAmount = Number(payment.amount) || 0;
 
             const userSettings = await prisma.userSettings.findFirst();
             let bonusAmount = 0;
@@ -721,7 +719,7 @@ export async function GET(req: NextRequest) {
               where: { id: payment.userId },
               data: {
                 balance: { increment: totalAmountToAdd },
-                balanceUSD: { increment: Number(payment.usdAmount) },
+                balanceUSD: { increment: originalAmount },
                 total_deposit: { increment: originalAmount }
               }
             });
@@ -737,7 +735,7 @@ export async function GET(req: NextRequest) {
                 await sendTransactionSuccessNotification(
                   payment.userId,
                   updatedPayment.id,
-                  Number(payment.usdAmount)
+                  Number(payment.amount)
                 );
               } catch (notifError) {
                 console.error('Error sending transaction success notification:', notifError);
@@ -768,7 +766,6 @@ export async function GET(req: NextRequest) {
             id: finalPaymentData.id,
             invoice_id: finalPaymentData.invoiceId,
             amount: finalPaymentData.amount,
-            usdAmount: finalPaymentData.usdAmount,
             status: finalPaymentData.status,
             transaction_id: finalPaymentData.transactionId,
             payment_method: finalPaymentData.paymentMethod,
@@ -784,7 +781,7 @@ export async function GET(req: NextRequest) {
           } : {
             id: updatedPayment.id,
             invoice_id: updatedPayment.invoiceId,
-            amount: updatedPayment.usdAmount,
+            amount: updatedPayment.amount,
             status: updatedPayment.status,
             transaction_id: updatedPayment.transactionId,
             payment_method: updatedPayment.paymentMethod,
@@ -808,7 +805,6 @@ export async function GET(req: NextRequest) {
             id: finalPaymentData.id,
             invoice_id: finalPaymentData.invoiceId,
             amount: finalPaymentData.amount,
-            usdAmount: finalPaymentData.usdAmount,
             status: finalPaymentData.status,
             transaction_id: finalPaymentData.transactionId,
             payment_method: finalPaymentData.paymentMethod,
@@ -824,7 +820,7 @@ export async function GET(req: NextRequest) {
           } : {
             id: updatedPayment.id,
             invoice_id: updatedPayment.invoiceId,
-            amount: updatedPayment.usdAmount,
+            amount: updatedPayment.amount,
             status: updatedPayment.status,
             transaction_id: updatedPayment.transactionId,
           }

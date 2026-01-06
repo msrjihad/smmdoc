@@ -9,6 +9,7 @@ const defaultPaymentGatewaySettings = {
   sandboxApiKey: '',
   sandboxApiUrl: '',
   mode: 'Live',
+  exchangeRate: 120.00,
 };
 
 export async function GET() {
@@ -35,6 +36,7 @@ export async function GET() {
         sandboxApiKey: settings.sandboxApiKey || '',
         sandboxApiUrl: settings.sandboxApiUrl || '',
         mode: settings.mode || defaultPaymentGatewaySettings.mode,
+        exchangeRate: settings.exchangeRate ?? defaultPaymentGatewaySettings.exchangeRate,
       }
     });
 
@@ -78,6 +80,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (settings.exchangeRate === undefined || settings.exchangeRate === null) {
+      return NextResponse.json(
+        { error: 'Exchange Rate is required' },
+        { status: 400 }
+      );
+    }
+
+    const exchangeRate = parseFloat(settings.exchangeRate);
+    if (isNaN(exchangeRate) || exchangeRate <= 0) {
+      return NextResponse.json(
+        { error: 'Exchange Rate must be a valid number greater than 0' },
+        { status: 400 }
+      );
+    }
+
     const existingSettings = await db.paymentGatewaySettings.findFirst();
 
     const updateData: any = {
@@ -98,6 +115,7 @@ export async function POST(request: NextRequest) {
     if (settings.sandboxApiUrl !== undefined) {
       updateData.sandboxApiUrl = settings.sandboxApiUrl?.trim() || '';
     }
+    updateData.exchangeRate = exchangeRate;
 
     if (existingSettings) {
       await db.paymentGatewaySettings.update({

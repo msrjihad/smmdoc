@@ -79,7 +79,9 @@ export async function POST(
           userName: transaction.user.name || 'Customer',
           userEmail: transaction.user.email,
           transactionId: (transaction.transactionId || transaction.invoiceId || '0').toString(),
-          amount: transaction.usdAmount.toString(),
+          amount: typeof transaction.amount === 'object' && transaction.amount !== null
+            ? Number(transaction.amount).toString()
+            : Number(transaction.amount || 0).toString(),
           currency: transaction.currency || 'BDT',
           supportEmail: supportEmail,
           whatsappNumber: whatsappNumber,
@@ -101,7 +103,9 @@ export async function POST(
         message: 'Transaction cancelled successfully',
         data: {
           transactionId: transaction.id,
-          amount: transaction.usdAmount,
+          amount: typeof transaction.amount === 'object' && transaction.amount !== null
+            ? Number(transaction.amount)
+            : Number(transaction.amount || 0),
           userId: transaction.userId,
           status: 'Cancelled'
         }

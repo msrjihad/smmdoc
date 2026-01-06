@@ -64,7 +64,9 @@ export async function POST(
           userName: transaction.user.name || 'Customer',
           userEmail: transaction.user.email,
           transactionId: transaction.transactionId || '0',
-          amount: transaction.usdAmount.toString(),
+          amount: typeof transaction.amount === 'object' && transaction.amount !== null
+            ? Number(transaction.amount).toString()
+            : Number(transaction.amount || 0).toString(),
           currency: transaction.currency || 'BDT',
           date: new Date().toLocaleDateString(),
           userId: transaction.userId.toString(),
@@ -85,7 +87,9 @@ export async function POST(
         data: {
           id: transaction.id,
           status: 'Cancelled',
-          amount: transaction.usdAmount,
+          amount: typeof transaction.amount === 'object' && transaction.amount !== null
+            ? Number(transaction.amount)
+            : Number(transaction.amount || 0),
           userId: transaction.userId
         }
       });

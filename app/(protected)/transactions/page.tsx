@@ -51,7 +51,6 @@ type Transaction = {
   id: number;
   invoice_id: number;
   amount: number;
-  usdAmount?: number;
   status: 'Success' | 'Processing' | 'Cancelled' | 'Failed';
   method: string;
   payment_method?: string;
@@ -118,7 +117,6 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Initialize activeTab from URL parameter if present
   const statusParamFromUrl = searchParams.get('status');
   const initialTab = (statusParamFromUrl && ['all', 'success', 'pending', 'failed'].includes(statusParamFromUrl)) 
     ? statusParamFromUrl 
@@ -561,16 +559,13 @@ export default function TransactionsPage() {
     }
   }, [isInitialLoad]);
 
-  // Set activeTab from URL status parameter on mount and when URL changes
   useEffect(() => {
     const statusParam = searchParams.get('status');
     if (statusParam && ['all', 'success', 'pending', 'failed'].includes(statusParam)) {
       setActiveTab(statusParam);
     } else if (!statusParam && activeTab !== 'all') {
-      // If no status param and tab is not 'all', reset to 'all'
       setActiveTab('all');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const handleViewDetails = (invoiceId: string) => {
@@ -597,7 +592,6 @@ export default function TransactionsPage() {
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setPage(1);
-    // Update URL to reflect the active tab
     const newUrl = tab === 'all' 
       ? '/transactions' 
       : `/transactions?status=${tab}`;

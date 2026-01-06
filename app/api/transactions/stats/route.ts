@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       
       db.addFunds.aggregate({
         where: { ...dateFilter, status: 'Success' },
-        _sum: { usdAmount: true }
+        _sum: { amount: true }
       }),
       
       (() => {
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
         take: 5,
         select: {
           id: true,
-          usdAmount: true,
+          amount: true,
           status: true,
           createdAt: true,
           user: {
@@ -112,10 +112,10 @@ export async function GET(request: NextRequest) {
       })
     ]);
 
-    const totalVolume = totalVolumeResult._sum.usdAmount 
-      ? (typeof totalVolumeResult._sum.usdAmount === 'object' && totalVolumeResult._sum.usdAmount !== null
-          ? Number(totalVolumeResult._sum.usdAmount)
-          : Number(totalVolumeResult._sum.usdAmount))
+    const totalVolume = totalVolumeResult._sum.amount 
+      ? (typeof totalVolumeResult._sum.amount === 'object' && totalVolumeResult._sum.amount !== null
+          ? Number(totalVolumeResult._sum.amount)
+          : Number(totalVolumeResult._sum.amount))
       : 0;
 
     const statusBreakdown = {
@@ -146,9 +146,9 @@ export async function GET(request: NextRequest) {
         percentages,
         recentTransactions: recentTransactions.map(t => ({
           id: t.id,
-          amount: typeof t.usdAmount === 'object' && t.usdAmount !== null 
-            ? Number(t.usdAmount) 
-            : Number(t.usdAmount || 0),
+          amount: typeof t.amount === 'object' && t.amount !== null 
+            ? Number(t.amount) 
+            : Number(t.amount || 0),
           status: t.status,
           createdAt: t.createdAt.toISOString(),
           user: t.user

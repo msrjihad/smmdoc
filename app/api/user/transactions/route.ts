@@ -54,7 +54,6 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           invoiceId: true,
-          usdAmount: true,
           amount: true,
           status: true,
           paymentGateway: true,
@@ -230,7 +229,6 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             invoiceId: true,
-            usdAmount: true,
             amount: true,
             status: true,
             paymentGateway: true,
@@ -296,21 +294,16 @@ export async function GET(request: NextRequest) {
         }
       });
       
-      const usdAmount = typeof transaction.usdAmount === 'object' && transaction.usdAmount !== null
-        ? Number(transaction.usdAmount)
-        : Number(transaction.usdAmount || 0);
-      
       const amount = transaction.amount 
         ? (typeof transaction.amount === 'object' && transaction.amount !== null
             ? Number(transaction.amount)
             : Number(transaction.amount))
-        : usdAmount;
+        : 0;
       
       return {
         id: transaction.id,
         invoice_id: transaction.invoiceId || transaction.id,
         amount: amount,
-        usdAmount: usdAmount,
         status: mappedStatus,
         method: transaction.paymentGateway || 'UddoktaPay',
         payment_method: transaction.paymentMethod || 'UddoktaPay',

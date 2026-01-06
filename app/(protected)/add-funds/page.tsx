@@ -69,6 +69,7 @@ export default function AddFundsPage() {
   const [convertedAmountError, setConvertedAmountError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const [exchangeRate, setExchangeRate] = useState<number>(120.00);
 
   useEffect(() => {
     setPageTitle('Add Funds', appName);
@@ -80,6 +81,24 @@ export default function AddFundsPage() {
     }, 1000);
 
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      try {
+        const response = await fetch('/api/payment-gateway/exchange-rate');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.exchangeRate) {
+            setExchangeRate(data.exchangeRate);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching exchange rate:', error);
+      }
+    };
+
+    fetchExchangeRate();
   }, []);
 
   const showToast = (
@@ -134,7 +153,7 @@ export default function AddFundsPage() {
     globalCurrency === 'USD' ? 'USD' : 'BDT'
   );
 
-  const rate = globalRate;
+  const rate = exchangeRate || globalRate || 120;
 
   const form = useForm<AddFundSchema>({
     mode: 'all',
@@ -160,7 +179,7 @@ export default function AddFundsPage() {
         });
       }
     }
-  }, [userSettings?.minimumFundsToAddUSD, activeCurrency, rate]);
+  }, [userSettings?.minimumFundsToAddUSD, activeCurrency, exchangeRate]);
 
   useEffect(() => {
     const newCurrency = (globalCurrency === 'USD' || globalCurrency === 'BDT') ? globalCurrency : 'BDT';
@@ -189,7 +208,7 @@ export default function AddFundsPage() {
         currency: newCurrency,
       });
     }
-  }, [globalCurrency, userSettings?.minimumFundsToAddUSD, rate]);
+  }, [globalCurrency, userSettings?.minimumFundsToAddUSD, exchangeRate]);
 
   const amountUSDValue = form.watch('amountUSD');
   const amountBDTValue = form.watch('amountBDT');
@@ -204,7 +223,7 @@ export default function AddFundsPage() {
       const usdValue = bdtValue / currentRate;
       validateConvertedAmount(usdValue);
     }
-  }, [amountUSDValue, amountBDTValue, activeCurrency, rate, userSettings]);
+  }, [amountUSDValue, amountBDTValue, activeCurrency, exchangeRate, userSettings]);
 
   const toggleCurrency = () => {
     const newCurrency = activeCurrency === 'USD' ? 'BDT' : 'USD';
@@ -310,7 +329,7 @@ export default function AddFundsPage() {
     
     (async () => {
       try {
-        const currentRate = rate || 120;
+        const currentRate = exchangeRate || 120;
         const amountInBDT =
           activeCurrency === 'USD'
             ? parseFloat(values.amountUSD || '0') * currentRate
@@ -456,7 +475,7 @@ export default function AddFundsPage() {
         setIsSubmitting(false);
       }
     })();
-  }, [user, activeCurrency, rate, userSettings]);
+  }, [user, activeCurrency, exchangeRate, userSettings]);
 
   const handleFormSubmit = useMemo(() => {
     return form.handleSubmit(onSubmit);

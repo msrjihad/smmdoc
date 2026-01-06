@@ -17,7 +17,6 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           invoiceId: true,
-          usdAmount: true,
           amount: true,
           status: true,
           paymentGateway: true,

@@ -422,9 +422,6 @@ export async function sendServiceUpdateNotification(
   }
 }
 
-/**
- * Delete pending notification for a specific transaction
- */
 async function deletePendingTransactionNotification(
   userId: number,
   transactionId: number
@@ -433,7 +430,6 @@ async function deletePendingTransactionNotification(
     const trxId = transactionId.toString();
     const pendingTitle = `Transaction #${trxId} is Pending`;
     
-    // Find and delete any pending notification for this transaction
     await db.notifications.deleteMany({
       where: {
         userId,
@@ -445,13 +441,9 @@ async function deletePendingTransactionNotification(
     console.log(`[NOTIFICATION] Deleted pending notification for transaction #${trxId}`);
   } catch (error) {
     console.error('[NOTIFICATION] Error deleting pending notification:', error);
-    // Don't throw - continue with creating success notification even if deletion fails
   }
 }
 
-/**
- * Send a transaction success notification
- */
 export async function sendTransactionSuccessNotification(
   userId: number,
   transactionId: number,
@@ -471,7 +463,6 @@ export async function sendTransactionSuccessNotification(
       return;
     }
 
-    // Delete the pending notification for this transaction first
     await deletePendingTransactionNotification(userId, transactionId);
 
     const amountStr = typeof amount === 'number' ? amount.toFixed(2) : amount;

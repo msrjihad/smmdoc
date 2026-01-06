@@ -124,7 +124,6 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             invoiceId: true,
-            usdAmount: true,
             amount: true,
             status: true,
             paymentGateway: true,
@@ -185,15 +184,11 @@ export async function GET(request: NextRequest) {
     }
 
     const transformedTransactions = transactions.map((transaction: any) => {
-      const usdAmount = typeof transaction.usdAmount === 'object' && transaction.usdAmount !== null
-        ? Number(transaction.usdAmount)
-        : Number(transaction.usdAmount || 0);
-      
       const amount = transaction.amount 
         ? (typeof transaction.amount === 'object' && transaction.amount !== null
             ? Number(transaction.amount)
             : Number(transaction.amount))
-        : usdAmount;
+        : 0;
 
       return {
         id: transaction.id,
@@ -240,9 +235,9 @@ export async function GET(request: NextRequest) {
         }),
         totalVolume: await db.addFunds.aggregate({
           where: { ...where, status: 'Success' },
-          _sum: { usdAmount: true }
+          _sum: { amount: true }
         }).then(result => {
-          const sum = result._sum.usdAmount;
+          const sum = result._sum.amount;
           return sum 
             ? (typeof sum === 'object' && sum !== null ? Number(sum) : Number(sum))
             : 0;
@@ -326,9 +321,9 @@ export async function PATCH(request: NextRequest) {
       updatedAt: new Date()
     };
 
-    const usdAmount = typeof transaction.usdAmount === 'object' && transaction.usdAmount !== null
-      ? Number(transaction.usdAmount)
-      : Number(transaction.usdAmount || 0);
+    const amount = typeof transaction.amount === 'object' && transaction.amount !== null
+      ? Number(transaction.amount)
+      : Number(transaction.amount || 0);
 
     if (status === 'approved' || status === 'Success') {
       updateData.status = 'Success';
@@ -337,8 +332,8 @@ export async function PATCH(request: NextRequest) {
         await db.users.update({
           where: { id: transaction.userId },
           data: {
-            balance: { increment: usdAmount },
-            total_deposit: { increment: usdAmount }
+            balance: { increment: amount },
+            total_deposit: { increment: amount }
           }
         });
       }
@@ -349,8 +344,8 @@ export async function PATCH(request: NextRequest) {
         await db.users.update({
           where: { id: transaction.userId },
           data: {
-            balance: { decrement: usdAmount },
-            total_deposit: { decrement: usdAmount }
+            balance: { decrement: amount },
+            total_deposit: { decrement: amount }
           }
         });
       }
@@ -373,9 +368,9 @@ export async function PATCH(request: NextRequest) {
       }
     });
 
-    const updatedUsdAmount = typeof updatedTransaction.usdAmount === 'object' && updatedTransaction.usdAmount !== null
-      ? Number(updatedTransaction.usdAmount)
-      : Number(updatedTransaction.usdAmount || 0);
+    const updatedAmount = typeof updatedTransaction.amount === 'object' && updatedTransaction.amount !== null
+      ? Number(updatedTransaction.amount)
+      : Number(updatedTransaction.amount || 0);
 
     return NextResponse.json({
       success: true,
@@ -383,7 +378,7 @@ export async function PATCH(request: NextRequest) {
       data: {
         id: updatedTransaction.id,
         transactionId: updatedTransaction.transactionId,
-        amount: updatedUsdAmount,
+        amount: updatedAmount,
         status: updatedTransaction.status,
         admin_status: updatedTransaction.status,
         currency: updatedTransaction.currency,

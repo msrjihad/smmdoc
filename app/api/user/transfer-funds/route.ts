@@ -138,8 +138,8 @@ export async function POST(req: NextRequest) {
       const senderTransaction = await prisma.addFunds.create({
         data: {
           invoiceId: `${invoiceId}-SENDER`,
-          usdAmount: totalDeductionUSD,
-          amount: totalDeductionBDT,
+          amount: totalDeductionUSD.toString(),
+          gatewayAmount: totalDeductionBDT,
           email: sender.email || '',
           name: sender.name || '',
           status: 'Success',
@@ -155,8 +155,8 @@ export async function POST(req: NextRequest) {
       const receiverTransaction = await prisma.addFunds.create({
         data: {
           invoiceId: `${invoiceId}-RECEIVER`,
-          usdAmount: amountUSD,
-          amount: transferAmountBDT,
+          amount: amountUSD.toString(),
+          gatewayAmount: transferAmountBDT,
           email: receiver.email || '',
           name: receiver.name || '',
           status: 'Success',

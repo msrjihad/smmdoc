@@ -169,14 +169,14 @@ export async function GET() {
         status: 'Success'
       },
       _sum: {
-        usdAmount: true
+        amount: true
       }
     });
 
-    const totalPayments = totalPaymentsResult._sum.usdAmount
-      ? (typeof totalPaymentsResult._sum.usdAmount === 'object' && totalPaymentsResult._sum.usdAmount !== null
-          ? Number(totalPaymentsResult._sum.usdAmount)
-          : Number(totalPaymentsResult._sum.usdAmount))
+    const totalPayments = totalPaymentsResult._sum.amount
+      ? (typeof totalPaymentsResult._sum.amount === 'object' && totalPaymentsResult._sum.amount !== null
+          ? Number(totalPaymentsResult._sum.amount)
+          : Number(totalPaymentsResult._sum.amount))
       : 0;
 
     const thirtyDaysAgo = new Date();

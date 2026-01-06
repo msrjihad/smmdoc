@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         message: 'Payment already verified and completed',
         payment: {
           invoice_id: payment.invoiceId,
-          amount: payment.usdAmount,
+          amount: payment.amount,
           status: payment.status,
           transaction_id: payment.transactionId,
         },
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
               },
             });
 
-            const originalAmount = payment.amount || Number(payment.usdAmount) || 0;
+            const originalAmount = Number(payment.amount) || 0;
 
             const userSettings = await prisma.userSettings.findFirst();
             let bonusAmount = 0;
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
               where: { id: payment.userId },
               data: {
                 balance: { increment: totalAmountToAdd },
-                balanceUSD: { increment: Number(payment.usdAmount) },
+                balanceUSD: { increment: originalAmount },
                 total_deposit: { increment: originalAmount },
               },
             });
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
                 await sendTransactionSuccessNotification(
                   payment.userId,
                   updatedPayment.id,
-                  Number(payment.usdAmount)
+                  Number(payment.amount)
                 );
               } catch (notifError) {
                 console.error('Error sending transaction success notification:', notifError);
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
               userName: payment.user.name || 'Customer',
               userEmail: payment.user.email,
               transactionId: finalTransactionId,
-              amount: payment.usdAmount.toString(),
+              amount: payment.amount.toString(),
               currency: payment.currency || 'USD',
               date: new Date().toLocaleDateString(),
               userId: payment.userId.toString(),
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
             userName: payment.user.name || 'Unknown User',
             userEmail: payment.user.email || '',
             transactionId: transaction_id,
-            amount: payment.usdAmount.toString(),
+            amount: payment.amount.toString(),
             currency: 'USD',
             date: new Date().toLocaleDateString(),
             userId: payment.userId.toString(),
@@ -219,7 +219,7 @@ export async function POST(req: NextRequest) {
             message: 'Payment verified and completed successfully',
             payment: {
               invoice_id: payment.invoiceId,
-              amount: payment.usdAmount,
+              amount: payment.amount,
               status: 'Success',
               transaction_id: finalTransactionId,
             },
@@ -252,7 +252,7 @@ export async function POST(req: NextRequest) {
           userName: payment.user?.name || 'Unknown User',
           userEmail: payment.user?.email || '',
           transactionId: transaction_id,
-          amount: payment.usdAmount.toString(),
+          amount: payment.amount.toString(),
           currency: 'BDT',
           date: new Date().toLocaleDateString(),
           userId: payment.userId.toString(),
@@ -272,7 +272,7 @@ export async function POST(req: NextRequest) {
           message: 'Payment is being processed. Please wait for verification.',
           payment: {
             invoice_id: payment.invoiceId,
-            amount: payment.usdAmount,
+            amount: payment.amount,
             status: 'Processing',
             transaction_id: finalTransactionId,
           },
@@ -292,7 +292,7 @@ export async function POST(req: NextRequest) {
           message: 'Payment verification failed or was cancelled',
           payment: {
             invoice_id: payment.invoiceId,
-            amount: payment.usdAmount,
+            amount: payment.amount,
             status: 'Cancelled',
             transaction_id: finalTransactionId,
           },

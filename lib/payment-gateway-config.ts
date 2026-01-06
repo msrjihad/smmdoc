@@ -110,6 +110,16 @@ export async function getPaymentGatewayName(): Promise<string> {
   return config.gatewayName;
 }
 
+export async function getPaymentGatewayExchangeRate(): Promise<number> {
+  try {
+    const settings = await db.paymentGatewaySettings.findFirst();
+    return settings?.exchangeRate ?? 120.00;
+  } catch (error) {
+    console.error('Error fetching payment gateway exchange rate:', error);
+    return 120.00;
+  }
+}
+
 export function clearPaymentGatewayCache(): void {
   cachedConfig = null;
   cacheTimestamp = 0;

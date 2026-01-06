@@ -68,8 +68,8 @@ export async function POST(
         const user = await prisma.users.update({
           where: { id: transaction.userId },
           data: {
-            balance: { increment: Number(transaction.usdAmount) },
-            total_deposit: { increment: Number(transaction.usdAmount) }
+            balance: { increment: Number(transaction.amount) },
+            total_deposit: { increment: Number(transaction.amount) }
           }
         });
         
@@ -79,7 +79,7 @@ export async function POST(
           await sendTransactionSuccessNotification(
             transaction.userId,
             transactionId,
-            Number(transaction.usdAmount)
+            Number(transaction.amount)
           );
         } catch (notifError) {
           console.error('Error sending transaction success notification:', notifError);
@@ -95,7 +95,7 @@ export async function POST(
           userName: transaction.user.name || 'Customer',
           userEmail: transaction.user.email,
           transactionId: (transaction.transactionId || transaction.invoiceId || '0').toString(),
-          amount: transaction.usdAmount.toString(),
+          amount: transaction.amount.toString(),
           currency: transaction.currency || 'BDT',
           date: new Date().toLocaleDateString(),
           userId: transaction.userId.toString(),
@@ -119,7 +119,7 @@ export async function POST(
         userName: transaction.user.name || 'Unknown User',
         userEmail: transaction.user.email || '',
         transactionId: (transaction.transactionId || transaction.invoiceId || '0').toString(),
-        amount: transaction.usdAmount.toString(),
+        amount: transaction.amount.toString(),
         currency: transaction.currency || 'USD',
         date: new Date().toLocaleDateString(),
         userId: transaction.userId.toString(),
@@ -138,7 +138,7 @@ export async function POST(
         message: 'Transaction approved successfully',
         data: {
           transactionId: transaction.id,
-          amount: transaction.usdAmount,
+          amount: transaction.amount,
           userId: transaction.userId,
           status: 'Success'
         }

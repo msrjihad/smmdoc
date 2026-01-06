@@ -181,8 +181,8 @@ export async function POST(request: NextRequest) {
         data: {
           userId: user.id,
           invoiceId: `MANUAL-${Date.now()}`,
-          usdAmount: amountToAdd,
-          amount: amountBDT,
+          amount: amountToAdd.toString(),
+          gatewayAmount: amountBDT,
           email: user.email || '',
           name: user.name || '',
           status: 'Success',

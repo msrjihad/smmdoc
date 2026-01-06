@@ -40,8 +40,7 @@ export async function POST(req: NextRequest) {
       const addFund = await prisma.addFunds.create({
         data: {
           invoiceId: invoiceId,
-          usdAmount: parseFloat(amountUSD),
-          amount: parseFloat(amountBDT),
+          amount: parseFloat(amountUSD).toString(),
           email: user.email || '',
           name: user.name || '',
           status: status || 'COMPLETED',

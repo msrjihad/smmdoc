@@ -182,10 +182,7 @@ export async function GET(request: NextRequest) {
           invoiceId: transaction.invoiceId,
           transactionId: transaction.transactionId,
           amount: typeof transaction.amount === 'bigint' ? Number(transaction.amount) : (transaction.amount ? Number(transaction.amount) : null),
-          usdAmount: typeof transaction.usdAmount === 'object' && 'toNumber' in transaction.usdAmount 
-            ? (transaction.usdAmount as any).toNumber() 
-            : (typeof transaction.usdAmount === 'bigint' ? Number(transaction.usdAmount) : Number(transaction.usdAmount || 0)),
-          originalAmount: transaction.originalAmount ? Number(transaction.originalAmount) : null,
+          gatewayAmount: transaction.gatewayAmount ? Number(transaction.gatewayAmount) : null,
           spentAmount: transaction.spentAmount ? Number(transaction.spentAmount) : null,
           currency: transaction.currency,
           gatewayFee: transaction.gatewayFee ? Number(transaction.gatewayFee) : null,

@@ -443,9 +443,8 @@ model AddFunds {
   email           String
   invoiceId       String                   @unique @map("invoice_id")
   transactionId   String?                  @map("transaction_id")
-  amount          Float?                   @map("amount")
-  usdAmount       Decimal                  @default(0.00) @map("usdAmount") @db.Decimal(10, 2)
-  originalAmount  Float?                   @map("original_amount")
+  amount          Decimal                  @default(0.00) @map("amount") @db.Decimal(10, 2)
+  gatewayAmount   Float?                   @map("gateway_amount")
   spentAmount     Float?                   @map("spent_amount")
   currency        String?                  @default("USD") @db.VarChar(3)
   gatewayFee      Float?                   @map("fee")
@@ -871,6 +870,7 @@ model PaymentGatewaySettings {
   sandboxApiKey String   @default("")
   sandboxApiUrl String   @default("")
   mode          String   @default("Live")
+  exchangeRate  Float?   @default(120.00) @map("exchange_rate")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

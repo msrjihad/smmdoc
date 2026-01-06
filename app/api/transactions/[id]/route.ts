@@ -64,9 +64,9 @@ export async function PATCH(
         };
 
         if (transaction.status !== 'Success' && transaction.status !== 'approved') {
-          const usdAmount = typeof transaction.usdAmount === 'object' && transaction.usdAmount !== null
-            ? Number(transaction.usdAmount)
-            : Number(transaction.usdAmount || 0);
+          const usdAmount = typeof transaction.amount === 'object' && transaction.amount !== null
+            ? Number(transaction.amount)
+            : Number(transaction.amount || 0);
           balanceChange = usdAmount;
           await prisma.users.update({
             where: { id: transaction.userId },
@@ -81,18 +81,18 @@ export async function PATCH(
         updateData = {
           status: 'Cancelled'
         };
-        const usdAmount = typeof transaction.usdAmount === 'object' && transaction.usdAmount !== null
-          ? Number(transaction.usdAmount)
-          : Number(transaction.usdAmount || 0);
+        const usdAmount = typeof transaction.amount === 'object' && transaction.amount !== null
+          ? Number(transaction.amount)
+          : Number(transaction.amount || 0);
         notificationMessage = `Your deposit of $${usdAmount} has been cancelled.`;
       } else if (status === 'Pending' || status === 'pending') {
         updateData = {
           status: 'Processing'
         };
 
-        const usdAmount = typeof transaction.usdAmount === 'object' && transaction.usdAmount !== null
-          ? Number(transaction.usdAmount)
-          : Number(transaction.usdAmount || 0);
+        const usdAmount = typeof transaction.amount === 'object' && transaction.amount !== null
+          ? Number(transaction.amount)
+          : Number(transaction.amount || 0);
 
         if (transaction.status === 'Success') {
           if (currentUser.balance >= usdAmount) {
@@ -141,9 +141,9 @@ export async function PATCH(
         const supportEmail = await getSupportEmail();
         const whatsappNumber = await getWhatsAppNumber();
         
-        const usdAmount = typeof transaction.usdAmount === 'object' && transaction.usdAmount !== null
-          ? Number(transaction.usdAmount)
-          : Number(transaction.usdAmount || 0);
+        const usdAmount = typeof transaction.amount === 'object' && transaction.amount !== null
+          ? Number(transaction.amount)
+          : Number(transaction.amount || 0);
         const emailData = emailTemplates.paymentSuccess({
           userName: result.currentUser.name || 'Customer',
           userEmail: result.currentUser.email,
@@ -169,9 +169,9 @@ export async function PATCH(
       const supportEmail = await getSupportEmail();
       const whatsappNumber = await getWhatsAppNumber();
       
-      const usdAmount = typeof transaction.usdAmount === 'object' && transaction.usdAmount !== null
-        ? Number(transaction.usdAmount)
-        : Number(transaction.usdAmount || 0);
+      const usdAmount = typeof transaction.amount === 'object' && transaction.amount !== null
+        ? Number(transaction.amount)
+        : Number(transaction.amount || 0);
       const adminEmailData = transactionEmailTemplates.adminAutoApproved({
         userName: result.currentUser.name || 'Unknown User',
         userEmail: result.currentUser.email || '',
@@ -249,9 +249,9 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const usdAmount = typeof transaction.usdAmount === 'object' && transaction.usdAmount !== null
-      ? Number(transaction.usdAmount)
-      : Number(transaction.usdAmount || 0);
+    const usdAmount = typeof transaction.amount === 'object' && transaction.amount !== null
+      ? Number(transaction.amount)
+      : Number(transaction.amount || 0);
     const transformedTransaction = {
       id: transaction.id,
       invoice_id: transaction.invoiceId || transaction.id.toString(),

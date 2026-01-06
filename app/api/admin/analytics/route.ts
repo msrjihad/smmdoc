@@ -85,16 +85,16 @@ export async function GET(request: NextRequest) {
               status: 'Success'
             },
             _sum: {
-              usdAmount: true
+              amount: true
             }
           })
         ]);
 
         const profit = ordersWithProfit.reduce((sum, order) => sum + (order.profit || 0), 0);
-        const paymentsTotal = paymentsResult._sum.usdAmount
-          ? (typeof paymentsResult._sum.usdAmount === 'object' && paymentsResult._sum.usdAmount !== null
-              ? Number(paymentsResult._sum.usdAmount)
-              : Number(paymentsResult._sum.usdAmount))
+        const paymentsTotal = paymentsResult._sum.amount
+          ? (typeof paymentsResult._sum.amount === 'object' && paymentsResult._sum.amount !== null
+              ? Number(paymentsResult._sum.amount)
+              : Number(paymentsResult._sum.amount))
           : 0;
 
         let monthData = analyticsData.find(d => d.month === months[monthIndex]);

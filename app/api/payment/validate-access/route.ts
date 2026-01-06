@@ -56,8 +56,10 @@ export async function GET(req: NextRequest) {
       payment: {
         id: payment.id,
         invoice_id: payment.invoiceId,
-        amount: payment.usdAmount,
-        bdt_amount: payment.amount,
+        amount: typeof payment.amount === 'object' && payment.amount !== null
+          ? Number(payment.amount)
+          : Number(payment.amount || 0),
+        gateway_amount: payment.gatewayAmount || null,
         status: payment.status,
         transaction_id: payment.transactionId,
         payment_method: payment.paymentMethod,

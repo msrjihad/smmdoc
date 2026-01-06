@@ -37,7 +37,6 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         invoiceId: true,
-        usdAmount: true,
         amount: true,
         status: true,
         paymentGateway: true,
@@ -71,8 +70,12 @@ export async function GET(req: NextRequest) {
       id: t.id,
       invoiceId: t.invoiceId,
       invoice_id: t.invoiceId,
-      usdAmount: t.usdAmount,
-      usd_amount: t.usdAmount,
+      amount: typeof t.amount === 'object' && t.amount !== null
+        ? Number(t.amount)
+        : Number(t.amount || 0),
+      usd_amount: typeof t.amount === 'object' && t.amount !== null
+        ? Number(t.amount)
+        : Number(t.amount || 0),
       bdtAmount: t.amount,
       bdt_amount: t.amount,
       status: t.status,

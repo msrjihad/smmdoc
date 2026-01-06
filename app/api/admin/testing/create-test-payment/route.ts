@@ -58,8 +58,8 @@ export async function POST(req: NextRequest) {
     const testPayment = await db.addFunds.create({
       data: {
         invoiceId: invoice_id,
-        usdAmount: amountUSD,
-        amount: amountBDT,
+        amount: amountUSD.toString(),
+        gatewayAmount: amountBDT,
         userId: testUser.id,
         status: 'Processing',
         paymentGateway: 'Test Gateway',
@@ -75,7 +75,9 @@ export async function POST(req: NextRequest) {
       message: 'Test payment created successfully',
       data: {
         invoice_id: testPayment.invoiceId,
-        amount: testPayment.usdAmount,
+        amount: typeof testPayment.amount === 'object' && testPayment.amount !== null
+          ? Number(testPayment.amount)
+          : Number(testPayment.amount || 0),
         userId: testPayment.userId,
         status: testPayment.status
       }

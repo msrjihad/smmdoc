@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
     const testTransaction = await db.addFunds.create({
       data: {
         invoiceId: `TEST-${Date.now()}`,
-        usdAmount: 100.00,
-        amount: amountBDT,
+        amount: '100.00',
+        gatewayAmount: amountBDT,
         email: 'test@example.com',
         name: 'Test User',
         status: 'Processing',

@@ -1,7 +1,7 @@
 ﻿import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { convertCurrency, fetchCurrencyData } from '@/lib/currency-utils';
-import { getPaymentGatewayName } from '@/lib/payment-gateway-config';
+import { convertToUSD } from '@/lib/currency-utils';
+import { getPaymentGatewayName, getPaymentGatewayExchangeRate } from '@/lib/payment-gateway-config';
 import { sendTransactionPendingNotification } from '@/lib/notifications/user-notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -32,12 +32,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { fetchCurrencyData } = await import('@/lib/currency-utils');
     const { currencies } = await fetchCurrencyData();
-    const { convertToUSD } = await import('@/lib/currency-utils');
     const amountUSDConverted = convertToUSD(amountUSD, currency, currencies);
-    const amountBDT = currency === 'BDT' 
-      ? amountUSD 
-      : convertCurrency(amountUSDConverted, 'USD', 'BDT', currencies);
+    
+    const exchangeRate = await getPaymentGatewayExchangeRate();
+    const gatewayAmount = amountUSDConverted * exchangeRate;
 
     const gatewayName = await getPaymentGatewayName();
 
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const paymentAmount = convertCurrency(amountUSDConverted, 'USD', 'BDT', currencies);
+    const paymentAmount = amountUSDConverted * exchangeRate;
     
     try {
       const controller = new AbortController();
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
           metadata: {
             user_id: session.user.id,
             original_currency: currency,
-            charged_amount: amountBDT,
+            charged_amount: gatewayAmount,
             usd_amount: amountUSDConverted,
           },
           redirect_url: `${appUrl}/transactions?payment=success`,
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
           const recentPayment = await db.addFunds.findFirst({
             where: {
               userId: session.user.id,
-              usdAmount: amountUSDConverted,
+              amount: amountUSDConverted.toString(),
               senderNumber: body.phone,
               createdAt: {
                 gte: tenSecondsAgo,
@@ -183,15 +183,15 @@ export async function POST(req: NextRequest) {
           const payment = await db.addFunds.create({
             data: {
               invoiceId: gatewayInvoiceId,
-              usdAmount: amountUSDConverted,
-              amount: amountBDT,
+              amount: amountUSDConverted.toString(),
+              gatewayAmount: gatewayAmount,
               email: session.user.email || '',
               name: session.user.name || '',
               status: 'Processing',
               paymentGateway: gatewayName,
               senderNumber: body.phone,
               userId: session.user.id,
-              currency: currency,
+              currency: 'USD',
             },
           });
 

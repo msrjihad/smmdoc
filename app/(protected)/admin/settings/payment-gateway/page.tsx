@@ -37,6 +37,7 @@ interface PaymentGatewaySettings {
   sandboxApiKey: string;
   sandboxApiUrl: string;
   mode: 'Live' | 'Sandbox';
+  exchangeRate: number;
 }
 
 const PaymentGatewayPage = () => {
@@ -64,6 +65,7 @@ const PaymentGatewayPage = () => {
     sandboxApiKey: '',
     sandboxApiUrl: '',
     mode: 'Live',
+    exchangeRate: 120.00,
   });
 
   useEffect(() => {
@@ -103,6 +105,7 @@ const PaymentGatewayPage = () => {
               sandboxApiKey: data.settings.sandboxApiKey || '',
               sandboxApiUrl: data.settings.sandboxApiUrl || '',
               mode: data.settings.mode || 'Live',
+              exchangeRate: data.settings.exchangeRate || 120.00,
             });
           }
         }
@@ -131,6 +134,11 @@ const PaymentGatewayPage = () => {
   };
 
   const saveSettings = async () => {
+    if (!gatewaySettings.exchangeRate || gatewaySettings.exchangeRate <= 0) {
+      showToast('Exchange Rate is required and must be greater than 0', 'error');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch('/api/admin/payment-gateway-settings', {
@@ -310,6 +318,28 @@ const PaymentGatewayPage = () => {
                     {gatewaySettings.mode === 'Sandbox' 
                       ? "Enter your sandbox API URL"
                       : "Enter your live API URL"}
+                  </p>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Exchange Rate (1 USD = ? BDT) <span className="text-red-500">*</span></label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    value={gatewaySettings.exchangeRate}
+                    onChange={(e) =>
+                      setGatewaySettings(prev => ({
+                        ...prev,
+                        exchangeRate: parseFloat(e.target.value) || 120.00
+                      }))
+                    }
+                    className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="120.00"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    This rate will be used to convert USD amounts to BDT (or gateway currency) when processing payments
                   </p>
                 </div>
 
