@@ -70,6 +70,7 @@ interface UserNotificationPreferences {
   newServiceEnabled: boolean;
   serviceUpdatesEnabled: boolean;
   transactionAlertEnabled: boolean;
+  transferFundsEnabled: boolean;
 }
 
 interface AdminNotificationSettings {
@@ -79,6 +80,7 @@ interface AdminNotificationSettings {
   newServiceEnabled: boolean;
   serviceUpdatesEnabled: boolean;
   transactionAlertEnabled: boolean;
+  transferFundsEnabled: boolean;
 }
 
 const NotificationPreferencesPage = () => {
@@ -103,6 +105,7 @@ const NotificationPreferencesPage = () => {
     newServiceEnabled: false,
     serviceUpdatesEnabled: false,
     transactionAlertEnabled: false,
+    transferFundsEnabled: false,
   });
 
   const [userPreferences, setUserPreferences] = useState<UserNotificationPreferences>({
@@ -112,6 +115,7 @@ const NotificationPreferencesPage = () => {
     newServiceEnabled: true,
     serviceUpdatesEnabled: true,
     transactionAlertEnabled: true,
+    transferFundsEnabled: true,
   });
 
   useEffect(() => {
@@ -336,6 +340,27 @@ const NotificationPreferencesPage = () => {
                       }))
                     }
                     title="Toggle transaction alert notifications"
+                  />
+                </div>
+              )}
+
+              {adminSettings.transferFundsEnabled && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="form-label mb-1">Transfer Funds</label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Notify users about fund transfers
+                    </p>
+                  </div>
+                  <Switch
+                    checked={userPreferences.transferFundsEnabled}
+                    onClick={() =>
+                      setUserPreferences(prev => ({
+                        ...prev,
+                        transferFundsEnabled: !prev.transferFundsEnabled
+                      }))
+                    }
+                    title="Toggle transfer funds notifications"
                   />
                 </div>
               )}

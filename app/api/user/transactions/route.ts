@@ -59,11 +59,13 @@ export async function GET(request: NextRequest) {
           paymentMethod: true,
           transactionId: true,
           currency: true,
+          transactionType: true,
           createdAt: true,
           updatedAt: true,
           userId: true,
           user: {
             select: {
+              username: true,
               name: true,
               email: true,
             },
@@ -173,7 +175,9 @@ export async function GET(request: NextRequest) {
 
           if (Object.keys(updateData).length > 0) {
             const updated = await db.addFunds.update({
-              where: { invoiceId: transaction.invoiceId },
+              where: transaction.invoiceId 
+                ? { invoiceId: transaction.invoiceId }
+                : { id: transaction.id },
               data: updateData,
             });
 
@@ -221,11 +225,13 @@ export async function GET(request: NextRequest) {
             paymentMethod: true,
             transactionId: true,
             currency: true,
+            transactionType: true,
             createdAt: true,
             updatedAt: true,
             userId: true,
             user: {
               select: {
+                username: true,
                 name: true,
                 email: true,
               },
@@ -247,6 +253,51 @@ export async function GET(request: NextRequest) {
     }
 
     const totalPages = Math.ceil(total / limit);
+
+    const transferTransactions = transactions.filter(tx => 
+      tx.transactionType === 'transfer' || tx.transactionType === 'received'
+    );
+    
+    const relatedUserInfo = new Map<number, { username?: string | null; name?: string | null }>();
+    
+    if (transferTransactions.length > 0) {
+      const transactionIds = transferTransactions
+        .map(tx => tx.transactionId)
+        .filter((id): id is string => id !== null && id !== undefined);
+      
+      if (transactionIds.length > 0) {
+        const relatedTransactions = await db.addFunds.findMany({
+          where: {
+            transactionId: { in: transactionIds },
+            userId: { not: session.user.id },
+          },
+          select: {
+            transactionId: true,
+            transactionType: true,
+            user: {
+              select: {
+                username: true,
+                name: true,
+              },
+            },
+          },
+        });
+        
+        transactions.forEach(tx => {
+          if (tx.transactionId && (tx.transactionType === 'transfer' || tx.transactionType === 'received')) {
+            const relatedTx = relatedTransactions.find(
+              rt => rt.transactionId === tx.transactionId && rt.transactionType !== tx.transactionType
+            );
+            if (relatedTx?.user) {
+              relatedUserInfo.set(tx.id, {
+                username: relatedTx.user.username,
+                name: relatedTx.user.name,
+              });
+            }
+          }
+        });
+      }
+    }
 
     const transformedTransactions = transactions.map((transaction) => {
       const dbStatus = transaction.status || 'Processing';
@@ -283,6 +334,9 @@ export async function GET(request: NextRequest) {
             : Number(transaction.amount))
         : 0;
       
+      const relatedUser = relatedUserInfo.get(transaction.id);
+      const relatedUsername = relatedUser?.username || relatedUser?.name || null;
+      
       return {
         id: transaction.id,
         invoice_id: transaction.invoiceId || transaction.id,
@@ -291,6 +345,8 @@ export async function GET(request: NextRequest) {
         method: transaction.paymentGateway || 'UddoktaPay',
         payment_method: transaction.paymentMethod || 'UddoktaPay',
         transaction_id: finalTransactionId,
+        transaction_type: transaction.transactionType || 'deposit',
+        related_username: relatedUsername,
         createdAt: transaction.createdAt.toISOString(),
         phone: '',
         currency: transaction.currency || 'USD',

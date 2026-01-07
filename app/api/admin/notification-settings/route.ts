@@ -22,6 +22,8 @@ export async function GET() {
           newServiceEnabled: false,
           serviceUpdatesEnabled: false,
           transactionAlertEnabled: false,
+          transferFundsEnabled: false,
+          affiliateWithdrawalsEnabled: false,
         },
         adminNotifications: {
           apiBalanceAlertsEnabled: false,
@@ -49,6 +51,8 @@ export async function GET() {
         newServiceEnabled: integrationSettings.userNotifNewService ?? false,
         serviceUpdatesEnabled: integrationSettings.userNotifServiceUpdates ?? false,
         transactionAlertEnabled: integrationSettings.userNotifTransactionAlert ?? false,
+        transferFundsEnabled: integrationSettings.userNotifTransferFunds ?? false,
+        affiliateWithdrawalsEnabled: integrationSettings.userNotifAffiliateWithdrawals ?? false,
       },
       adminNotifications: {
         apiBalanceAlertsEnabled: integrationSettings.adminNotifApiBalanceAlerts ?? false,

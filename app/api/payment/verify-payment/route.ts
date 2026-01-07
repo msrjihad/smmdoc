@@ -814,7 +814,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST method handler - extracts data using POST method
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -831,9 +830,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Reuse the same logic as GET method by creating a mock request with query params
-    // or better yet, extract the common logic into a shared function
-    // For now, we'll duplicate the logic but read from body instead of query params
     
     let payment = await db.addFunds.findUnique({
       where: {
@@ -922,7 +918,6 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    // Get gateway API credentials and verify URL
     const { getPaymentGatewayApiKey, getPaymentGatewayVerifyUrl } = await import('@/lib/payment-gateway-config');
     const apiKey = await getPaymentGatewayApiKey();
     const baseUrl = await getPaymentGatewayVerifyUrl();
@@ -1058,7 +1053,6 @@ export async function POST(req: NextRequest) {
         paymentStatus = payment.status || "Processing";
       }
       
-      // Update payment record with data from gateway
       if (from_redirect && payment.user) {
         console.log('Payment redirected - updating with fetched transaction details from Verify Payment API (POST)');
         
@@ -1132,7 +1126,6 @@ export async function POST(req: NextRequest) {
         }
       }
       
-      // Return the updated payment data
       const updatedPayment = await db.addFunds.findUnique({
         where: { invoiceId: invoice_id },
         include: { user: true },

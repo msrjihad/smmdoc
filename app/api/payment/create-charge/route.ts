@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         full_name: session.user.name || 'User',
         email: session.user.email || 'user@example.com',
         amount: Math.round(paymentAmount).toString(),
-        phone: body.phone || '0000000000', // Phone will be extracted from invoiceId later via verify-payment
+        phone: body.phone || '0000000000',
         metadata: {
           user_id: session.user.id,
           original_currency: currency,

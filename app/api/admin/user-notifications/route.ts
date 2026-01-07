@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
         userNotifNewService: userNotifications.newServiceEnabled ?? false,
         userNotifServiceUpdates: userNotifications.serviceUpdatesEnabled ?? false,
         userNotifTransactionAlert: userNotifications.transactionAlertEnabled ?? false,
+        userNotifTransferFunds: userNotifications.transferFundsEnabled ?? false,
+        userNotifAffiliateWithdrawals: userNotifications.affiliateWithdrawalsEnabled ?? false,
         updatedAt: new Date(),
       },
       create: {
@@ -38,6 +40,8 @@ export async function POST(request: NextRequest) {
         userNotifNewService: userNotifications.newServiceEnabled ?? false,
         userNotifServiceUpdates: userNotifications.serviceUpdatesEnabled ?? false,
         userNotifTransactionAlert: userNotifications.transactionAlertEnabled ?? false,
+        userNotifTransferFunds: userNotifications.transferFundsEnabled ?? false,
+        userNotifAffiliateWithdrawals: userNotifications.affiliateWithdrawalsEnabled ?? false,
       },
     });
 

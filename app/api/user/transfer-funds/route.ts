@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { convertCurrency, convertToUSD, fetchCurrencyData } from '@/lib/currency-utils';
+import { sendTransferFundsNotification } from '@/lib/notifications/user-notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -103,17 +104,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const generateRandomLetters = (length: number): string => {
-      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const generateRandomString = (length: number): string => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       let result = '';
       for (let i = 0; i < length; i++) {
-        result += letters.charAt(Math.floor(Math.random() * letters.length));
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       return result;
     };
 
-    const invoiceId = `TRF-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    const transactionId = `TRX-${generateRandomLetters(10)}-${Date.now()}`;
+    const transactionId = `${generateRandomString(8)}`;
 
     const result = await db.$transaction(async (prisma) => {
       await prisma.users.update({
@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
 
       const senderTransaction = await prisma.addFunds.create({
         data: {
-          invoiceId: `${invoiceId}-SENDER`,
+          invoiceId: null as any,
           amount: totalDeductionUSD.toString(),
           gatewayAmount: totalDeductionBDT,
           email: sender.email || '',
@@ -146,6 +146,7 @@ export async function POST(req: NextRequest) {
           paymentGateway: 'transfer',
           paymentMethod: 'Manual',
           transactionId: transactionId,
+          transactionType: 'transfer' as any,
           userId: sender.id,
           currency: currency,
         },
@@ -153,7 +154,7 @@ export async function POST(req: NextRequest) {
 
       const receiverTransaction = await prisma.addFunds.create({
         data: {
-          invoiceId: `${invoiceId}-RECEIVER`,
+          invoiceId: null as any,
           amount: amountUSD.toString(),
           gatewayAmount: transferAmountBDT,
           email: receiver.email || '',
@@ -162,6 +163,7 @@ export async function POST(req: NextRequest) {
           paymentGateway: 'transfer',
           paymentMethod: 'Manual',
           transactionId: transactionId,
+          transactionType: 'received' as any,
           userId: receiver.id,
           currency: currency,
         },
@@ -169,6 +171,26 @@ export async function POST(req: NextRequest) {
 
       return { senderTransaction, receiverTransaction };
     });
+
+    const currencyData = await db.currencies.findUnique({
+      where: { code: currency },
+      select: { symbol: true }
+    });
+    const currencySymbol = currencyData?.symbol || '$';
+
+    try {
+      await sendTransferFundsNotification(
+        sender.id,
+        receiver.id,
+        transferAmount,
+        currency,
+        currencySymbol,
+        sender.username || sender.name || 'User',
+        receiver.username || receiver.name || 'User'
+      );
+    } catch (notificationError) {
+      console.error('Error sending transfer funds notifications:', notificationError);
+    }
 
     return NextResponse.json({
       success: true,

@@ -55,6 +55,7 @@ type Transaction = {
   method: string;
   payment_method?: string;
   transaction_id?: string | null;
+  transaction_type?: string | null;
   createdAt: string;
   reference_id?: string;
   phone?: string;

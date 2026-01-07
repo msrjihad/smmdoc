@@ -6,8 +6,9 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useUserSettings } from '@/hooks/use-user-settings';
 import useCurrency from '@/hooks/use-currency';
 
-import { useCallback, useEffect, useState, useTransition, useMemo } from 'react';
-import { FaExchangeAlt, FaSpinner, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { useCallback, useEffect, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { FaExchangeAlt, FaSpinner, FaCheckCircle, FaTimes, FaTimesCircle } from 'react-icons/fa';
 
 const Toast = ({
   message,
@@ -22,7 +23,7 @@ const Toast = ({
     {type === 'success' && <FaCheckCircle className="toast-icon" />}
     <span className="font-medium">{message}</span>
     <button onClick={onClose} className="toast-close">
-      <FaTimesCircle className="toast-close-icon" />
+      <FaTimes className="toast-close-icon" />
     </button>
   </div>
 );
@@ -30,21 +31,19 @@ const Toast = ({
 export default function TransferFund() {
   const { appName } = useAppNameWithFallback();
   const currentUser = useCurrentUser();
+  const router = useRouter();
 
   const className = '';
-  const { rate: globalRate, availableCurrencies } = useCurrency();
   const { settings: userSettings, loading: settingsLoading } = useUserSettings();
+  const { currencySettings, availableCurrencies } = useCurrency();
   
-  const bdtRate = useMemo(() => {
-    const bdtCurrency = availableCurrencies.find(c => c.code === 'BDT');
-    const rate = bdtCurrency?.rate || globalRate || 110;
-    return typeof rate === 'number' ? rate : parseFloat(String(rate)) || 110;
-  }, [availableCurrencies, globalRate]);
+  const defaultCurrency = currencySettings?.defaultCurrency || 'USD';
+  const defaultCurrencyData = availableCurrencies.find(c => c.code === defaultCurrency);
+  const currencySymbol = defaultCurrencyData?.symbol || '$';
+  const currencyName = defaultCurrencyData?.name || 'US Dollar';
+  
   const [username, setUsername] = useState('');
-  const [amountUSD, setAmountUSD] = useState('');
-  const [amountBDT, setAmountBDT] = useState('');
-  const [amountBDTConverted, setAmountBDTConverted] = useState('');
-  const [activeCurrency, setActiveCurrency] = useState<'USD' | 'BDT'>('BDT');
+  const [amount, setAmount] = useState('');
   const [isPending, startTransition] = useTransition();
   const [toastMessage, setToastMessage] = useState<{
     message: string;
@@ -55,8 +54,6 @@ export default function TransferFund() {
   const [isUserValid, setIsUserValid] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selfTransferError, setSelfTransferError] = useState('');
-
-  const rate = bdtRate;
 
   useEffect(() => {
     setPageTitle('Transfer Funds', appName);
@@ -176,30 +173,8 @@ export default function TransferFund() {
     }
   };
 
-  const toggleCurrency = () => {
-    const newCurrency = activeCurrency === 'USD' ? 'BDT' : 'USD';
-    setActiveCurrency(newCurrency);
-
-    setAmountUSD('');
-    setAmountBDT('');
-    setAmountBDTConverted('');
-  };
-
-  const handleUSDChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const usdValue = parseFloat(e.target.value) || 0;
-    const bdtValue = usdValue * rate;
-
-    setAmountUSD(e.target.value);
-    setAmountBDT(bdtValue.toFixed(2));
-    setAmountBDTConverted(bdtValue.toFixed(2));
-  };
-
-  const handleBDTChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const bdtValue = parseFloat(e.target.value) || 0;
-    const usdValue = bdtValue / rate;
-
-    setAmountBDT(e.target.value);
-    setAmountUSD(usdValue.toFixed(2));
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAmount(e.target.value);
   };
 
   const showToast = (
@@ -213,9 +188,7 @@ export default function TransferFund() {
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const currentAmount = activeCurrency === 'USD' ? amountUSD : amountBDT;
-
-    if (!username || !currentAmount) {
+    if (!username || !amount) {
       showToast('Please fill in all fields', 'error');
       return;
     }
@@ -225,16 +198,16 @@ export default function TransferFund() {
       return;
     }
 
-    const transferAmount = parseFloat(currentAmount);
+    const transferAmount = parseFloat(amount);
     if (transferAmount <= 0) {
       showToast('Please enter a valid amount', 'error');
       return;
     }
 
-    const minAmount = activeCurrency === 'USD' ? 0.1 : 10;
+    const minAmount = 0.1;
     if (transferAmount < minAmount) {
       showToast(
-        `Minimum transfer amount is ${minAmount} ${activeCurrency}`,
+        `Minimum transfer amount is ${minAmount} ${defaultCurrency}`,
         'error'
       );
       return;
@@ -254,7 +227,7 @@ export default function TransferFund() {
           body: JSON.stringify({
             username,
             amount: transferAmount,
-            currency: activeCurrency,
+            currency: defaultCurrency,
           }),
         });
 
@@ -265,15 +238,17 @@ export default function TransferFund() {
         }
 
         showToast(
-          `Successfully transferred ${transferAmount} ${activeCurrency} to ${username} (Fee: ${calculatedFee.toFixed(
+          `Successfully transferred ${transferAmount} ${defaultCurrency} to ${username} (Fee: ${calculatedFee.toFixed(
             2
-          )} ${activeCurrency})`,
+          )} ${defaultCurrency})`,
           'success'
         );
         setUsername('');
-        setAmountUSD('');
-        setAmountBDT('');
-        setAmountBDTConverted('');
+        setAmount('');
+        
+        setTimeout(() => {
+          router.push('/transactions');
+        }, 1500);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Transfer failed. Please try again.';
         showToast(errorMessage, 'error');
@@ -281,10 +256,7 @@ export default function TransferFund() {
     });
   };
 
-  const currentAmount =
-    activeCurrency === 'USD'
-      ? parseFloat(amountUSD) || 0
-      : parseFloat(amountBDT) || 0;
+  const currentAmount = parseFloat(amount) || 0;
 
   const feePercentage = userSettings?.transferFundsPercentage || 3;
   const fee = (currentAmount * feePercentage) / 100;
@@ -316,20 +288,12 @@ export default function TransferFund() {
                 >
                   <div className="flex flex-wrap items-center justify-between mb-4">
                     <div className="h-5 w-32 gradient-shimmer rounded" />
-                    <div className="h-6 w-32 gradient-shimmer rounded-full" />
                   </div>
                   <div className="space-y-4">
                     <div className="form-group">
                       <div className="h-4 w-24 gradient-shimmer rounded mb-2" />
                       <div className="h-10 w-full gradient-shimmer rounded-lg" />
                     </div>
-                    <div className="flex justify-center">
-                      <div className="h-12 w-40 gradient-shimmer rounded-lg" />
-                    </div>
-                  </div>
-                  <div className="mt-4 p-4 bg-white dark:bg-gray-800/80 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div className="h-4 w-32 gradient-shimmer rounded mb-2" />
-                    <div className="h-10 w-full gradient-shimmer rounded-lg" />
                   </div>
                 </div>
                 <div className="h-14 w-full gradient-shimmer rounded-lg" />
@@ -386,7 +350,11 @@ export default function TransferFund() {
                   />
                   {isValidatingUser && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <FaSpinner className="animate-spin text-gray-400 dark:text-gray-500 w-4 h-4" />
+                      <div className="w-4 h-4 relative">
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 animate-spin">
+                          <div className="absolute inset-0.5 rounded-full bg-white dark:bg-gray-700"></div>
+                        </div>
+                      </div>
                     </div>
                   )}
                   {isUserValid && !isValidatingUser && (
@@ -438,99 +406,27 @@ export default function TransferFund() {
               >
                 <div className="flex flex-wrap items-center justify-between mb-4">
                   <h3 className="card-title dark:text-gray-100">Amount Details</h3>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700 mt-2 sm:mt-0 mx-auto sm:mx-0">
-                    Rate: 1 USD = {bdtRate.toFixed(2)} BDT
-                  </div>
                 </div>
 
                 <div className="space-y-4">
-                  {activeCurrency === 'USD' ? (
-                    <div className="form-group">
-                      <label className="form-label">Amount (USD)</label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={amountUSD}
-                          onChange={handleUSDChange}
-                          className="form-field w-full pl-10 pr-4 py-3 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          placeholder="0.00"
-                          disabled={isPending}
-                        />
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600 dark:text-blue-400 font-semibold">
-                          $
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="form-group">
-                      <label className="form-label">Amount (BDT)</label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={amountBDT}
-                          onChange={handleBDTChange}
-                          className="form-field w-full pl-10 pr-4 py-3 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          placeholder="0.00"
-                          disabled={isPending}
-                        />
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600 dark:text-blue-400 font-semibold">
-                          ৳
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      onClick={toggleCurrency}
-                      className="btn btn-secondary h-12 px-6 flex items-center gap-2"
-                      disabled={isPending}
-                      title={`Switch to ${
-                        activeCurrency === 'USD' ? 'BDT' : 'USD'
-                      }`}
-                    >
-                      <FaExchangeAlt className="text-blue-600 dark:text-blue-400" />
-                      <span className="text-sm font-semibold">
-                        Switch to {activeCurrency === 'USD' ? 'BDT' : 'USD'}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-4 p-4 bg-white dark:bg-gray-800/80 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div className="text-sm text-gray-600 dark:text-gray-300 mb-2 font-medium">
-                    Converted Amount
-                  </div>
-                  {activeCurrency === 'USD' ? (
+                  <div className="form-group">
+                    <label className="form-label">Amount ({defaultCurrency})</label>
                     <div className="relative">
                       <input
-                        type="text"
-                        className="form-field w-full pl-10 pr-4 py-3 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                        disabled
-                        placeholder="0.00 BDT"
-                        value={amountBDTConverted || '0.00'}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={amount}
+                        onChange={handleAmountChange}
+                        className="form-field w-full pl-10 pr-4 py-3 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        placeholder="0.00"
+                        disabled={isPending}
                       />
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600 dark:text-blue-400 font-bold">
-                        ৳
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600 dark:text-blue-400 font-semibold">
+                        {currencySymbol}
                       </span>
                     </div>
-                  ) : (
-                    <div className="relative">
-                      <input
-                        type="text"
-                        className="form-field w-full pl-10 pr-4 py-3 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
-                        disabled
-                        placeholder="0.00 USD"
-                        value={amountUSD || '0.00'}
-                      />
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-600 dark:text-blue-400 font-bold">
-                        $
-                      </span>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
               {currentAmount > 0 && (
@@ -541,8 +437,7 @@ export default function TransferFund() {
                         Transfer Amount:
                       </span>
                       <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {activeCurrency === 'USD' ? '$' : '৳'}
-                        {currentAmount.toFixed(2)}
+                        {currencySymbol}{currentAmount.toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -550,8 +445,7 @@ export default function TransferFund() {
                         Processing Fee ({feePercentage}%):
                       </span>
                       <span className="text-lg font-semibold text-red-600 dark:text-red-400">
-                        {activeCurrency === 'USD' ? '$' : '৳'}
-                        {fee.toFixed(2)}
+                        {currencySymbol}{fee.toFixed(2)}
                       </span>
                     </div>
                     <hr className="border-gray-300 dark:border-gray-600" />
@@ -560,20 +454,9 @@ export default function TransferFund() {
                         Total Deduction:
                       </span>
                       <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {activeCurrency === 'USD' ? '$' : '৳'}
-                        {totalAmount.toFixed(2)}
+                        {currencySymbol}{totalAmount.toFixed(2)}
                       </span>
                     </div>
-                    {activeCurrency === 'USD' && (
-                      <div className="text-sm text-gray-600 dark:text-gray-300">
-                        ≈ ৳{(totalAmount * rate).toFixed(2)} BDT
-                      </div>
-                    )}
-                    {activeCurrency === 'BDT' && (
-                      <div className="text-sm text-gray-600 dark:text-gray-300">
-                        ≈ ${(totalAmount / rate).toFixed(2)} USD
-                      </div>
-                    )}
                   </div>
                 </div>
               )}

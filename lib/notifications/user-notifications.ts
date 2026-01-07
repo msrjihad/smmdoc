@@ -17,7 +17,7 @@ interface NotificationData {
  */
 async function shouldSendNotification(
   userId: number,
-  notificationType: 'welcome' | 'apiKeyChanged' | 'orderStatusChanged' | 'newService' | 'serviceUpdates' | 'transactionAlert'
+  notificationType: 'welcome' | 'apiKeyChanged' | 'orderStatusChanged' | 'newService' | 'serviceUpdates' | 'transactionAlert' | 'transferFunds'
 ): Promise<boolean> {
   try {
     const integrationSettings = await db.integrationSettings.findFirst();
@@ -45,6 +45,9 @@ async function shouldSendNotification(
         break;
       case 'transactionAlert':
         adminEnabled = integrationSettings.userNotifTransactionAlert ?? false;
+        break;
+      case 'transferFunds':
+        adminEnabled = integrationSettings.userNotifTransferFunds ?? false;
         break;
       default:
         return false;
@@ -83,6 +86,9 @@ async function shouldSendNotification(
             break;
           case 'transactionAlert':
             userEnabled = prefs.transactionAlertEnabled ?? true;
+            break;
+          case 'transferFunds':
+            userEnabled = prefs.transferFundsEnabled ?? true;
             break;
         }
       }
@@ -518,6 +524,70 @@ export async function sendTransactionPendingNotification(
     console.log(`[NOTIFICATION] Transaction pending notification created successfully`);
   } catch (error) {
     console.error('[NOTIFICATION] Error sending transaction pending notification:', error);
+    if (error instanceof Error) {
+      console.error('[NOTIFICATION] Error stack:', error.stack);
+    }
+  }
+}
+
+/**
+ * Send transfer funds notifications to sender and receiver
+ */
+export async function sendTransferFundsNotification(
+  senderId: number,
+  receiverId: number,
+  amount: number,
+  currencyCode: string,
+  currencySymbol: string,
+  senderUsername: string,
+  receiverUsername: string
+): Promise<void> {
+  try {
+    console.log(`[NOTIFICATION] Sending transfer funds notifications:`, {
+      senderId,
+      receiverId,
+      amount,
+      currencyCode
+    });
+
+    let symbol = currencySymbol;
+    if (!symbol) {
+      const currency = await db.currencies.findUnique({
+        where: { code: currencyCode },
+        select: { symbol: true }
+      });
+      symbol = currency?.symbol || '$';
+    }
+
+    const formattedAmount = amount.toFixed(2);
+
+    const senderShouldSend = await shouldSendNotification(senderId, 'transferFunds');
+    if (senderShouldSend) {
+      await createNotification({
+        userId: senderId,
+        title: `${symbol}${formattedAmount} Transferred to @${receiverUsername}`,
+        message: `${symbol}${formattedAmount} has been transferred to your friend @${receiverUsername}.`,
+        type: 'payment',
+        link: '/transactions',
+      });
+      console.log(`[NOTIFICATION] Transfer funds notification sent to sender ${senderId}`);
+    }
+
+    const receiverShouldSend = await shouldSendNotification(receiverId, 'transferFunds');
+    if (receiverShouldSend) {
+      await createNotification({
+        userId: receiverId,
+        title: `${symbol}${formattedAmount} Received from @${senderUsername}`,
+        message: `${symbol}${formattedAmount} has been received from your friend @${senderUsername}.`,
+        type: 'payment',
+        link: '/transactions',
+      });
+      console.log(`[NOTIFICATION] Transfer funds notification sent to receiver ${receiverId}`);
+    }
+
+    console.log(`[NOTIFICATION] Transfer funds notifications sent successfully`);
+  } catch (error) {
+    console.error('[NOTIFICATION] Error sending transfer funds notification:', error);
     if (error instanceof Error) {
       console.error('[NOTIFICATION] Error stack:', error.stack);
     }

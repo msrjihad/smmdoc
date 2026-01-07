@@ -19,6 +19,7 @@ export async function GET() {
       newServiceEnabled: integrationSettings?.userNotifNewService ?? false,
       serviceUpdatesEnabled: integrationSettings?.userNotifServiceUpdates ?? false,
       transactionAlertEnabled: integrationSettings?.userNotifTransactionAlert ?? false,
+      transferFundsEnabled: integrationSettings?.userNotifTransferFunds ?? false,
     };
 
     const user = await db.users.findUnique({
@@ -33,6 +34,7 @@ export async function GET() {
       newServiceEnabled: adminUserNotifications.newServiceEnabled,
       serviceUpdatesEnabled: adminUserNotifications.serviceUpdatesEnabled,
       transactionAlertEnabled: adminUserNotifications.transactionAlertEnabled,
+      transferFundsEnabled: adminUserNotifications.transferFundsEnabled,
     };
 
     let userPreferences = { ...defaultPreferences };
@@ -58,6 +60,9 @@ export async function GET() {
             : false,
           transactionAlertEnabled: adminUserNotifications.transactionAlertEnabled
             ? (savedPrefs.transactionAlertEnabled ?? defaultPreferences.transactionAlertEnabled)
+            : false,
+          transferFundsEnabled: adminUserNotifications.transferFundsEnabled
+            ? (savedPrefs.transferFundsEnabled ?? defaultPreferences.transferFundsEnabled)
             : false,
         };
       }

@@ -12,6 +12,8 @@ type Transaction = {
   method: string;
   payment_method?: string;
   transaction_id?: string | null;
+  transaction_type?: string | null;
+  related_username?: string | null;
   createdAt: string;
   phone?: string;
   currency?: string;
@@ -82,39 +84,42 @@ export function TransactionsTable({
   }
 
   return (
-    <div className="card">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse border border-gray-200 dark:border-gray-700">
-          <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[var(--card-bg)]">
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                ID
-              </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                Transaction ID
-              </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                Amount
-              </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                Method
-              </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                Date and Time
-              </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.map((transaction, index) => {
-              return (
-                <tr
-                  key={transaction.id}
-                  className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)]"
-                >
-                  <td className="py-3 px-4">
+    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[var(--card-bg)] rounded-t-lg">
+            <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100 first:rounded-tl-lg">
+              ID
+            </th>
+            <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              Transaction ID
+            </th>
+            <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              Amount
+            </th>
+            <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              Type
+            </th>
+            <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              Method
+            </th>
+            <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              Date and Time
+            </th>
+            <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100 last:rounded-tr-lg">
+              Status
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {transactions.map((transaction, index) => {
+            const isLastRow = index === transactions.length - 1;
+            return (
+              <tr
+                key={transaction.id}
+                className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)] ${isLastRow ? 'last:border-b-0' : ''}`}
+              >
+                  <td className={`py-3 px-4 ${isLastRow ? 'first:rounded-bl-lg' : ''}`}>
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {transaction.id}
                     </span>
@@ -131,6 +136,26 @@ export function TransactionsTable({
                         originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency === 'BDT' ? 'BDT' : 'USD')}
                       />
                     </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    {(() => {
+                      const transactionType = transaction.transaction_type || 'deposit';
+                      const tooltipTitle = 
+                        transaction.transaction_type === 'transfer' && transaction.related_username
+                          ? `Transferred to @${transaction.related_username}`
+                          : transaction.transaction_type === 'received' && transaction.related_username
+                          ? `Received from @${transaction.related_username}`
+                          : undefined;
+                      
+                      return (
+                        <span 
+                          className={`text-sm text-gray-700 dark:text-gray-300 capitalize ${tooltipTitle ? 'cursor-help' : ''}`}
+                          title={tooltipTitle}
+                        >
+                          {transactionType}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="py-3 px-4">
                     <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -164,7 +189,6 @@ export function TransactionsTable({
             })}
           </tbody>
         </table>
-      </div>
     </div>
   );
 }

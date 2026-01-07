@@ -93,6 +93,8 @@ interface UserNotifications {
   newServiceEnabled: boolean;
   serviceUpdatesEnabled: boolean;
   transactionAlertEnabled: boolean;
+  transferFundsEnabled: boolean;
+  affiliateWithdrawalsEnabled: boolean;
 }
 
 interface AdminNotifications {
@@ -134,6 +136,8 @@ const NotificationSettingsPage = () => {
     newServiceEnabled: true,
     serviceUpdatesEnabled: true,
     transactionAlertEnabled: true,
+    transferFundsEnabled: true,
+    affiliateWithdrawalsEnabled: true,
   });
 
   const [adminNotifications, setAdminNotifications] = useState<AdminNotifications>({
@@ -618,6 +622,44 @@ const NotificationSettingsPage = () => {
                     }))
                   }
                   title="Toggle transaction alert notifications"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="form-label mb-1">Transfer Funds</label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Notify users about transfer funds
+                  </p>
+                </div>
+                <Switch
+                  checked={userNotifications.transferFundsEnabled}
+                  onClick={() =>
+                    setUserNotifications(prev => ({
+                      ...prev,
+                      transferFundsEnabled: !prev.transferFundsEnabled
+                    }))
+                  }
+                  title="Toggle transfer funds notifications"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="form-label mb-1">Affiliate Withdrawals</label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Notify users about affiliate withdrawals
+                  </p>
+                </div>
+                <Switch
+                  checked={userNotifications.affiliateWithdrawalsEnabled}
+                  onClick={() =>
+                    setUserNotifications(prev => ({
+                      ...prev,
+                      affiliateWithdrawalsEnabled: !prev.affiliateWithdrawalsEnabled
+                    }))
+                  }
+                  title="Toggle affiliate withdrawals notifications"
                 />
               </div>
 

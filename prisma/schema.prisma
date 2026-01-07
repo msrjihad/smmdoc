@@ -441,7 +441,7 @@ model AddFunds {
   userId          Int
   name            String?
   email           String
-  invoiceId       String                   @unique @map("invoice_id")
+  invoiceId       String?                  @unique @map("invoice_id")
   transactionId   String?                  @map("transaction_id")
   amount          Decimal                  @default(0.00) @map("amount") @db.Decimal(10, 2)
   gatewayAmount   Float?                   @map("gateway_amount")
@@ -466,6 +466,8 @@ enum AddFundsTransactionType {
   withdrawal
   purchase
   refund
+  transfer
+  received
 
   @@map("add_funds_transaction_type")
 }
@@ -799,6 +801,8 @@ model IntegrationSettings {
   userNotifNewService               Boolean  @default(false)
   userNotifServiceUpdates           Boolean  @default(false)
   userNotifTransactionAlert         Boolean  @default(false)
+  userNotifTransferFunds            Boolean  @default(false)
+  userNotifAffiliateWithdrawals     Boolean  @default(false)
   adminNotifApiBalanceAlerts        Boolean  @default(false)
   adminNotifSupportTickets          Boolean  @default(false)
   adminNotifNewMessages             Boolean  @default(false)
