@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminOrModerator } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
+import { sendAffiliateWithdrawalDeclinedNotification } from '@/lib/notifications/user-notifications'
 
 export async function POST(
   request: NextRequest,
@@ -80,6 +81,20 @@ export async function POST(
         details: logDetails,
       },
     })
+
+    const currencySettings = await db.currencySettings.findFirst()
+    const defaultCurrency = currencySettings?.defaultCurrency || 'USD'
+    const currency = await db.currencies.findUnique({
+      where: { code: defaultCurrency },
+      select: { symbol: true }
+    })
+    const currencySymbol = currency?.symbol || '$'
+
+    await sendAffiliateWithdrawalDeclinedNotification(
+      payout.affiliate.userId,
+      payout.amount,
+      currencySymbol
+    )
 
     return NextResponse.json({
       success: true,

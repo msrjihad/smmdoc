@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 import { getModuleSettings } from '@/lib/utils/module-settings'
+import { sendAffiliateWithdrawalRequestNotification } from '@/lib/notifications/user-notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -109,6 +110,20 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       },
     })
+
+    const currencySettings = await db.currencySettings.findFirst()
+    const defaultCurrency = currencySettings?.defaultCurrency || 'USD'
+    const currency = await db.currencies.findUnique({
+      where: { code: defaultCurrency },
+      select: { symbol: true }
+    })
+    const currencySymbol = currency?.symbol || '$'
+
+    await sendAffiliateWithdrawalRequestNotification(
+      userId,
+      amount,
+      currencySymbol
+    )
 
     return NextResponse.json({ 
       success: true, 

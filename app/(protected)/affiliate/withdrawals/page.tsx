@@ -3,6 +3,7 @@
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useEffect, useState, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
 import {
@@ -66,6 +67,8 @@ type Withdrawal = {
 
 export default function WithdrawalsPage() {
   const { appName } = useAppNameWithFallback();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
   const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
@@ -74,7 +77,11 @@ export default function WithdrawalsPage() {
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('all');
+  const statusParamFromUrl = searchParams.get('status');
+  const initialTab = (statusParamFromUrl && ['all', 'success', 'pending', 'cancelled'].includes(statusParamFromUrl)) 
+    ? statusParamFromUrl 
+    : 'all';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [page, setPage] = useState(1);
@@ -318,7 +325,20 @@ export default function WithdrawalsPage() {
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setPage(1);
+    const newUrl = tab === 'all' 
+      ? '/affiliate/withdrawals' 
+      : `/affiliate/withdrawals?status=${tab}`;
+    router.replace(newUrl, { scroll: false });
   };
+
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam && ['all', 'success', 'pending', 'cancelled'].includes(statusParam)) {
+      setActiveTab(statusParam);
+    } else if (!statusParam && activeTab !== 'all') {
+      setActiveTab('all');
+    }
+  }, [searchParams]);
 
   const filteredWithdrawals = withdrawals;
 

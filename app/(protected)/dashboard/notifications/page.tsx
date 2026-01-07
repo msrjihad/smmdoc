@@ -71,6 +71,7 @@ interface UserNotificationPreferences {
   serviceUpdatesEnabled: boolean;
   transactionAlertEnabled: boolean;
   transferFundsEnabled: boolean;
+  affiliateWithdrawalsEnabled: boolean;
 }
 
 interface AdminNotificationSettings {
@@ -81,6 +82,7 @@ interface AdminNotificationSettings {
   serviceUpdatesEnabled: boolean;
   transactionAlertEnabled: boolean;
   transferFundsEnabled: boolean;
+  affiliateWithdrawalsEnabled: boolean;
 }
 
 const NotificationPreferencesPage = () => {
@@ -106,6 +108,7 @@ const NotificationPreferencesPage = () => {
     serviceUpdatesEnabled: false,
     transactionAlertEnabled: false,
     transferFundsEnabled: false,
+    affiliateWithdrawalsEnabled: false,
   });
 
   const [userPreferences, setUserPreferences] = useState<UserNotificationPreferences>({
@@ -116,6 +119,7 @@ const NotificationPreferencesPage = () => {
     serviceUpdatesEnabled: true,
     transactionAlertEnabled: true,
     transferFundsEnabled: true,
+    affiliateWithdrawalsEnabled: true,
   });
 
   useEffect(() => {
@@ -361,6 +365,27 @@ const NotificationPreferencesPage = () => {
                       }))
                     }
                     title="Toggle transfer funds notifications"
+                  />
+                </div>
+              )}
+
+              {adminSettings.affiliateWithdrawalsEnabled && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="form-label mb-1">Affiliate Withdrawals</label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Notify users about affiliate withdrawal requests and status updates
+                    </p>
+                  </div>
+                  <Switch
+                    checked={userPreferences.affiliateWithdrawalsEnabled}
+                    onClick={() =>
+                      setUserPreferences(prev => ({
+                        ...prev,
+                        affiliateWithdrawalsEnabled: !prev.affiliateWithdrawalsEnabled
+                      }))
+                    }
+                    title="Toggle affiliate withdrawals notifications"
                   />
                 </div>
               )}

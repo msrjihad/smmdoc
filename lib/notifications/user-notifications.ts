@@ -17,7 +17,7 @@ interface NotificationData {
  */
 async function shouldSendNotification(
   userId: number,
-  notificationType: 'welcome' | 'apiKeyChanged' | 'orderStatusChanged' | 'newService' | 'serviceUpdates' | 'transactionAlert' | 'transferFunds'
+  notificationType: 'welcome' | 'apiKeyChanged' | 'orderStatusChanged' | 'newService' | 'serviceUpdates' | 'transactionAlert' | 'transferFunds' | 'affiliateWithdrawals'
 ): Promise<boolean> {
   try {
     const integrationSettings = await db.integrationSettings.findFirst();
@@ -48,6 +48,9 @@ async function shouldSendNotification(
         break;
       case 'transferFunds':
         adminEnabled = integrationSettings.userNotifTransferFunds ?? false;
+        break;
+      case 'affiliateWithdrawals':
+        adminEnabled = integrationSettings.userNotifAffiliateWithdrawals ?? false;
         break;
       default:
         return false;
@@ -89,6 +92,9 @@ async function shouldSendNotification(
             break;
           case 'transferFunds':
             userEnabled = prefs.transferFundsEnabled ?? true;
+            break;
+          case 'affiliateWithdrawals':
+            userEnabled = prefs.affiliateWithdrawalsEnabled ?? true;
             break;
         }
       }
@@ -588,6 +594,129 @@ export async function sendTransferFundsNotification(
     console.log(`[NOTIFICATION] Transfer funds notifications sent successfully`);
   } catch (error) {
     console.error('[NOTIFICATION] Error sending transfer funds notification:', error);
+    if (error instanceof Error) {
+      console.error('[NOTIFICATION] Error stack:', error.stack);
+    }
+  }
+}
+
+/**
+ * Send affiliate withdrawal request notification
+ */
+export async function sendAffiliateWithdrawalRequestNotification(
+  userId: number,
+  amount: number,
+  currencySymbol: string
+): Promise<void> {
+  try {
+    console.log(`[NOTIFICATION] Sending affiliate withdrawal request notification:`, {
+      userId,
+      amount,
+      currencySymbol
+    });
+
+    const shouldSend = await shouldSendNotification(userId, 'affiliateWithdrawals');
+    
+    if (!shouldSend) {
+      console.log(`[NOTIFICATION] Affiliate withdrawal notification not sent - settings disabled`);
+      return;
+    }
+
+    const formattedAmount = amount.toFixed(2);
+
+    await createNotification({
+      userId,
+      title: `${currencySymbol}${formattedAmount} Withdrawal Requested`,
+      message: `Your ${currencySymbol}${formattedAmount} withdrawal has been requested. Please wait for approval.`,
+      type: 'payment',
+      link: '/affiliate/withdrawals',
+    });
+
+    console.log(`[NOTIFICATION] Affiliate withdrawal request notification sent successfully`);
+  } catch (error) {
+    console.error('[NOTIFICATION] Error sending affiliate withdrawal request notification:', error);
+    if (error instanceof Error) {
+      console.error('[NOTIFICATION] Error stack:', error.stack);
+    }
+  }
+}
+
+/**
+ * Send affiliate withdrawal approved notification
+ */
+export async function sendAffiliateWithdrawalApprovedNotification(
+  userId: number,
+  amount: number,
+  currencySymbol: string
+): Promise<void> {
+  try {
+    console.log(`[NOTIFICATION] Sending affiliate withdrawal approved notification:`, {
+      userId,
+      amount,
+      currencySymbol
+    });
+
+    const shouldSend = await shouldSendNotification(userId, 'affiliateWithdrawals');
+    
+    if (!shouldSend) {
+      console.log(`[NOTIFICATION] Affiliate withdrawal notification not sent - settings disabled`);
+      return;
+    }
+
+    const formattedAmount = amount.toFixed(2);
+
+    await createNotification({
+      userId,
+      title: `${currencySymbol}${formattedAmount} Withdrawal Request Approved`,
+      message: `Your ${currencySymbol}${formattedAmount} withdrawal request has been approved. Please check your withdrawal method account balance.`,
+      type: 'payment',
+      link: '/affiliate/withdrawals?status=success',
+    });
+
+    console.log(`[NOTIFICATION] Affiliate withdrawal approved notification sent successfully`);
+  } catch (error) {
+    console.error('[NOTIFICATION] Error sending affiliate withdrawal approved notification:', error);
+    if (error instanceof Error) {
+      console.error('[NOTIFICATION] Error stack:', error.stack);
+    }
+  }
+}
+
+/**
+ * Send affiliate withdrawal declined notification
+ */
+export async function sendAffiliateWithdrawalDeclinedNotification(
+  userId: number,
+  amount: number,
+  currencySymbol: string
+): Promise<void> {
+  try {
+    console.log(`[NOTIFICATION] Sending affiliate withdrawal declined notification:`, {
+      userId,
+      amount,
+      currencySymbol
+    });
+
+    const shouldSend = await shouldSendNotification(userId, 'affiliateWithdrawals');
+    
+    if (!shouldSend) {
+      console.log(`[NOTIFICATION] Affiliate withdrawal notification not sent - settings disabled`);
+      return;
+    }
+
+    const formattedAmount = amount.toFixed(2);
+
+    await createNotification({
+      userId,
+      title: `${currencySymbol}${formattedAmount} Withdrawal Request Declined`,
+      message: `Your ${currencySymbol}${formattedAmount} withdrawal request has been declined. Please try again later or check your withdrawal method.`,
+      type: 'payment',
+      link: '/affiliate/withdrawals?status=cancelled',
+    });
+
+    console.log(`[NOTIFICATION] Affiliate withdrawal declined notification sent successfully`);
+  } catch (error) {
+    console.error('[NOTIFICATION] Error sending affiliate withdrawal declined notification:', error);
     if (error instanceof Error) {
       console.error('[NOTIFICATION] Error stack:', error.stack);
     }

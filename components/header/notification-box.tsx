@@ -262,6 +262,28 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
   };
 
   const getNotificationIcon = (type: string, title?: string) => {
+    if (title && title.includes('Withdrawal Requested')) {
+      return {
+        icon: FaWallet,
+        bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+        iconColor: 'text-yellow-600 dark:text-yellow-400'
+      };
+    }
+    if (title && title.includes('Withdrawal Request Approved')) {
+      return {
+        icon: FaWallet,
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+        iconColor: 'text-green-600 dark:text-green-400'
+      };
+    }
+    if (title && title.includes('Withdrawal Request Declined')) {
+      return {
+        icon: FaWallet,
+        bgColor: 'bg-red-100 dark:bg-red-900/30',
+        iconColor: 'text-red-600 dark:text-red-400'
+      };
+    }
+    
     if (title === 'New Service Added') {
       return { 
         icon: FaBriefcase, 
