@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   FaBox,
   FaCheckCircle,
@@ -207,12 +208,17 @@ interface PaginationInfo {
 const AdminOrdersPage = () => {
   const { appName } = useAppNameWithFallback();
   const dispatch = useAppDispatch();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     setPageTitle('All Orders', appName);
   }, [appName]);
 
   const { availableCurrencies } = useCurrency();
+
+  const statusFilter = searchParams.get('status') || 'all';
+  const searchTerm = searchParams.get('search') || '';
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState<OrderStats>({
@@ -234,8 +240,56 @@ const AdminOrdersPage = () => {
     hasPrev: false,
   });
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const updateQueryParams = useCallback((updates: Record<string, string | number | null>) => {
+    const params = new URLSearchParams();
+    
+    const newStatus = 'status' in updates 
+      ? (updates.status === 'all' || updates.status === null ? null : updates.status)
+      : (statusFilter !== 'all' ? statusFilter : null);
+    const newSearch = 'search' in updates 
+      ? (updates.search === null || updates.search === '' ? null : updates.search)
+      : (searchTerm || null);
+    
+    if (newStatus && newStatus !== 'all' && newStatus !== null && newStatus !== '') {
+      params.set('status', String(newStatus));
+    }
+    
+    if (newSearch && newSearch !== null && newSearch !== '') {
+      params.set('search', String(newSearch));
+    }
+    
+    const queryString = params.toString();
+    router.push(queryString ? `?${queryString}` : window.location.pathname, { scroll: false });
+    
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [statusFilter, searchTerm, router]);
+
+  const [searchInput, setSearchInput] = useState(searchTerm);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setSearchInput(searchTerm);
+  }, [searchTerm]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      updateQueryParams({ search: value });
+    }, 500);
+  }, [updateQueryParams]);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<number | null>(null);
@@ -348,12 +402,15 @@ const AdminOrdersPage = () => {
   }, []);
 
   const ordersUrl = useMemo(() => {
-    const params = new URLSearchParams({
-      page: pagination.page.toString(),
-      limit: pagination.limit.toString(),
-      ...(statusFilter !== 'all' && { status: statusFilter }),
-      ...(searchTerm && { search: searchTerm }),
-    });
+    const params = new URLSearchParams();
+    params.set('page', pagination.page.toString());
+    params.set('limit', pagination.limit.toString());
+    if (statusFilter && statusFilter !== 'all') {
+      params.set('status', statusFilter);
+    }
+    if (searchTerm) {
+      params.set('search', searchTerm);
+    }
     return `/api/admin/orders?${params.toString()}`;
   }, [pagination.page, pagination.limit, statusFilter, searchTerm]);
 
@@ -1078,16 +1135,14 @@ const AdminOrdersPage = () => {
             <div className="flex items-center gap-2">
               <select
                 value={pagination.limit}
-                onChange={(e) =>
-                  setPagination((prev) => ({
+                onChange={(e) => {
+                  const limit = e.target.value === 'all' ? 1000 : parseInt(e.target.value);
+                  setPagination(prev => ({
                     ...prev,
-                    limit:
-                      e.target.value === 'all'
-                        ? 1000
-                        : parseInt(e.target.value),
+                    limit,
                     page: 1,
-                  }))
-                }
+                  }));
+                }}
                 className="pl-4 pr-8 py-2.5 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer text-sm"
               >
                 <option value="25">25</option>
@@ -1121,8 +1176,8 @@ const AdminOrdersPage = () => {
                   placeholder={`Search ${
                     statusFilter === 'all' ? 'all' : statusFilter
                   } orders...`}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
                 />
               </div>
@@ -1134,7 +1189,7 @@ const AdminOrdersPage = () => {
             <div className="mb-4">
               <div className="block space-y-2">
                 <button
-                  onClick={() => setStatusFilter('all')}
+                  onClick={() => updateQueryParams({ status: null })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
                     statusFilter === 'all'
                       ? 'bg-gradient-to-r from-purple-700 to-purple-500 text-white shadow-lg'
@@ -1153,7 +1208,7 @@ const AdminOrdersPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => setStatusFilter('pending')}
+                  onClick={() => updateQueryParams({ status: 'pending' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
                     statusFilter === 'pending'
                       ? 'bg-gradient-to-r from-yellow-600 to-yellow-400 text-white shadow-lg'
@@ -1172,7 +1227,7 @@ const AdminOrdersPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => setStatusFilter('processing')}
+                  onClick={() => updateQueryParams({ status: 'processing' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
                     statusFilter === 'processing'
                       ? 'bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-lg'
@@ -1191,7 +1246,7 @@ const AdminOrdersPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => setStatusFilter('completed')}
+                  onClick={() => updateQueryParams({ status: 'completed' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
                     statusFilter === 'completed'
                       ? 'bg-gradient-to-r from-green-600 to-green-400 text-white shadow-lg'
@@ -1210,7 +1265,7 @@ const AdminOrdersPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => setStatusFilter('partial')}
+                  onClick={() => updateQueryParams({ status: 'partial' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
                     statusFilter === 'partial'
                       ? 'bg-gradient-to-r from-orange-600 to-orange-400 text-white shadow-lg'
@@ -1229,7 +1284,7 @@ const AdminOrdersPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => setStatusFilter('cancelled')}
+                  onClick={() => updateQueryParams({ status: 'cancelled' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
                     statusFilter === 'cancelled'
                       ? 'bg-gradient-to-r from-gray-600 to-gray-400 text-white shadow-lg'
@@ -1248,7 +1303,7 @@ const AdminOrdersPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => setStatusFilter('failed')}
+                  onClick={() => updateQueryParams({ status: 'failed' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
                     statusFilter === 'failed'
                       ? 'bg-gradient-to-r from-red-600 to-red-400 text-white shadow-lg'
@@ -1363,9 +1418,10 @@ const AdminOrdersPage = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() =>
-                        setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))
-                      }
+                      onClick={() => {
+                        const newPage = Math.max(1, pagination.page - 1);
+                        setPagination(prev => ({ ...prev, page: newPage }));
+                      }}
                       disabled={!pagination.hasPrev || ordersLoading}
                       className="btn btn-secondary"
                     >
@@ -1384,9 +1440,10 @@ const AdminOrdersPage = () => {
                       )}
                     </span>
                     <button
-                      onClick={() =>
-                        setPagination(prev => ({ ...prev, page: Math.min(prev.totalPages, prev.page + 1) }))
-                      }
+                      onClick={() => {
+                        const newPage = Math.min(pagination.totalPages, pagination.page + 1);
+                        setPagination(prev => ({ ...prev, page: newPage }));
+                      }}
                       disabled={!pagination.hasNext || ordersLoading}
                       className="btn btn-secondary"
                     >

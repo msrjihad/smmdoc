@@ -190,6 +190,17 @@ export async function POST(
       });
     }
 
+    try {
+      const { sendAdminNewManualCancelRequestNotification } = await import('@/lib/notifications/admin-notifications');
+      await sendAdminNewManualCancelRequestNotification(
+        cancelRequest.id,
+        parseInt(id),
+        order.user.name || order.user.email || 'User'
+      );
+    } catch (notificationError) {
+      console.error('Error sending admin new manual cancel request notification:', notificationError);
+    }
+
     console.log('Cancel request created successfully:', {
       id: cancelRequest.id,
       orderId: cancelRequest.orderId,

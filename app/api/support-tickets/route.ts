@@ -502,6 +502,7 @@ export async function POST(request: NextRequest) {
             id: true,
             name: true,
             email: true,
+            username: true,
           }
         }
       }
@@ -517,6 +518,16 @@ export async function POST(request: NextRequest) {
         attachments: validatedData.attachments ? JSON.stringify(validatedData.attachments) : null,
       }
     });
+
+    try {
+      const { sendAdminSupportTicketNotification } = await import('@/lib/notifications/admin-notifications');
+      await sendAdminSupportTicketNotification(
+        ticket.id,
+        ticket.user.username || ticket.user.name || 'User'
+      );
+    } catch (notificationError) {
+      console.error('Error sending admin support ticket notification:', notificationError);
+    }
 
     return NextResponse.json({
       success: true,

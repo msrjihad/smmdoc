@@ -715,6 +715,23 @@ export async function POST(request: Request) {
 
         console.log(`Order ${order.id} created successfully`);
 
+        if (orderError && order.status === 'failed') {
+          try {
+            const { sendAdminFailOrderNotification } = await import('@/lib/notifications/admin-notifications');
+            const user = await prisma.users.findUnique({
+              where: { id: userIdNum },
+              select: { name: true, email: true }
+            });
+            await sendAdminFailOrderNotification(
+              order.id,
+              order.service.name || 'Service',
+              user?.name || user?.email || 'User'
+            );
+          } catch (notificationError) {
+            console.error('Error sending admin fail order notification:', notificationError);
+          }
+        }
+
         if (serviceProviderId) {
           try {
             await prisma.providerOrderLogs.create({

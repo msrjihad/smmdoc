@@ -200,6 +200,17 @@ export async function POST(req: NextRequest) {
           } catch (notifError) {
             console.error('Error sending transaction pending notification:', notifError);
           }
+
+          try {
+            const { sendAdminPendingTransactionNotification } = await import('@/lib/notifications/admin-notifications');
+            await sendAdminPendingTransactionNotification(
+              payment.id,
+              parseFloat(amountUSDConverted),
+              session.user.name || session.user.email || 'User'
+            );
+          } catch (adminNotifError) {
+            console.error('Error sending admin pending transaction notification:', adminNotifError);
+          }
         } catch (createError: any) {
           console.error('Error creating payment record:', createError);
           

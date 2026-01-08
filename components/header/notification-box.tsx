@@ -12,6 +12,23 @@ import {
   FaMoneyBillWave,
   FaPlug,
   FaBriefcase,
+  FaSmileBeam,
+  FaUserPlus,
+  FaExclamationTriangle,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaSync,
+  FaEnvelope,
+  FaCreditCard,
+  FaArrowRight,
+  FaArrowLeft,
+  FaInfoCircle,
+  FaGift,
+  FaStar,
+  FaHandPaper,
+  FaKey,
+  FaRocket,
+  FaClock,
 } from 'react-icons/fa';
 import {
   DropdownMenu,
@@ -261,68 +278,201 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
     return date.toLocaleDateString();
   };
 
-  const getNotificationIcon = (type: string, title?: string) => {
-    if (title && title.includes('Withdrawal Requested')) {
+  const getNotificationIcon = (type: string, title?: string, message?: string) => {
+    const titleLower = title?.toLowerCase() || '';
+    const messageLower = message?.toLowerCase() || '';
+    const combinedText = `${titleLower} ${messageLower}`;
+
+    if (titleLower.includes('new contact message') || titleLower.includes('contact message')) {
+      return {
+        icon: FaEnvelope,
+        bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+        iconColor: 'text-yellow-600 dark:text-yellow-400'
+      };
+    }
+
+    if (titleLower.includes('new support ticket') || titleLower.includes('support ticket')) {
+      return {
+        icon: FaTicketAlt,
+        bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+        iconColor: 'text-yellow-600 dark:text-yellow-400'
+      };
+    }
+
+    if (titleLower.includes('welcome to') || titleLower.includes('welcome')) {
+      return {
+        icon: FaSmileBeam,
+        bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+        iconColor: 'text-purple-600 dark:text-purple-400'
+      };
+    }
+
+    if (titleLower.includes('withdrawal request')) {
+      if (titleLower.includes('approved') || titleLower.includes('success')) {
+        return {
+          icon: FaCheckCircle,
+          bgColor: 'bg-green-100 dark:bg-green-900/30',
+          iconColor: 'text-green-600 dark:text-green-400'
+        };
+      }
+      if (titleLower.includes('declined') || titleLower.includes('cancelled') || titleLower.includes('rejected')) {
+        return {
+          icon: FaTimesCircle,
+          bgColor: 'bg-red-100 dark:bg-red-900/30',
+          iconColor: 'text-red-600 dark:text-red-400'
+        };
+      }
       return {
         icon: FaWallet,
         bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
         iconColor: 'text-yellow-600 dark:text-yellow-400'
       };
     }
-    if (title && title.includes('Withdrawal Request Approved')) {
+
+    if (titleLower.includes('transferred to') || titleLower.includes('transferred')) {
       return {
-        icon: FaWallet,
-        bgColor: 'bg-green-100 dark:bg-green-900/30',
-        iconColor: 'text-green-600 dark:text-green-400'
-      };
-    }
-    if (title && title.includes('Withdrawal Request Declined')) {
-      return {
-        icon: FaWallet,
-        bgColor: 'bg-red-100 dark:bg-red-900/30',
-        iconColor: 'text-red-600 dark:text-red-400'
-      };
-    }
-    
-    if (title === 'New Service Added') {
-      return { 
-        icon: FaBriefcase, 
-        bgColor: 'bg-green-100 dark:bg-green-900/30', 
-        iconColor: 'text-green-600 dark:text-green-400' 
-      };
-    }
-    
-    if (title === 'Service Updated') {
-      return {
-        icon: FaBriefcase,
+        icon: FaArrowRight,
         bgColor: 'bg-blue-100 dark:bg-blue-900/30',
         iconColor: 'text-blue-600 dark:text-blue-400'
       };
     }
-    
-    if (title && title.includes('is Pending')) {
+    if (titleLower.includes('received from') || titleLower.includes('received')) {
       return {
-        icon: FaWallet,
-        bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
-        iconColor: 'text-yellow-600 dark:text-yellow-400'
+        icon: FaArrowLeft,
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+        iconColor: 'text-green-600 dark:text-green-400'
       };
     }
-    
-    if (title && title.includes('has been cancelled')) {
+
+    if (titleLower.includes('new service added') || titleLower.includes('service added')) {
       return {
-        icon: FaShoppingCart,
+        icon: FaBriefcase,
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+        iconColor: 'text-green-600 dark:text-green-400'
+      };
+    }
+    if (titleLower.includes('service updated') || titleLower.includes('service update')) {
+      return {
+        icon: FaSync,
+        bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+        iconColor: 'text-blue-600 dark:text-blue-400'
+      };
+    }
+
+    if (titleLower.includes('order') && (titleLower.includes('completed') || titleLower.includes('success'))) {
+      return {
+        icon: FaCheckCircle,
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+        iconColor: 'text-green-600 dark:text-green-400'
+      };
+    }
+    if (titleLower.includes('order') && (titleLower.includes('cancelled') || titleLower.includes('canceled'))) {
+      return {
+        icon: FaTimesCircle,
         bgColor: 'bg-red-100 dark:bg-red-900/30',
         iconColor: 'text-red-600 dark:text-red-400'
       };
     }
-    
+    if (titleLower.includes('order') && titleLower.includes('pending')) {
+      return {
+        icon: FaClock,
+        bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+        iconColor: 'text-yellow-600 dark:text-yellow-400'
+      };
+    }
+    if (titleLower.includes('new order') || titleLower.includes('order created')) {
+      return {
+        icon: FaShoppingCart,
+        bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+        iconColor: 'text-blue-600 dark:text-blue-400'
+      };
+    }
+
+    if (titleLower.includes('fund') && (titleLower.includes('added') || titleLower.includes('success'))) {
+      return {
+        icon: FaCheckCircle,
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+        iconColor: 'text-green-600 dark:text-green-400'
+      };
+    }
+    if (titleLower.includes('transaction') && titleLower.includes('pending')) {
+      return {
+        icon: FaClock,
+        bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+        iconColor: 'text-yellow-600 dark:text-yellow-400'
+      };
+    }
+    if (titleLower.includes('transaction') && (titleLower.includes('failed') || titleLower.includes('error'))) {
+      return {
+        icon: FaExclamationTriangle,
+        bgColor: 'bg-red-100 dark:bg-red-900/30',
+        iconColor: 'text-red-600 dark:text-red-400'
+      };
+    }
+
+    if (titleLower.includes('api key') || titleLower.includes('apikey')) {
+      return {
+        icon: FaKey,
+        bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+        iconColor: 'text-orange-600 dark:text-orange-400'
+      };
+    }
+
+    if (titleLower.includes('new user') || titleLower.includes('user registered')) {
+      return {
+        icon: FaUserPlus,
+        bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+        iconColor: 'text-blue-600 dark:text-blue-400'
+      };
+    }
+    if (titleLower.includes('account') || titleLower.includes('profile')) {
+      return {
+        icon: FaUserCog,
+        bgColor: 'bg-indigo-100 dark:bg-indigo-900/30',
+        iconColor: 'text-indigo-600 dark:text-indigo-400'
+      };
+    }
+
+    if (titleLower.includes('success') || titleLower.includes('completed') || titleLower.includes('approved')) {
+      return {
+        icon: FaCheckCircle,
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+        iconColor: 'text-green-600 dark:text-green-400'
+      };
+    }
+
+    if (titleLower.includes('error') || titleLower.includes('failed') || titleLower.includes('failure')) {
+      return {
+        icon: FaExclamationTriangle,
+        bgColor: 'bg-red-100 dark:bg-red-900/30',
+        iconColor: 'text-red-600 dark:text-red-400'
+      };
+    }
+
+    if (titleLower.includes('warning') || titleLower.includes('pending') || titleLower.includes('processing')) {
+      return {
+        icon: FaClock,
+        bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+        iconColor: 'text-yellow-600 dark:text-yellow-400'
+      };
+    }
+
+    if (titleLower.includes('info') || titleLower.includes('information')) {
+      return {
+        icon: FaInfoCircle,
+        bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+        iconColor: 'text-blue-600 dark:text-blue-400'
+      };
+    }
+
     const iconMap: { [key: string]: { icon: any; bgColor: string; iconColor: string } } = {
       order: { icon: FaShoppingCart, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
       payment: { icon: FaWallet, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
       ticket: { icon: FaTicketAlt, bgColor: 'bg-purple-100 dark:bg-purple-900/30', iconColor: 'text-purple-600 dark:text-purple-400' },
       user: { icon: FaUserCog, bgColor: 'bg-orange-100 dark:bg-orange-900/30', iconColor: 'text-orange-600 dark:text-orange-400' },
-      system: { icon: FaPlug, bgColor: 'bg-red-100 dark:bg-red-900/30', iconColor: 'text-red-600 dark:text-red-400' },
+      system: { icon: FaPlug, bgColor: 'bg-gray-100 dark:bg-gray-900/30', iconColor: 'text-gray-600 dark:text-gray-400' },
       revenue: { icon: FaMoneyBillWave, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
+      transfer: { icon: FaArrowRight, bgColor: 'bg-blue-100 dark:bg-blue-900/30', iconColor: 'text-blue-600 dark:text-blue-400' },
       default: { icon: FaBell, bgColor: 'bg-blue-100 dark:bg-blue-900/30', iconColor: 'text-blue-600 dark:text-blue-400' },
     };
     return iconMap[type] || iconMap.default;
@@ -334,7 +484,39 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
     }
     if (notification.link) {
       onOpenChange(false);
-      router.push(notification.link);
+      const titleLower = notification.title?.toLowerCase() || '';
+      
+      if (titleLower.includes('new contact message') || 
+          titleLower.includes('contact message')) {
+        let link = notification.link;
+        const queryMatch = link.match(/\/admin\/contact-messages\?message=(\d+)/);
+        if (queryMatch) {
+          link = `/admin/contact-messages/${queryMatch[1]}`;
+        }
+        if (link.includes('/admin/contact-messages') && !link.match(/\/admin\/contact-messages\/\d+$/)) {
+          const idMatch = link.match(/message[=:](\d+)/);
+          if (idMatch) {
+            link = `/admin/contact-messages/${idMatch[1]}`;
+          }
+        }
+        window.location.href = link;
+      } else if (titleLower.includes('new support ticket') || 
+                 titleLower.includes('support ticket')) {
+        let link = notification.link;
+        const queryMatch = link.match(/\/admin\/support-tickets\?ticket=(\d+)/);
+        if (queryMatch) {
+          link = `/admin/tickets/${queryMatch[1]}`;
+        }
+        if (link.includes('/admin/tickets') || link.includes('/admin/support-tickets')) {
+          const idMatch = link.match(/(\d+)$/);
+          if (idMatch) {
+            link = `/admin/tickets/${idMatch[1]}`;
+          }
+        }
+        window.location.href = link;
+      } else {
+        router.push(notification.link);
+      }
     }
   };
 
@@ -427,7 +609,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
             <>
               <div className="p-2">
                 {notifications.map((notification) => {
-                  const { icon: IconComponent, bgColor, iconColor } = getNotificationIcon(notification.type || 'default', notification.title);
+                  const { icon: IconComponent, bgColor, iconColor } = getNotificationIcon(notification.type || 'default', notification.title, notification.message);
                   return (
                     <div
                       key={notification.id}

@@ -140,16 +140,6 @@ const ContactSystemGuard: React.FC<ContactSystemGuardProps> = ({
                     </div>
 
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                        <FaPhone className="text-green-600 text-sm" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900 text-sm">Phone</h4>
-                        <p className="text-gray-600 text-sm">+1 (555) 123-4567</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
                       <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
                         <FaClock className="text-purple-600 text-sm" />
                       </div>

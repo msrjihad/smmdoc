@@ -99,6 +99,17 @@ export const register = async (values: any & { recaptchaToken?: string }) => {
       console.error('Failed to send welcome notification:', err);
     });
 
+    try {
+      const { sendAdminNewUserNotification } = await import('@/lib/notifications/admin-notifications');
+      await sendAdminNewUserNotification(
+        newUser.id,
+        newUser.name || newUser.username || 'User',
+        newUser.email || ''
+      );
+    } catch (notificationError) {
+      console.error('Error sending admin new user notification:', notificationError);
+    }
+
     if (emailConfirmationEnabled) {
       const verificationToken = await generateVerificationCode(email);
       if (verificationToken) {

@@ -246,6 +246,21 @@ export async function POST(
       }
     });
 
+    try {
+      const { sendAdminNewManualRefillRequestNotification } = await import('@/lib/notifications/admin-notifications');
+      const user = await db.users.findUnique({
+        where: { id: session.user.id },
+        select: { name: true, email: true }
+      });
+      await sendAdminNewManualRefillRequestNotification(
+        refillRequest.id,
+        parseInt(id),
+        user?.name || user?.email || 'User'
+      );
+    } catch (notificationError) {
+      console.error('Error sending admin new manual refill request notification:', notificationError);
+    }
+
     return NextResponse.json({
       success: true,
       data: {

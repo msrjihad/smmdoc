@@ -96,7 +96,7 @@ function ContactSupportPage() {
     const loadContactFormData = async () => {
       try {
         try {
-          const settingsResponse = await fetch('/api/admin/general-settings');
+          const settingsResponse = await fetch('/api/public/general-settings');
           if (settingsResponse.ok) {
             const settingsData = await settingsResponse.json();
             if (settingsData.success && settingsData.generalSettings?.supportEmail) {

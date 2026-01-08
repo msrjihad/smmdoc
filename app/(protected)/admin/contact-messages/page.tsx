@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
     FaBox,
     FaCheckCircle,
@@ -149,6 +150,8 @@ interface PaginationInfo {
 
 const ContactMessagesPage = () => {
   const { appName } = useAppNameWithFallback();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
   const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
@@ -249,6 +252,9 @@ const ContactMessagesPage = () => {
   });
 
 
+  const statusFilter = searchParams.get('status') || 'all';
+  const searchTerm = searchParams.get('search') || '';
+
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
     limit: 20,
@@ -258,8 +264,56 @@ const ContactMessagesPage = () => {
     hasPrev: false,
   });
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const updateQueryParams = useCallback((updates: Record<string, string | number | null>) => {
+    const params = new URLSearchParams();
+    
+    const newStatus = 'status' in updates 
+      ? (updates.status === 'all' || updates.status === null ? null : updates.status)
+      : (statusFilter !== 'all' ? statusFilter : null);
+    const newSearch = 'search' in updates 
+      ? (updates.search === null || updates.search === '' ? null : updates.search)
+      : (searchTerm || null);
+    
+    if (newStatus && newStatus !== 'all' && newStatus !== null && newStatus !== '') {
+      params.set('status', String(newStatus));
+    }
+    
+    if (newSearch && newSearch !== null && newSearch !== '') {
+      params.set('search', String(newSearch));
+    }
+    
+    const queryString = params.toString();
+    router.push(queryString ? `?${queryString}` : window.location.pathname, { scroll: false });
+    
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [statusFilter, searchTerm, router]);
+
+  const [searchInput, setSearchInput] = useState(searchTerm);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setSearchInput(searchTerm);
+  }, [searchTerm]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      updateQueryParams({ search: value });
+    }, 500);
+  }, [updateQueryParams]);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
   const [selectedMessages, setSelectedMessages] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
@@ -625,8 +679,8 @@ const ContactMessagesPage = () => {
                 <input
                   type="text"
                   placeholder={`Search ${statusFilter === 'all' ? 'all' : statusFilter} messages...`}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
                 />
               </div>
@@ -658,7 +712,7 @@ const ContactMessagesPage = () => {
             <div className="mb-4">
               <div className="block space-y-2">
                 <button
-                  onClick={() => setStatusFilter('all')}
+                  onClick={() => updateQueryParams({ status: null })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
                     statusFilter === 'all'
                       ? 'bg-gradient-to-r from-purple-700 to-purple-500 text-white shadow-lg'
@@ -677,7 +731,7 @@ const ContactMessagesPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => setStatusFilter('Unread')}
+                  onClick={() => updateQueryParams({ status: 'Unread' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
                     statusFilter === 'Unread'
                       ? 'bg-gradient-to-r from-orange-600 to-orange-400 text-white shadow-lg'
@@ -696,7 +750,7 @@ const ContactMessagesPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => setStatusFilter('Read')}
+                  onClick={() => updateQueryParams({ status: 'Read' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
                     statusFilter === 'Read'
                       ? 'bg-gradient-to-r from-blue-600 to-blue-400 text-white shadow-lg'
@@ -715,7 +769,7 @@ const ContactMessagesPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => setStatusFilter('Replied')}
+                  onClick={() => updateQueryParams({ status: 'Replied' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 mr-2 mb-2 ${
                     statusFilter === 'Replied'
                       ? 'bg-gradient-to-r from-green-600 to-green-400 text-white shadow-lg'

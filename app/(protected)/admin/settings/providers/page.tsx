@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   FaChartBar,
   FaCheck,
@@ -209,6 +210,8 @@ const APIProvidersPage = () => {
   }
 
   const { appName } = useAppNameWithFallback();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
   const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
@@ -307,11 +310,61 @@ const APIProvidersPage = () => {
   const [availableProviders, setAvailableProviders] = useState<any[]>([]);
   const [connectionStatuses, setConnectionStatuses] = useState<{[key: number]: 'connected' | 'disconnected' | 'testing' | 'unknown'}>({});
 
+  const statusFilter = searchParams.get('status') || 'all';
+  const searchQuery = searchParams.get('search') || '';
+
   const [isLoading, setIsLoading] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+
+  const updateQueryParams = useCallback((updates: Record<string, string | number | null>) => {
+    const params = new URLSearchParams();
+    
+    const newStatus = 'status' in updates 
+      ? (updates.status === 'all' || updates.status === null ? null : updates.status)
+      : (statusFilter !== 'all' ? statusFilter : null);
+    const newSearch = 'search' in updates 
+      ? (updates.search === null || updates.search === '' ? null : updates.search)
+      : (searchQuery || null);
+    
+    if (newStatus && newStatus !== 'all' && newStatus !== null && newStatus !== '') {
+      params.set('status', String(newStatus));
+    }
+    
+    if (newSearch && newSearch !== null && newSearch !== '') {
+      params.set('search', String(newSearch));
+    }
+    
+    const queryString = params.toString();
+    router.push(queryString ? `?${queryString}` : window.location.pathname, { scroll: false });
+  }, [statusFilter, searchQuery, router]);
+
+  const [searchInput, setSearchInput] = useState(searchQuery);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      updateQueryParams({ search: value });
+    }, 500);
+  }, [updateQueryParams]);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
   const [syncingProvider, setSyncingProvider] = useState<number | null>(null);
   const [syncingAll, setSyncingAll] = useState(false);
   const [editingProvider, setEditingProvider] = useState<Provider | null | undefined>(undefined);
@@ -540,13 +593,19 @@ const APIProvidersPage = () => {
   useEffect(() => {
     const loadData = async () => {
       console.log('🔄 loadData called in useEffect');
-      await fetchProviders('all');
+      await fetchProviders(statusFilter);
       setIsPageLoading(false);
     };
 
     console.log('🚀 useEffect triggered for initial loading');
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!isPageLoading) {
+      fetchProviders(statusFilter);
+    }
+  }, [statusFilter]);
 
   const showToast = (
     message: string,
@@ -1175,8 +1234,8 @@ const APIProvidersPage = () => {
                 <input
                   type="text"
                   placeholder="Search providers..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full md:w-80 pl-10 pr-4 py-2.5 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
                 />
               </div>
@@ -1190,10 +1249,7 @@ const APIProvidersPage = () => {
                 <div className="mb-6">
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => {
-                    setStatusFilter('all');
-                    fetchProviders('all');
-                  }}
+                  onClick={() => updateQueryParams({ status: null })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
                     statusFilter === 'all'
                       ? 'bg-gradient-to-r from-purple-700 to-purple-500 text-white shadow-lg'
@@ -1212,10 +1268,7 @@ const APIProvidersPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => {
-                    setStatusFilter('active');
-                    fetchProviders('active');
-                  }}
+                  onClick={() => updateQueryParams({ status: 'active' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
                     statusFilter === 'active'
                       ? 'bg-gradient-to-r from-green-600 to-green-400 text-white shadow-lg'
@@ -1234,10 +1287,7 @@ const APIProvidersPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => {
-                    setStatusFilter('inactive');
-                    fetchProviders('inactive');
-                  }}
+                  onClick={() => updateQueryParams({ status: 'inactive' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
                     statusFilter === 'inactive'
                       ? 'bg-gradient-to-r from-red-600 to-red-400 text-white shadow-lg'
@@ -1256,10 +1306,7 @@ const APIProvidersPage = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => {
-                    setStatusFilter('trash');
-                    fetchProviders('trash');
-                  }}
+                  onClick={() => updateQueryParams({ status: 'trash' })}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
                     statusFilter === 'trash'
                       ? 'bg-gradient-to-r from-orange-600 to-orange-400 text-white shadow-lg'

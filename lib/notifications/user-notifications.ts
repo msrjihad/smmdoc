@@ -9,12 +9,6 @@ interface NotificationData {
   link: string;
 }
 
-/**
- * Check if a notification type is enabled for a user
- * Returns true if:
- * 1. Admin has enabled the notification type
- * 2. User has enabled the notification type in their preferences (or defaults to enabled)
- */
 async function shouldSendNotification(
   userId: number,
   notificationType: 'welcome' | 'apiKeyChanged' | 'orderStatusChanged' | 'newService' | 'serviceUpdates' | 'transactionAlert' | 'transferFunds' | 'affiliateWithdrawals'
@@ -107,9 +101,6 @@ async function shouldSendNotification(
   }
 }
 
-/**
- * Create a notification for a user
- */
 async function createNotification(data: NotificationData): Promise<void> {
   try {
     await db.notifications.create({
@@ -127,9 +118,6 @@ async function createNotification(data: NotificationData): Promise<void> {
   }
 }
 
-/**
- * Send a welcome notification to a new user
- */
 export async function sendWelcomeNotification(
   userId: number
 ): Promise<void> {
@@ -154,9 +142,6 @@ export async function sendWelcomeNotification(
   }
 }
 
-/**
- * Send an API key changed notification
- */
 export async function sendApiKeyChangedNotification(
   userId: number,
   changedByAdmin: boolean = false
@@ -185,9 +170,6 @@ export async function sendApiKeyChangedNotification(
   }
 }
 
-/**
- * Send a new order created notification
- */
 export async function sendNewOrderNotification(
   userId: number,
   orderId: number,
@@ -212,9 +194,6 @@ export async function sendNewOrderNotification(
   }
 }
 
-/**
- * Send an order status changed notification
- */
 export async function sendOrderStatusChangedNotification(
   userId: number,
   orderId: number,
@@ -376,9 +355,6 @@ function formatServiceUpdateMessage(changes: any, serviceName: string): string {
   return `${serviceName}: ${updates.join(', ')}`;
 }
 
-/**
- * Send a service update notification to all users
- */
 export async function sendServiceUpdateNotification(
   serviceId: number,
   serviceName: string,
@@ -497,9 +473,6 @@ export async function sendTransactionSuccessNotification(
   }
 }
 
-/**
- * Send a transaction pending notification
- */
 export async function sendTransactionPendingNotification(
   userId: number,
   transactionId: number
@@ -536,9 +509,6 @@ export async function sendTransactionPendingNotification(
   }
 }
 
-/**
- * Send transfer funds notifications to sender and receiver
- */
 export async function sendTransferFundsNotification(
   senderId: number,
   receiverId: number,
@@ -600,9 +570,6 @@ export async function sendTransferFundsNotification(
   }
 }
 
-/**
- * Send affiliate withdrawal request notification
- */
 export async function sendAffiliateWithdrawalRequestNotification(
   userId: number,
   amount: number,
@@ -641,9 +608,6 @@ export async function sendAffiliateWithdrawalRequestNotification(
   }
 }
 
-/**
- * Send affiliate withdrawal approved notification
- */
 export async function sendAffiliateWithdrawalApprovedNotification(
   userId: number,
   amount: number,
@@ -682,9 +646,6 @@ export async function sendAffiliateWithdrawalApprovedNotification(
   }
 }
 
-/**
- * Send affiliate withdrawal declined notification
- */
 export async function sendAffiliateWithdrawalDeclinedNotification(
   userId: number,
   amount: number,

@@ -10,6 +10,7 @@ import {
     FaChevronUp,
     FaComments,
     FaEnvelope,
+    FaExclamationTriangle,
     FaEye,
     FaFileAlt,
     FaFileArchive,
@@ -826,11 +827,11 @@ const ContactDetailsPage = () => {
         <div className="page-content">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <div className="text-red-500 dark:text-red-400 text-6xl mb-4">⚠️</div>
+              <FaExclamationTriangle className="h-16 w-16 text-red-500 dark:text-red-400 mx-auto mb-4" />
               <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-gray-100">Message Not Found</h2>
               <p className="text-lg mb-4 text-gray-600 dark:text-gray-400">The requested contact message could not be found.</p>
               <button 
-                onClick={() => window.history.back()}
+                onClick={() => router.push('/admin/contact-messages')}
                 className="btn btn-primary flex items-center gap-2 mx-auto"
               >
                 <FaArrowLeft className="h-4 w-4" />

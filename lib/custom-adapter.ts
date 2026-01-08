@@ -33,6 +33,17 @@ export const CustomAdapter = (): Adapter => ({
     sendWelcomeNotification(u.id).catch(err => {
       console.error('Failed to send welcome notification:', err)
     })
+
+    try {
+      const { sendAdminNewUserNotification } = await import('@/lib/notifications/admin-notifications');
+      await sendAdminNewUserNotification(
+        u.id,
+        u.name || u.username || 'User',
+        u.email || ''
+      );
+    } catch (notificationError) {
+      console.error('Error sending admin new user notification:', notificationError);
+    }
     
     return toAdapterUser(u)
   },

@@ -469,6 +469,17 @@ export async function POST(req: NextRequest) {
         }
       });
 
+      try {
+        const { sendAdminFailOrderNotification } = await import('@/lib/notifications/admin-notifications');
+        await sendAdminFailOrderNotification(
+          order.id,
+          service.name || 'Service',
+          updatedOrder.user.name || updatedOrder.user.email || 'User'
+        );
+      } catch (notificationError) {
+        console.error('Error sending admin fail order notification:', notificationError);
+      }
+
       console.error('Error forwarding order to provider:', providerError);
     }
 
@@ -488,6 +499,17 @@ export async function POST(req: NextRequest) {
       minQty: updatedOrder.minQty && typeof updatedOrder.minQty === 'bigint' ? updatedOrder.minQty.toString() : updatedOrder.minQty,
       maxQty: updatedOrder.maxQty && typeof updatedOrder.maxQty === 'bigint' ? updatedOrder.maxQty.toString() : updatedOrder.maxQty,
     };
+
+    try {
+      const { sendAdminNewManualServiceOrderNotification } = await import('@/lib/notifications/admin-notifications');
+      await sendAdminNewManualServiceOrderNotification(
+        updatedOrder.id,
+        service.name || 'Service',
+        order.user.name || order.user.email || 'User'
+      );
+    } catch (notificationError) {
+      console.error('Error sending admin new manual service order notification:', notificationError);
+    }
 
     return NextResponse.json({
       success: true,

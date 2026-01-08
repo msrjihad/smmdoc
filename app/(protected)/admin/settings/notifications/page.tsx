@@ -362,9 +362,9 @@ const NotificationSettingsPage = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="form-label mb-1">New Manual Refill Requests</label>
+                  <label className="form-label mb-1">Refill Requests</label>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Get notified about new manual refill requests
+                    Get notified about refill requests
                   </p>
                 </div>
                 <Switch

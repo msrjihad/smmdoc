@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
           html: emailData.html
             .replace('Payment Successful!', `Balance ${action === 'add' ? 'Added' : 'Deducted'}`)
             .replace('Your payment has been successfully processed', notificationMessage)
-            .replace('funds have been added to your account', `your new balance is à§³${result.updatedUser.balance}`)
+            .replace('funds have been added to your account', `your new balance is ${adminCurrencySymbol}${result.updatedUser.balance}`)
         });
       }
 

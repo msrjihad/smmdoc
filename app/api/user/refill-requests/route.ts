@@ -248,6 +248,17 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    try {
+      const { sendAdminNewManualRefillRequestNotification } = await import('@/lib/notifications/admin-notifications');
+      await sendAdminNewManualRefillRequestNotification(
+        refillRequest.id,
+        parseInt(orderId),
+        order.user.name || order.user.email || 'User'
+      );
+    } catch (notificationError) {
+      console.error('Error sending admin new manual refill request notification:', notificationError);
+    }
+
     let providerRefillSubmitted = false;
     let providerRefillError: string | null = null;
 

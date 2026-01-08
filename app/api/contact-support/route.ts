@@ -143,7 +143,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const messageId = await (async () => {
+    let messageId = 0;
+    try {
+      const { db } = await import('@/lib/db');
+      const contactMessage = await db.contactMessages.create({
+        data: {
+          userId: session.user.id,
+          subject: subject.trim(),
+          message: message.trim(),
+          categoryId: parseInt(category),
+          attachments: attachmentsJson || null,
+          status: 'Unread'
+        }
+      });
+      messageId = contactMessage.id;
+    } catch (dbError) {
+      console.error('Error creating contact message:', dbError);
       const result = await contactDB.createContactMessage({
         userId: session.user.id,
         subject: subject.trim(),
@@ -152,22 +167,24 @@ export async function POST(request: NextRequest) {
         attachments: attachmentsJson || undefined
       });
       
-      const messages = await contactDB.getContactMessages({
-        search: subject.trim(),
-        limit: 1
-      });
-      
-      return messages.length > 0 ? messages[0].id : 0;
-    })();
+      if (result) {
+        const messages = await contactDB.getContactMessages({
+          search: subject.trim(),
+          limit: 1
+        });
+        messageId = messages.length > 0 ? messages[0].id : 0;
+      }
+    }
+
+    const userEmail = session.user.email;
+    const userName = session.user.name || session.user.username || 'User';
+    const userUsername = session.user.username || 'User';
 
     try {
       const { sendMail } = await import('@/lib/nodemailer');
       const { contactEmailTemplates } = await import('@/lib/email-templates');
       const { sendSMS } = await import('@/lib/sms');
       const { smsTemplates } = await import('@/lib/sms');
-      
-      const userEmail = session.user.email;
-      const userName = session.user.name || session.user.username || 'User';
       
       const { getFromEmailAddress } = await import('@/lib/email-config');
       const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
@@ -206,6 +223,19 @@ export async function POST(request: NextRequest) {
       
     } catch (notificationError) {
       console.error('Error sending admin notification:', notificationError);
+    }
+
+    if (messageId > 0) {
+      try {
+        const { sendAdminNewMessageNotification } = await import('@/lib/notifications/admin-notifications');
+        await sendAdminNewMessageNotification(
+          messageId,
+          subject.trim(),
+          userUsername
+        );
+      } catch (notificationError) {
+        console.error('Error sending admin new message notification:', notificationError);
+      }
     }
 
     return NextResponse.json({
