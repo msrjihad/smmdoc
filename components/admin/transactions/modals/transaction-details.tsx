@@ -13,11 +13,11 @@ interface Transaction {
     username?: string;
   };
   transactionId: number | string;
-  amount: number;
-  bdt_amount?: number;
+  amount: number | string;
   currency: string;
-  phone: string;
-  method: string;
+  phone?: string;
+  method?: string;
+  gateway?: string;
   payment_method?: string;
   paymentGateway?: string;
   paymentMethod?: string;
@@ -94,24 +94,14 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                User
-              </label>
-              <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                {transaction.user?.username ||
-                  transaction.user?.email ||
-                  'N/A'}
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Phone
-              </label>
-              <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
-                {transaction.phone || 'N/A'}
-              </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              User
+            </label>
+            <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded text-gray-900 dark:text-gray-100">
+              {transaction.user?.username ||
+                transaction.user?.email ||
+                'N/A'}
             </div>
           </div>
 
@@ -122,8 +112,12 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
               </label>
               <div className="text-sm bg-gray-50 dark:bg-gray-700/50 p-2 rounded font-semibold text-gray-900 dark:text-gray-100">
                 <PriceDisplay
-                  amount={transaction.bdt_amount || transaction.amount}
-                  originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : 'BDT'}
+                  amount={(() => {
+                    const amount = transaction.amount;
+                    const numAmount = typeof amount === 'string' ? parseFloat(amount) : (typeof amount === 'number' ? amount : 0);
+                    return isNaN(numAmount) ? 0 : numAmount;
+                  })()}
+                  originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency === 'BDT' ? 'BDT' : 'USD')}
                 />
               </div>
             </div>

@@ -171,11 +171,10 @@ interface Transaction {
     username?: string;
   };
   transactionId: number | string;
-  amount: number;
-  bdt_amount?: number;
+  amount: number | string;
   currency: string;
-  phone: string;
-  method: string;
+  method?: string;
+  gateway?: string;
   payment_method?: string;
   paymentGateway?: string;
   paymentMethod?: string;
@@ -747,22 +746,19 @@ const AdminAllTransactionsPage = () => {
   };
 
   const displayMethod = (transaction: Transaction) => {
-    const gateway = transaction.method || (transaction as any).paymentGateway || '';
-    const methodName = transaction.payment_method || (transaction as any).paymentMethod || '';
+    const paymentMethod = transaction.payment_method || (transaction as any).paymentMethod || null;
+    const gateway = transaction.gateway || (transaction as any).paymentGateway || (transaction as any).method || null;
     
-    if (!gateway && !methodName) {
-      return 'Unknown';
+    // Use payment_method first, fallback to gateway if payment_method is null
+    if (paymentMethod) {
+      return paymentMethod;
     }
     
-    if (gateway && methodName) {
-      return `${gateway} - ${methodName}`;
+    if (gateway) {
+      return gateway;
     }
     
-    if (gateway && !methodName) {
-      return `${gateway} - Unknown`;
-    }
-    
-    return gateway || methodName;
+    return 'Unknown';
   };
 
   const handleRefresh = () => {

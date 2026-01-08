@@ -449,7 +449,7 @@ model AddFunds {
   gatewayFee      Float?                   @map("fee")
   status          String?                  @default("Processing")
   adminStatus     String?                  @default("Pending") @map("admin_status")
-  paymentGateway  String?                  @map("method")
+  paymentGateway  String?                  @map("gateway") @db.VarChar(255)
   paymentMethod   String?                  @map("payment_method")
   transactionType AddFundsTransactionType? @default(deposit) @map("transaction_type")
   paidAt          DateTime                 @default(now()) @map("paid_at")

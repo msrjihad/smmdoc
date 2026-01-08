@@ -11,6 +11,7 @@ type Transaction = {
   status: 'Success' | 'Processing' | 'Cancelled' | 'Failed';
   method: string;
   payment_method?: string;
+  gateway?: string;
   transaction_id?: string | null;
   transaction_type?: string | null;
   related_username?: string | null;
@@ -160,6 +161,7 @@ export function TransactionsTable({
                   <td className="py-3 px-4">
                     <span className="text-sm text-gray-700 dark:text-gray-300">
                       {transaction.payment_method ||
+                        transaction.gateway ||
                         transaction.method ||
                         'UddoktaPay'}
                     </span>

@@ -87,12 +87,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (type && type !== 'all') {
-      if (type === 'withdrawal') {
-        where.id = -1;
-      }
-    }
-
     if (startDate || endDate) {
       where.createdAt = {};
 
@@ -127,6 +121,7 @@ export async function GET(request: NextRequest) {
             paymentGateway: true,
             paymentMethod: true,
             transactionId: true,
+            transactionType: true,
             createdAt: true,
             updatedAt: true,
             currency: true,
@@ -195,12 +190,14 @@ export async function GET(request: NextRequest) {
         bdt_amount: transaction.amount || amount,
         status: transaction.status || 'Processing',
         admin_status: transaction.status || 'Processing',
-        method: transaction.paymentGateway || 'UddoktaPay',
-        payment_method: transaction.paymentMethod || 'UddoktaPay',
+        method: transaction.paymentGateway || null,
+        gateway: transaction.paymentGateway || null,
+        payment_method: transaction.paymentMethod || null,
         transaction_id: transaction.transactionId || transaction.id?.toString(),
         createdAt: transaction.createdAt?.toISOString() || new Date().toISOString(),
         updatedAt: transaction.updatedAt?.toISOString() || transaction.createdAt?.toISOString() || new Date().toISOString(),
-        type: 'deposit',
+        type: transaction.transactionType || 'deposit',
+        transaction_type: transaction.transactionType || 'deposit',
         phone: '',
         currency: transaction.currency || 'BDT',
         userId: transaction.userId,

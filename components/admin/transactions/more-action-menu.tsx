@@ -12,11 +12,12 @@ interface Transaction {
     username?: string;
   };
   transactionId?: number | string;
-  amount: number;
+  amount: number | string;
   bdt_amount?: number;
   currency: string;
   phone?: string;
   method?: string;
+  gateway?: string;
   payment_method?: string;
   paymentGateway?: string;
   paymentMethod?: string;
@@ -26,6 +27,8 @@ interface Transaction {
   createdAt: string;
   updatedAt?: string;
   processedAt?: string;
+  type?: string;
+  transaction_type?: string;
 }
 
 interface MoreActionMenuProps {

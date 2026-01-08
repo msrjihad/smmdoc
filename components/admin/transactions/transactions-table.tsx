@@ -20,11 +20,11 @@ interface Transaction {
     username?: string;
   };
   transactionId?: number | string;
-  amount: number;
-  bdt_amount?: number;
+  amount: number | string;
   currency: string;
   phone?: string;
   method?: string;
+  gateway?: string;
   payment_method?: string;
   paymentGateway?: string;
   paymentMethod?: string;
@@ -34,6 +34,8 @@ interface Transaction {
   createdAt: string;
   updatedAt?: string;
   processedAt?: string;
+  type?: string;
+  transaction_type?: string;
 }
 
 interface TransactionsTableProps {
@@ -77,6 +79,9 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
             </th>
             <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
               Amount
+            </th>
+            <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
+              Type
             </th>
             <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
               Payment Method
@@ -137,13 +142,29 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
               </td>
               <td className="p-3">
                 <PriceDisplay
-                  amount={transaction.bdt_amount || transaction.amount}
+                  amount={(() => {
+                    const amount = transaction.amount;
+                    const numAmount = typeof amount === 'string' ? parseFloat(amount) : (typeof amount === 'number' ? amount : 0);
+                    return isNaN(numAmount) ? 0 : numAmount;
+                  })()}
                   originalCurrency={transaction.currency === 'USD' || transaction.currency === 'USDT' ? 'USD' : (transaction.currency === 'BDT' ? 'BDT' : 'USD')}
                   className="font-semibold text-sm"
                 />
               </td>
               <td className="p-3">
-                <div className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                {(() => {
+                  const transactionType = transaction.transaction_type || transaction.type || 'deposit';
+                  return (
+                    <span className="text-sm text-gray-900 dark:text-gray-100 capitalize">
+                      {transactionType === 'transfer' ? 'transfer' : 
+                       transactionType === 'received' ? 'receive' : 
+                       transactionType}
+                    </span>
+                  );
+                })()}
+              </td>
+              <td className="p-3">
+                <div className="text-sm text-gray-900 dark:text-gray-100">
                   {displayMethod(transaction)}
                 </div>
               </td>

@@ -13,11 +13,11 @@ interface Transaction {
   };
   transactionId?: number | string;
   transaction_id?: string;
-  amount: number;
-  bdt_amount?: number;
+  amount: number | string;
   currency: string;
   phone?: string;
   method?: string;
+  gateway?: string;
   payment_method?: string;
   paymentGateway?: string;
   paymentMethod?: string;
@@ -103,7 +103,11 @@ const CancelTransactionModal: React.FC<CancelTransactionModalProps> = ({
               </span>
               <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">
                 {formatTransactionCurrency(
-                  transaction.bdt_amount || transaction.amount,
+                  (() => {
+                    const amount = transaction.amount;
+                    const numAmount = typeof amount === 'string' ? parseFloat(amount) : (typeof amount === 'number' ? amount : 0);
+                    return isNaN(numAmount) ? 0 : numAmount;
+                  })(),
                   transaction.currency
                 )}
               </span>
@@ -114,14 +118,6 @@ const CancelTransactionModal: React.FC<CancelTransactionModalProps> = ({
               </span>
               <span className="text-gray-900 dark:text-gray-100">
                 {displayMethod(transaction)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-medium text-gray-600 dark:text-gray-300">
-                Phone:
-              </span>
-              <span className="text-gray-900 dark:text-gray-100">
-                {transaction.phone || 'N/A'}
               </span>
             </div>
           </div>
