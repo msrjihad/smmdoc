@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
     FaBox,
@@ -127,6 +127,7 @@ interface SupportTicket {
   username: string;
   name: string;
   subject: string;
+  ticketType?: string;
   createdAt: string;
   lastUpdated: string;
   status: 'Open' | 'Answered' | 'Customer Reply' | 'On Hold' | 'In Progress' | 'Closed' | 'closed';
@@ -242,6 +243,7 @@ const SupportTicketsPage = () => {
 
   const statusFilter = searchParams.get('status') || 'all';
   const searchTerm = searchParams.get('search') || '';
+  const typeFilter = searchParams.get('type') || 'all';
 
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -262,6 +264,9 @@ const SupportTicketsPage = () => {
     const newSearch = 'search' in updates 
       ? (updates.search === null || updates.search === '' ? null : updates.search)
       : (searchTerm || null);
+    const newType = 'type' in updates
+      ? (updates.type === 'all' || updates.type === null ? null : updates.type)
+      : (typeFilter !== 'all' ? typeFilter : null);
     
     if (newStatus && newStatus !== 'all' && newStatus !== null && newStatus !== '') {
       params.set('status', String(newStatus));
@@ -271,11 +276,15 @@ const SupportTicketsPage = () => {
       params.set('search', String(newSearch));
     }
     
+    if (newType && newType !== 'all' && newType !== null && newType !== '') {
+      params.set('type', String(newType));
+    }
+    
     const queryString = params.toString();
     router.push(queryString ? `?${queryString}` : window.location.pathname, { scroll: false });
     
     setPagination(prev => ({ ...prev, page: 1 }));
-  }, [statusFilter, searchTerm, router]);
+  }, [statusFilter, searchTerm, typeFilter, router]);
 
   const [searchInput, setSearchInput] = useState(searchTerm);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -417,7 +426,23 @@ const SupportTicketsPage = () => {
   };
 
 
-  const filteredTickets = supportTickets.filter((ticket) => {
+  const typeFilteredTickets = useMemo(() => {
+    if (typeFilter === 'all' || !typeFilter) {
+      return supportTickets;
+    }
+    return supportTickets.filter((ticket) => {
+      const ticketType = (ticket.ticketType || 'Human').toLowerCase();
+      const filterType = typeFilter.toLowerCase();
+      if (filterType === 'human') {
+        return ticketType === 'human';
+      } else if (filterType === 'ai') {
+        return ticketType === 'ai';
+      }
+      return false;
+    });
+  }, [supportTickets, typeFilter]);
+
+  const filteredTickets = typeFilteredTickets.filter((ticket) => {
     const matchesSearch =
       ticket.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -479,8 +504,7 @@ const SupportTicketsPage = () => {
   };
 
   const handleViewTicket = (ticketId: string) => {
-
-    window.open(`/admin/tickets/${ticketId}`, '_blank');
+    router.push(`/admin/tickets/${ticketId}`);
   };
 
   const handleDeleteTicket = async (ticketId: string) => {
@@ -667,6 +691,19 @@ const SupportTicketsPage = () => {
                 <option value="50">50</option>
                 <option value="100">100</option>
                 <option value="all">All</option>
+              </select>
+
+              <select 
+                value={typeFilter}
+                onChange={(e) => {
+                  const newType = e.target.value === 'all' ? null : e.target.value;
+                  updateQueryParams({ type: newType });
+                }}
+                className="pl-4 pr-8 py-2.5 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="human">Human</option>
+                <option value="ai">AI</option>
               </select>
 
               <button

@@ -249,14 +249,17 @@ export async function POST(req: NextRequest) {
     });
 
     try {
-      const { sendAdminNewManualRefillRequestNotification } = await import('@/lib/notifications/admin-notifications');
-      await sendAdminNewManualRefillRequestNotification(
-        refillRequest.id,
+      const { sendAdminNewRefillRequestNotification } = await import('@/lib/notifications/admin-notifications');
+      const user = await db.users.findUnique({
+        where: { id: parseInt(session.user.id) },
+        select: { username: true, name: true }
+      });
+      await sendAdminNewRefillRequestNotification(
         parseInt(orderId),
-        order.user.name || order.user.email || 'User'
+        user?.username || user?.name || 'User'
       );
     } catch (notificationError) {
-      console.error('Error sending admin new manual refill request notification:', notificationError);
+      console.error('Error sending admin new refill request notification:', notificationError);
     }
 
     let providerRefillSubmitted = false;
@@ -352,6 +355,23 @@ export async function POST(req: NextRequest) {
                     updatedAt: new Date()
                   }
                 });
+
+                if (newStatus === 'error') {
+                  try {
+                    const { sendAdminRefillRequestFailedNotification } = await import('@/lib/notifications/admin-notifications');
+                    const user = await db.users.findUnique({
+                      where: { id: parseInt(session.user.id) },
+                      select: { username: true, name: true }
+                    });
+                    await sendAdminRefillRequestFailedNotification(
+                      parseInt(orderId),
+                      user?.username || user?.name || 'User',
+                      provider.name
+                    );
+                  } catch (notificationError) {
+                    console.error('Error sending admin refill request failed notification:', notificationError);
+                  }
+                }
                 
                 console.log('Refill request submitted to provider successfully:', providerResult);
               } else {
@@ -374,6 +394,21 @@ export async function POST(req: NextRequest) {
                     updatedAt: new Date()
                   }
                 });
+
+                try {
+                  const { sendAdminRefillRequestFailedNotification } = await import('@/lib/notifications/admin-notifications');
+                  const user = await db.users.findUnique({
+                    where: { id: parseInt(session.user.id) },
+                    select: { username: true, name: true }
+                  });
+                  await sendAdminRefillRequestFailedNotification(
+                    parseInt(orderId),
+                    user?.username || user?.name || 'User',
+                    provider.name
+                  );
+                } catch (notificationError) {
+                  console.error('Error sending admin refill request failed notification:', notificationError);
+                }
                 
                 console.error('Provider refill API error:', providerRefillError);
               }
@@ -391,6 +426,21 @@ export async function POST(req: NextRequest) {
                   updatedAt: new Date()
                 }
               });
+
+              try {
+                const { sendAdminRefillRequestFailedNotification } = await import('@/lib/notifications/admin-notifications');
+                const user = await db.users.findUnique({
+                  where: { id: parseInt(session.user.id) },
+                  select: { username: true, name: true }
+                });
+                await sendAdminRefillRequestFailedNotification(
+                  parseInt(orderId),
+                  user?.username || user?.name || 'User',
+                  provider.name
+                );
+              } catch (notificationError) {
+                console.error('Error sending admin refill request failed notification:', notificationError);
+              }
               
               console.error('Error submitting refill request to provider:', fetchError);
             }

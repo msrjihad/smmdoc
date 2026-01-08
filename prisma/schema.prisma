@@ -803,6 +803,10 @@ model IntegrationSettings {
   userNotifTransactionAlert         Boolean  @default(false)
   userNotifTransferFunds            Boolean  @default(false)
   userNotifAffiliateWithdrawals     Boolean  @default(false)
+  userNotifSupportTickets           Boolean  @default(false)
+  userNotifContactMessages          Boolean  @default(false)
+  userNotifBlogPost                 Boolean  @default(false)
+  userNotifAnnouncement             Boolean  @default(false)
   adminNotifApiBalanceAlerts        Boolean  @default(false)
   adminNotifSupportTickets          Boolean  @default(false)
   adminNotifNewMessages             Boolean  @default(false)
@@ -815,6 +819,7 @@ model IntegrationSettings {
   adminNotifPendingTransactions     Boolean  @default(false)
   adminNotifApiSyncLogs             Boolean  @default(false)
   adminNotifNewChildPanelOrders     Boolean  @default(false)
+  adminNotifAnnouncement            Boolean  @default(false)
   createdAt                         DateTime @default(now())
   updatedAt                         DateTime @updatedAt
   recaptchaV2SecretKey              String?  @db.Text

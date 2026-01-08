@@ -21,6 +21,8 @@ export async function GET() {
       transactionAlertEnabled: integrationSettings?.userNotifTransactionAlert ?? false,
       transferFundsEnabled: integrationSettings?.userNotifTransferFunds ?? false,
       affiliateWithdrawalsEnabled: integrationSettings?.userNotifAffiliateWithdrawals ?? false,
+      supportTicketsEnabled: integrationSettings?.userNotifSupportTickets ?? false,
+      contactMessagesEnabled: integrationSettings?.userNotifContactMessages ?? false,
     };
 
     const user = await db.users.findUnique({
@@ -37,6 +39,8 @@ export async function GET() {
       transactionAlertEnabled: adminUserNotifications.transactionAlertEnabled,
       transferFundsEnabled: adminUserNotifications.transferFundsEnabled,
       affiliateWithdrawalsEnabled: adminUserNotifications.affiliateWithdrawalsEnabled,
+      supportTicketsEnabled: adminUserNotifications.supportTicketsEnabled,
+      contactMessagesEnabled: adminUserNotifications.contactMessagesEnabled,
     };
 
     let userPreferences = { ...defaultPreferences };
@@ -68,6 +72,12 @@ export async function GET() {
             : false,
           affiliateWithdrawalsEnabled: adminUserNotifications.affiliateWithdrawalsEnabled
             ? (savedPrefs.affiliateWithdrawalsEnabled ?? defaultPreferences.affiliateWithdrawalsEnabled)
+            : false,
+          supportTicketsEnabled: adminUserNotifications.supportTicketsEnabled
+            ? (savedPrefs.supportTicketsEnabled ?? defaultPreferences.supportTicketsEnabled)
+            : false,
+          contactMessagesEnabled: adminUserNotifications.contactMessagesEnabled
+            ? (savedPrefs.contactMessagesEnabled ?? defaultPreferences.contactMessagesEnabled)
             : false,
         };
       }

@@ -219,7 +219,7 @@ const AdminOrdersPage = () => {
 
   const statusFilter = searchParams.get('status') || 'all';
   const searchTerm = searchParams.get('search') || '';
-
+  const providerParam = searchParams.get('provider');
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState<OrderStats>({
     totalOrders: 0,
@@ -249,6 +249,9 @@ const AdminOrdersPage = () => {
     const newSearch = 'search' in updates 
       ? (updates.search === null || updates.search === '' ? null : updates.search)
       : (searchTerm || null);
+    const newProvider = 'provider' in updates
+      ? (updates.provider === 'all' || updates.provider === null ? null : updates.provider)
+      : (providerParam || null);
     
     if (newStatus && newStatus !== 'all' && newStatus !== null && newStatus !== '') {
       params.set('status', String(newStatus));
@@ -258,11 +261,15 @@ const AdminOrdersPage = () => {
       params.set('search', String(newSearch));
     }
     
+    if (newProvider && newProvider !== 'all' && newProvider !== null && newProvider !== '') {
+      params.set('provider', String(newProvider));
+    }
+    
     const queryString = params.toString();
     router.push(queryString ? `?${queryString}` : window.location.pathname, { scroll: false });
     
     setPagination(prev => ({ ...prev, page: 1 }));
-  }, [statusFilter, searchTerm, router]);
+  }, [statusFilter, searchTerm, providerParam, router]);
 
   const [searchInput, setSearchInput] = useState(searchTerm);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -449,9 +456,121 @@ const AdminOrdersPage = () => {
     },
   });
 
+  const { data: providersData, mutate: refreshProviders, error: providersError } = useSWR(
+    '/api/admin/providers?filter=active',
+    async (url) => {
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Error fetching providers:', error);
+        throw error;
+      }
+    },
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 30000,
+      dedupingInterval: 5000,
+      errorRetryCount: 3,
+      errorRetryInterval: 5000,
+      onError: (error) => {
+        console.error('SWR providers fetch error:', error);
+      }
+    }
+  );
+
   useEffect(() => {
     refreshStatsRef.current = refreshStats;
   }, [refreshStats]);
+
+  const getProviderNameById = useCallback((providerId: number | string | null, providerName?: string) => {
+    if (!providerId) {
+      return providerName || 'Self';
+    }
+
+    try {
+      const providerIdNum = typeof providerId === 'string' ? parseInt(providerId) : providerId;
+      if (providersData?.data?.providers) {
+        const provider = providersData.data.providers.find(
+          (p: any) => Number(p.id) === providerIdNum
+        );
+        if (provider) {
+          const resolvedName = provider.label || provider.name || 'Unknown Provider';
+          return resolvedName;
+        }
+      }
+    } catch (error) {
+      console.log('Error getting provider name, using fallback');
+      return providerName || 'Provider (Error)';
+    }
+
+    return providerName || 'Provider (Error)';
+  }, [providersData?.data?.providers]);
+
+  const uniqueProviders = useMemo(() => {
+    const result: Array<{ id: string; name: string }> = [
+      { id: 'all', name: 'All' },
+      { id: 'self', name: 'Self' }
+    ];
+
+    const providerIdsWithOrders = new Set<number>();
+
+    orders.forEach((order) => {
+      if (order.service?.providerId) {
+        try {
+          providerIdsWithOrders.add(parseInt(String(order.service.providerId)));
+        } catch (_) {
+        }
+      }
+    });
+
+    if (providersData?.data?.providers && providerIdsWithOrders.size > 0) {
+      const providers = providersData.data.providers
+        .filter((p: any) => p.status === 'active')
+        .filter((p: any) => providerIdsWithOrders.has(Number(p.id)))
+        .map((p: any) => ({
+          id: String(p.id),
+          name: p.label || p.name || p.value || 'Unknown Provider'
+        }))
+        .filter((p: { id: string; name: string }) => !!p.name && p.name.trim() !== '')
+        .sort((a: { id: string; name: string }, b: { id: string; name: string }) => 
+          a.name.localeCompare(b.name)
+        );
+
+      return [...result, ...providers];
+    }
+
+    if (orders.length > 0) {
+      const providerMap = new Map<string, string>();
+      orders.forEach((order) => {
+        if (order.service?.providerId) {
+          const providerId = String(order.service.providerId);
+          const name = getProviderNameById(order.service.providerId, order.service.providerName);
+          if (name && name !== 'N/A' && name !== 'Provider (Error)' && name !== 'Self') {
+            providerMap.set(providerId, name);
+          }
+        }
+      });
+      const providers = Array.from(providerMap.entries())
+        .map(([id, name]) => ({ id, name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      return [...result, ...providers];
+    }
+
+    return result;
+  }, [providersData?.data?.providers, orders, getProviderNameById]);
 
   useEffect(() => {
     let eventSource: EventSource | null = null;
@@ -608,6 +727,26 @@ const AdminOrdersPage = () => {
     syncProviderOrders();
   }, [refreshOrders, refreshStats, dispatch]);
 
+  const providerFilter = providerParam || 'all';
+
+  const filteredOrders = useMemo(() => {
+    if (providerFilter === 'all' || !providerFilter) {
+      return orders;
+    }
+
+    if (providerFilter === 'self') {
+      return orders.filter((order) => !order.service?.providerId);
+    }
+
+    return orders.filter((order) => {
+      if (!order.service?.providerId) {
+        return false;
+      }
+      const orderProviderId = String(order.service.providerId);
+      return orderProviderId === providerFilter;
+    });
+  }, [orders, providerFilter]);
+
   useEffect(() => {
     if (ordersData?.success && ordersData.data) {
       const transformed = (ordersData.data || []).map((o: any) => ({
@@ -762,7 +901,7 @@ const AdminOrdersPage = () => {
   };
 
   const handleSelectAll = () => {
-    const selectableOrders = orders.filter((order) => {
+    const selectableOrders = filteredOrders.filter((order) => {
       const status = order.status?.toLowerCase();
       return !['cancelled', 'canceled', 'completed'].includes(status);
     });
@@ -944,13 +1083,13 @@ const AdminOrdersPage = () => {
   };
 
   const openUpdateStatusDialog = (orderId: string | number, currentStatus: string) => {
-    const order = orders.find(o => o.id === Number(orderId));
+    const order = filteredOrders.find(o => o.id === Number(orderId));
     const isSelfService = order ? !order.service?.providerId : false;
     setUpdateStatusDialog({ open: true, orderId, currentStatus, isSelfService });
   };
 
   const openRequestCancelOrderDialog = (orderId: number) => {
-    const order = orders.find(o => o.id === orderId);
+    const order = filteredOrders.find(o => o.id === orderId);
     if (order) {
       setRequestCancelOrderDialog({
         open: true,
@@ -998,7 +1137,7 @@ const AdminOrdersPage = () => {
   };
 
   const handleEditOrderUrl = (orderId: number) => {
-    const order = orders.find(o => o.id === orderId);
+    const order = filteredOrders.find(o => o.id === orderId);
     if (order) {
       openEditOrderUrlDialog(orderId, order.link || '');
     }
@@ -1149,6 +1288,21 @@ const AdminOrdersPage = () => {
                 <option value="50">50</option>
                 <option value="100">100</option>
                 <option value="all">All</option>
+              </select>
+
+              <select 
+                value={providerFilter}
+                onChange={(e) => {
+                  const newProvider = e.target.value === 'all' ? null : e.target.value;
+                  updateQueryParams({ provider: newProvider });
+                }}
+                className="pl-4 pr-8 py-2.5 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer text-sm"
+              >
+                {uniqueProviders.map((provider) => (
+                  <option key={provider.id} value={provider.id}>
+                    {provider.name}
+                  </option>
+                ))}
               </select>
 
               <button
@@ -1348,7 +1502,7 @@ const AdminOrdersPage = () => {
               <div className="py-6">
                 <GradientTableLoader />
               </div>
-            ) : orders.length === 0 ? (
+            ) : filteredOrders.length === 0 ? (
               <div className="text-center py-12">
                 <FaBox
                   className="h-16 w-16 mx-auto mb-4"
@@ -1361,13 +1515,15 @@ const AdminOrdersPage = () => {
                   No information was found for you.
                 </h3>
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                  No orders match your current filters or no orders exist yet.
+                  {providerFilter !== 'all' && providerFilter
+                    ? `No orders match your current filters.`
+                    : 'No orders match your current filters or no orders exist yet.'}
                 </p>
               </div>
             ) : (
               <>
                 <OrdersTableContent
-                  orders={orders}
+                  orders={filteredOrders}
                   selectedOrders={selectedOrders}
                   onSelectOrder={handleSelectOrder}
                   onSelectAll={handleSelectAll}

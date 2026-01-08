@@ -11,7 +11,7 @@ interface NotificationData {
 
 async function shouldSendNotification(
   userId: number,
-  notificationType: 'welcome' | 'apiKeyChanged' | 'orderStatusChanged' | 'newService' | 'serviceUpdates' | 'transactionAlert' | 'transferFunds' | 'affiliateWithdrawals'
+  notificationType: 'welcome' | 'apiKeyChanged' | 'orderStatusChanged' | 'newService' | 'serviceUpdates' | 'transactionAlert' | 'transferFunds' | 'affiliateWithdrawals' | 'supportTickets' | 'contactMessages' | 'blogPost' | 'announcement'
 ): Promise<boolean> {
   try {
     const integrationSettings = await db.integrationSettings.findFirst();
@@ -45,6 +45,18 @@ async function shouldSendNotification(
         break;
       case 'affiliateWithdrawals':
         adminEnabled = integrationSettings.userNotifAffiliateWithdrawals ?? false;
+        break;
+      case 'supportTickets':
+        adminEnabled = integrationSettings.userNotifSupportTickets ?? false;
+        break;
+      case 'contactMessages':
+        adminEnabled = integrationSettings.userNotifContactMessages ?? false;
+        break;
+      case 'blogPost':
+        adminEnabled = integrationSettings.userNotifBlogPost ?? false;
+        break;
+      case 'announcement':
+        adminEnabled = integrationSettings.userNotifAnnouncement ?? false;
         break;
       default:
         return false;
@@ -89,6 +101,18 @@ async function shouldSendNotification(
             break;
           case 'affiliateWithdrawals':
             userEnabled = prefs.affiliateWithdrawalsEnabled ?? true;
+            break;
+          case 'supportTickets':
+            userEnabled = prefs.supportTicketsEnabled ?? true;
+            break;
+          case 'contactMessages':
+            userEnabled = prefs.contactMessagesEnabled ?? true;
+            break;
+          case 'blogPost':
+            userEnabled = prefs.blogPostEnabled ?? true;
+            break;
+          case 'announcement':
+            userEnabled = prefs.announcementEnabled ?? true;
             break;
         }
       }
@@ -678,6 +702,248 @@ export async function sendAffiliateWithdrawalDeclinedNotification(
     console.log(`[NOTIFICATION] Affiliate withdrawal declined notification sent successfully`);
   } catch (error) {
     console.error('[NOTIFICATION] Error sending affiliate withdrawal declined notification:', error);
+    if (error instanceof Error) {
+      console.error('[NOTIFICATION] Error stack:', error.stack);
+    }
+  }
+}
+
+export async function sendSupportTicketRepliedNotification(
+  userId: number,
+  ticketId: number
+): Promise<void> {
+  try {
+    console.log(`[NOTIFICATION] Sending support ticket replied notification:`, {
+      userId,
+      ticketId
+    });
+
+    const shouldSend = await shouldSendNotification(userId, 'supportTickets');
+    
+    if (!shouldSend) {
+      console.log(`[NOTIFICATION] Support ticket notification not sent - settings disabled`);
+      return;
+    }
+
+    await createNotification({
+      userId,
+      title: `Support Ticket #${ticketId} Replied`,
+      message: `Your support ticket #${ticketId} has been replied by admin. Please check it.`,
+      type: 'ticket',
+      link: `/support-tickets/${ticketId}`,
+    });
+
+    console.log(`[NOTIFICATION] Support ticket replied notification sent successfully`);
+  } catch (error) {
+    console.error('[NOTIFICATION] Error sending support ticket replied notification:', error);
+    if (error instanceof Error) {
+      console.error('[NOTIFICATION] Error stack:', error.stack);
+    }
+  }
+}
+
+export async function sendSupportTicketClosedNotification(
+  userId: number,
+  ticketId: number
+): Promise<void> {
+  try {
+    console.log(`[NOTIFICATION] Sending support ticket closed notification:`, {
+      userId,
+      ticketId
+    });
+
+    const shouldSend = await shouldSendNotification(userId, 'supportTickets');
+    
+    if (!shouldSend) {
+      console.log(`[NOTIFICATION] Support ticket notification not sent - settings disabled`);
+      return;
+    }
+
+    await createNotification({
+      userId,
+      title: `Support Ticket #${ticketId} Closed`,
+      message: `Your support ticket #${ticketId} has been closed by admin.`,
+      type: 'ticket',
+      link: `/support-tickets/${ticketId}`,
+    });
+
+    console.log(`[NOTIFICATION] Support ticket closed notification sent successfully`);
+  } catch (error) {
+    console.error('[NOTIFICATION] Error sending support ticket closed notification:', error);
+    if (error instanceof Error) {
+      console.error('[NOTIFICATION] Error stack:', error.stack);
+    }
+  }
+}
+
+export async function sendSupportTicketStatusUpdatedNotification(
+  userId: number,
+  ticketId: number,
+  statusName: string
+): Promise<void> {
+  try {
+    console.log(`[NOTIFICATION] Sending support ticket status updated notification:`, {
+      userId,
+      ticketId,
+      statusName
+    });
+
+    const shouldSend = await shouldSendNotification(userId, 'supportTickets');
+    
+    if (!shouldSend) {
+      console.log(`[NOTIFICATION] Support ticket notification not sent - settings disabled`);
+      return;
+    }
+
+    await createNotification({
+      userId,
+      title: `Support Ticket #${ticketId} Status Updated`,
+      message: `Your support ticket #${ticketId} status has been updated to ${statusName} by admin.`,
+      type: 'ticket',
+      link: `/support-tickets/${ticketId}`,
+    });
+
+    console.log(`[NOTIFICATION] Support ticket status updated notification sent successfully`);
+  } catch (error) {
+    console.error('[NOTIFICATION] Error sending support ticket status updated notification:', error);
+    if (error instanceof Error) {
+      console.error('[NOTIFICATION] Error stack:', error.stack);
+    }
+  }
+}
+
+export async function sendContactMessageRepliedNotification(
+  userId: number,
+  messageId: number
+): Promise<void> {
+  try {
+    console.log(`[NOTIFICATION] Sending contact message replied notification:`, {
+      userId,
+      messageId
+    });
+
+    const shouldSend = await shouldSendNotification(userId, 'contactMessages');
+    
+    if (!shouldSend) {
+      console.log(`[NOTIFICATION] Contact message notification not sent - settings disabled`);
+      return;
+    }
+
+    await createNotification({
+      userId,
+      title: `Support Message Replied #${messageId}`,
+      message: `Admin has been replied your support message #${messageId}. Please check your email.`,
+      type: 'message',
+      link: '',
+    });
+
+    console.log(`[NOTIFICATION] Contact message replied notification sent successfully`);
+  } catch (error) {
+    console.error('[NOTIFICATION] Error sending contact message replied notification:', error);
+    if (error instanceof Error) {
+      console.error('[NOTIFICATION] Error stack:', error.stack);
+    }
+  }
+}
+
+export async function sendBlogPostNotification(
+  blogTitle: string,
+  blogSlug: string
+): Promise<void> {
+  try {
+    console.log(`[NOTIFICATION] Sending blog post notification:`, {
+      blogTitle,
+      blogSlug
+    });
+
+    const users = await db.users.findMany({
+      where: {
+        role: 'user'
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    console.log(`[NOTIFICATION] Found ${users.length} users to notify`);
+
+    const notificationPromises = users.map(async (user) => {
+      try {
+        const shouldSend = await shouldSendNotification(user.id, 'blogPost');
+        
+        if (!shouldSend) {
+          return;
+        }
+
+        await createNotification({
+          userId: user.id,
+          title: 'New Blog Post Released',
+          message: blogTitle,
+          type: 'blog',
+          link: `/blogs/${blogSlug}`,
+        });
+      } catch (error) {
+        console.error(`[NOTIFICATION] Error sending notification to user ${user.id}:`, error);
+      }
+    });
+
+    await Promise.all(notificationPromises);
+    console.log(`[NOTIFICATION] Blog post notifications sent successfully`);
+  } catch (error) {
+    console.error('[NOTIFICATION] Error sending blog post notification:', error);
+    if (error instanceof Error) {
+      console.error('[NOTIFICATION] Error stack:', error.stack);
+    }
+  }
+}
+
+export async function sendAnnouncementNotification(
+  announcementTitle: string,
+  announcementType: string = 'info'
+): Promise<void> {
+  try {
+    console.log(`[NOTIFICATION] Sending announcement notification:`, {
+      announcementTitle,
+      announcementType
+    });
+
+    const users = await db.users.findMany({
+      where: {
+        role: 'user'
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    console.log(`[NOTIFICATION] Found ${users.length} users to notify`);
+
+    const notificationType = `announcement-${announcementType}`;
+
+    const notificationPromises = users.map(async (user) => {
+      try {
+        const shouldSend = await shouldSendNotification(user.id, 'announcement');
+        
+        if (!shouldSend) {
+          return;
+        }
+
+        await createNotification({
+          userId: user.id,
+          title: 'New Announcement for User',
+          message: announcementTitle,
+          type: notificationType,
+          link: '/dashboard',
+        });
+      } catch (error) {
+        console.error(`[NOTIFICATION] Error sending notification to user ${user.id}:`, error);
+      }
+    });
+
+    await Promise.all(notificationPromises);
+    console.log(`[NOTIFICATION] Announcement notifications sent successfully`);
+  } catch (error) {
+    console.error('[NOTIFICATION] Error sending announcement notification:', error);
     if (error instanceof Error) {
       console.error('[NOTIFICATION] Error stack:', error.stack);
     }

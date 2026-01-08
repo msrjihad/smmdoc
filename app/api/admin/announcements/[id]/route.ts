@@ -106,6 +106,26 @@ export async function PUT(
       },
     });
 
+    const finalTargetedAudience = targetedAudience || existing.targetedAudience;
+    const finalType = type || existing.type;
+    if (finalStatus === 'active' && existing.status !== 'active' && (finalTargetedAudience === 'users' || finalTargetedAudience === 'all')) {
+      try {
+        const { sendAnnouncementNotification } = await import('@/lib/notifications/user-notifications');
+        await sendAnnouncementNotification(announcement.title, finalType);
+      } catch (error) {
+        console.error('Error sending announcement notification:', error);
+      }
+    }
+
+    if (finalStatus === 'active' && existing.status !== 'active' && (finalTargetedAudience === 'admin' || finalTargetedAudience === 'moderator' || finalTargetedAudience === 'all')) {
+      try {
+        const { sendAdminAnnouncementNotification } = await import('@/lib/notifications/admin-notifications');
+        await sendAdminAnnouncementNotification(announcement.title, finalType, finalTargetedAudience);
+      } catch (error) {
+        console.error('Error sending admin announcement notification:', error);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: announcement,

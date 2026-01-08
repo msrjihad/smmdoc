@@ -247,18 +247,17 @@ export async function POST(
     });
 
     try {
-      const { sendAdminNewManualRefillRequestNotification } = await import('@/lib/notifications/admin-notifications');
+      const { sendAdminNewRefillRequestNotification } = await import('@/lib/notifications/admin-notifications');
       const user = await db.users.findUnique({
         where: { id: session.user.id },
-        select: { name: true, email: true }
+        select: { username: true, name: true }
       });
-      await sendAdminNewManualRefillRequestNotification(
-        refillRequest.id,
+      await sendAdminNewRefillRequestNotification(
         parseInt(id),
-        user?.name || user?.email || 'User'
+        user?.username || user?.name || 'User'
       );
     } catch (notificationError) {
-      console.error('Error sending admin new manual refill request notification:', notificationError);
+      console.error('Error sending admin new refill request notification:', notificationError);
     }
 
     return NextResponse.json({

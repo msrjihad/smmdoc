@@ -15,6 +15,7 @@ interface SupportTicket {
   username: string;
   name: string;
   subject: string;
+  ticketType?: string;
   createdAt: string;
   lastUpdated: string;
   status: 'Open' | 'Answered' | 'Customer Reply' | 'On Hold' | 'In Progress' | 'Closed' | 'closed';
@@ -98,6 +99,9 @@ const TicketsTable: React.FC<TicketsTableProps> = ({
                 Subject
               </th>
               <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
+                Type
+              </th>
+              <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
                 Created
               </th>
               <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
@@ -141,6 +145,11 @@ const TicketsTable: React.FC<TicketsTableProps> = ({
                   >
                     {ticket.subject}
                   </div>
+                </td>
+                <td className="p-3">
+                  <span className="inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium capitalize">
+                    {ticket.ticketType || 'Human'}
+                  </span>
                 </td>
                 <td className="p-3">
                   <div>

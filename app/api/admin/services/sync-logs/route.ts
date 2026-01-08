@@ -371,6 +371,19 @@ export async function POST(req: NextRequest) {
       syncId,
       timestamp: new Date().toISOString()
     });
+
+    try {
+      const { sendAdminApiSyncLogNotification } = await import('@/lib/notifications/admin-notifications');
+      await sendAdminApiSyncLogNotification(
+        syncId,
+        provider || 'All Providers',
+        action,
+        0,
+        'in_progress'
+      );
+    } catch (notificationError) {
+      console.error('Error sending API sync log notification:', notificationError);
+    }
     
     return NextResponse.json({
       success: true,

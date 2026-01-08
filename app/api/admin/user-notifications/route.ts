@@ -30,6 +30,10 @@ export async function POST(request: NextRequest) {
         userNotifTransactionAlert: userNotifications.transactionAlertEnabled ?? false,
         userNotifTransferFunds: userNotifications.transferFundsEnabled ?? false,
         userNotifAffiliateWithdrawals: userNotifications.affiliateWithdrawalsEnabled ?? false,
+        userNotifSupportTickets: userNotifications.supportTicketsEnabled ?? false,
+        userNotifContactMessages: userNotifications.contactMessagesEnabled ?? false,
+        userNotifBlogPost: userNotifications.blogPostEnabled ?? false,
+        userNotifAnnouncement: userNotifications.announcementEnabled ?? false,
         updatedAt: new Date(),
       },
       create: {
@@ -42,6 +46,10 @@ export async function POST(request: NextRequest) {
         userNotifTransactionAlert: userNotifications.transactionAlertEnabled ?? false,
         userNotifTransferFunds: userNotifications.transferFundsEnabled ?? false,
         userNotifAffiliateWithdrawals: userNotifications.affiliateWithdrawalsEnabled ?? false,
+        userNotifSupportTickets: userNotifications.supportTicketsEnabled ?? false,
+        userNotifContactMessages: userNotifications.contactMessagesEnabled ?? false,
+        userNotifBlogPost: userNotifications.blogPostEnabled ?? false,
+        userNotifAnnouncement: userNotifications.announcementEnabled ?? false,
       },
     });
 

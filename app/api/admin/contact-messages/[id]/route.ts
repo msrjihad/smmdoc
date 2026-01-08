@@ -130,6 +130,19 @@ export async function PUT(
 
         try {
           const contactMessage = await contactDB.getContactMessageById(messageId);
+          if (contactMessage && contactMessage.userId) {
+            const { sendContactMessageRepliedNotification } = await import('@/lib/notifications/user-notifications');
+            await sendContactMessageRepliedNotification(
+              contactMessage.userId,
+              messageId
+            );
+          }
+        } catch (notificationError) {
+          console.error('Error sending user contact message replied notification:', notificationError);
+        }
+
+        try {
+          const contactMessage = await contactDB.getContactMessageById(messageId);
           if (contactMessage && contactMessage.user) {
             const { sendMail } = await import('@/lib/nodemailer');
             const { contactEmailTemplates } = await import('@/lib/email-templates');

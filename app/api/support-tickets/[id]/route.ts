@@ -228,7 +228,13 @@ export async function PUT(
 
     const existingTicket = await db.supportTickets.findUnique({
       where: { id: ticketId },
-      select: { id: true, userId: true, status: true }
+      include: {
+        user: {
+          select: {
+            id: true
+          }
+        }
+      }
     });
 
     if (!existingTicket) {
@@ -314,6 +320,44 @@ export async function PUT(
           isFromAdmin: true
         }
       });
+
+      if (parsedData.status === 'closed' && !isAdmin) {
+        try {
+          const { sendAdminSupportTicketClosedNotification } = await import('@/lib/notifications/admin-notifications');
+          const user = await db.users.findUnique({
+            where: { id: parseInt(session.user.id) },
+            select: { username: true, name: true }
+          });
+          await sendAdminSupportTicketClosedNotification(
+            ticketId,
+            user?.username || user?.name || 'User'
+          );
+        } catch (notificationError) {
+          console.error('Error sending admin support ticket closed notification:', notificationError);
+        }
+      }
+
+      if (isAdmin && existingTicket?.user?.id) {
+        try {
+          const { sendSupportTicketClosedNotification, sendSupportTicketStatusUpdatedNotification } = await import('@/lib/notifications/user-notifications');
+          
+          if (parsedData.status.toLowerCase() === 'closed') {
+            await sendSupportTicketClosedNotification(
+              existingTicket.user.id,
+              ticketId
+            );
+          } else {
+            const statusName = parsedData.status.charAt(0).toUpperCase() + parsedData.status.slice(1).toLowerCase();
+            await sendSupportTicketStatusUpdatedNotification(
+              existingTicket.user.id,
+              ticketId,
+              statusName
+            );
+          }
+        } catch (notificationError) {
+          console.error('Error sending user support ticket notification:', notificationError);
+        }
+      }
     }
 
     return NextResponse.json({

@@ -85,7 +85,7 @@ interface SupportTicketDetails {
   status: 'Open' | 'Answered' | 'Customer Reply' | 'On Hold' | 'In Progress' | 'closed';
   messages: TicketMessage[];
   ticketType?: 'Human' | 'AI';
-  aiSubcategory?: 'Refill' | 'Cancel' | 'Speed Up' | 'Restart' | 'Fake Complete';
+  aiSubcategory?: 'Refill' | 'Cancel';
   systemMessage?: string;
   ticketStatus?: 'Pending' | 'Processed' | 'Failed';
   orderIds?: string[];
@@ -659,45 +659,6 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
           {}
           <div className="md:col-span-2 space-y-6">
             {}
-            {ticketDetails && ticketDetails.ticketType === 'AI' && ticketDetails.systemMessage && (
-              <div className="card card-padding">
-                <div className="card-header">
-                  <div className="card-icon">
-                    <FaExclamationTriangle />
-                  </div>
-                  <h3 className="card-title">System Processing Result</h3>
-                </div>
-
-                <div className={`p-4 rounded-lg border-l-4 ${
-                  ticketDetails.ticketStatus === 'Processed' 
-                    ? 'bg-green-50 border-green-400 text-green-800' 
-                    : ticketDetails.ticketStatus === 'Failed'
-                    ? 'bg-red-50 border-red-400 text-red-800'
-                    : 'bg-yellow-50 border-yellow-400 text-yellow-800'
-                }`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm ${
-                      ticketDetails.ticketStatus === 'Processed' 
-                        ? 'bg-green-500' 
-                        : ticketDetails.ticketStatus === 'Failed'
-                        ? 'bg-red-500'
-                        : 'bg-yellow-500'
-                    }`}>
-                      {ticketDetails.ticketStatus === 'Processed' ? '✓' : 
-                       ticketDetails.ticketStatus === 'Failed' ? '✗' : '⏳'}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold mb-2">
-                        AI {ticketDetails.aiSubcategory} Request - {ticketDetails.ticketStatus}
-                      </h4>
-                      <p className="text-sm whitespace-pre-wrap">{ticketDetails.systemMessage}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {}
             <div className="card card-padding">
               <div className="card-header">
                 <div className="card-icon">
@@ -710,23 +671,29 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
                 {ticketDetails && ticketDetails.messages && ticketDetails.messages.length > 0 ? (
                   ticketDetails.messages.map((message) => (
                     <div key={message.id} className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center relative">
                       {message.userImage && message.type === 'customer' ? (
                         <img
                           src={message.userImage}
                           alt={message.author}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover relative z-10"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
-                      ) : (
-                        <div className={`w-full h-full flex items-center justify-center text-white font-medium text-sm ${
-                          message.type === 'customer' ? 'bg-gradient-to-r from-[var(--secondary)] to-[var(--primary)]' :
-                          message.type === 'staff' ? 'bg-gradient-to-r from-gray-600 to-gray-700' : 'bg-gradient-to-r from-gray-600 to-gray-700'
-                        }`}>
-                          {message.type === 'customer' ? <FaUser className="h-4 w-4" /> :
-                           message.type === 'staff' ? <FaUserShield className="h-4 w-4" /> :
-                           <FaExclamationTriangle className="h-4 w-4" />}
-                        </div>
-                      )}
+                      ) : null}
+                      <div className={`w-full h-full flex items-center justify-center text-white font-medium text-sm absolute inset-0 ${
+                        message.type === 'customer' ? 'bg-gradient-to-r from-[var(--secondary)] to-[var(--primary)]' :
+                        message.type === 'staff' ? 'bg-gradient-to-r from-gray-600 to-gray-700' : 'bg-gradient-to-r from-gray-600 to-gray-700'
+                      }`}>
+                        {message.type === 'customer' ? (
+                          message.author?.charAt(0)?.toUpperCase() || <FaUser className="h-4 w-4" />
+                        ) : message.type === 'staff' ? (
+                          <FaUserShield className="h-4 w-4" />
+                        ) : (
+                          <FaExclamationTriangle className="h-4 w-4" />
+                        )}
+                      </div>
                     </div>
 
                     <div className={`flex-1 min-w-0 p-4 rounded-lg ${
@@ -893,7 +860,7 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
                      )}
                 <div>
                   <label className="form-label">Status</label>
-                  <span className={`mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(ticketDetails.status)}`}>
+                  <span className={`mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(ticketDetails.status)}`}>
                   {formatStatusDisplay(ticketDetails.status)}
                 </span>
                 </div>

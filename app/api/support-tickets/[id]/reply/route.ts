@@ -45,7 +45,13 @@ export async function POST(
 
     const ticket = await db.supportTickets.findUnique({
       where: { id: ticketId },
-      select: { userId: true, status: true }
+      include: {
+        user: {
+          select: {
+            id: true
+          }
+        }
+      }
     });
 
     if (!ticket) {
@@ -125,6 +131,34 @@ export async function POST(
         repliedBy: parseInt(session.user.id)
       }
     });
+
+    if (!isAdmin) {
+      try {
+        const { sendAdminSupportTicketReplyNotification } = await import('@/lib/notifications/admin-notifications');
+        const user = await db.users.findUnique({
+          where: { id: parseInt(session.user.id) },
+          select: { username: true, name: true }
+        });
+        await sendAdminSupportTicketReplyNotification(
+          ticketId,
+          user?.username || user?.name || 'User'
+        );
+      } catch (notificationError) {
+        console.error('Error sending admin support ticket reply notification:', notificationError);
+      }
+    }
+
+    if (isAdmin && ticket?.user?.id) {
+      try {
+        const { sendSupportTicketRepliedNotification } = await import('@/lib/notifications/user-notifications');
+        await sendSupportTicketRepliedNotification(
+          ticket.user.id,
+          ticketId
+        );
+      } catch (notificationError) {
+        console.error('Error sending user support ticket replied notification:', notificationError);
+      }
+    }
 
     const updatedTicket = await db.supportTickets.findUnique({
       where: { id: ticketId },

@@ -290,6 +290,16 @@ const CancelRequestDetailsModal: React.FC<CancelRequestDetailsModalProps> = ({
             <button
               onClick={() => {
                 onClose();
+                onDeclineRequest(request.id);
+              }}
+              className="btn btn-secondary flex items-center gap-2"
+            >
+              <FaTimesCircle />
+              Decline Request
+            </button>
+            <button
+              onClick={() => {
+                onClose();
                 onResendRequest(request.id);
               }}
               className="btn btn-primary flex items-center gap-2"

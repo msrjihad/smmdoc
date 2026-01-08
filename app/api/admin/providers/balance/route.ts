@@ -422,6 +422,18 @@ export async function GET(req: NextRequest) {
         }
       });
       console.log(`💾 Balance cached in database for ${provider.name}: $${formattedBalance.balance}`);
+
+      if (formattedBalance.balance < 50) {
+        try {
+          const { sendAdminApiBalanceAlertNotification } = await import('@/lib/notifications/admin-notifications');
+          await sendAdminApiBalanceAlertNotification(
+            provider.name,
+            formattedBalance.balance
+          );
+        } catch (notificationError) {
+          console.error('Error sending API balance alert notification:', notificationError);
+        }
+      }
     } catch (dbError) {
       console.error(`❌ Failed to cache balance in database for ${provider.name}:`, dbError);
     }

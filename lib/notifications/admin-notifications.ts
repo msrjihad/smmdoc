@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { ROUTE_PERMISSION_MAP } from '@/lib/permissions';
 
 interface NotificationData {
   userId: number;
@@ -7,6 +8,23 @@ interface NotificationData {
   type: string;
   link: string;
 }
+
+// Map notification types to their required permissions
+const NOTIFICATION_PERMISSION_MAP: Record<string, string | null> = {
+  'apiBalanceAlerts': null, // No specific page, admins only
+  'supportTickets': 'support_tickets',
+  'newMessages': 'contact_messages',
+  'newManualServiceOrders': 'all_orders',
+  'failOrders': 'all_orders',
+  'refillRequests': 'refill_requests',
+  'cancelRequests': 'cancel_requests',
+  'newUsers': 'users',
+  'userActivityLogs': 'user_activity_logs',
+  'pendingTransactions': 'all_transactions',
+  'apiSyncLogs': 'api_sync_logs',
+  'newChildPanelOrders': 'child_panels',
+  'announcement': null, // Special case: based on audience, not permissions
+};
 
 async function createNotification(data: NotificationData): Promise<void> {
   try {
@@ -26,7 +44,7 @@ async function createNotification(data: NotificationData): Promise<void> {
 }
 
 async function shouldSendAdminNotification(
-  notificationType: 'apiBalanceAlerts' | 'supportTickets' | 'newMessages' | 'newManualServiceOrders' | 'failOrders' | 'newManualRefillRequests' | 'newManualCancelRequests' | 'newUsers' | 'userActivityLogs' | 'pendingTransactions' | 'apiSyncLogs' | 'newChildPanelOrders'
+  notificationType: 'apiBalanceAlerts' | 'supportTickets' | 'newMessages' | 'newManualServiceOrders' | 'failOrders' | 'refillRequests' | 'cancelRequests' | 'newUsers' | 'userActivityLogs' | 'pendingTransactions' | 'apiSyncLogs' | 'newChildPanelOrders' | 'announcement'
 ): Promise<boolean> {
   try {
     const integrationSettings = await db.integrationSettings.findFirst();
@@ -46,9 +64,9 @@ async function shouldSendAdminNotification(
         return integrationSettings.adminNotifNewManualServiceOrders ?? false;
       case 'failOrders':
         return integrationSettings.adminNotifFailOrders ?? false;
-      case 'newManualRefillRequests':
+      case 'refillRequests':
         return integrationSettings.adminNotifNewManualRefillRequests ?? false;
-      case 'newManualCancelRequests':
+      case 'cancelRequests':
         return integrationSettings.adminNotifNewManualCancelRequests ?? false;
       case 'newUsers':
         return integrationSettings.adminNotifNewUsers ?? false;
@@ -60,6 +78,8 @@ async function shouldSendAdminNotification(
         return integrationSettings.adminNotifApiSyncLogs ?? false;
       case 'newChildPanelOrders':
         return integrationSettings.adminNotifNewChildPanelOrders ?? false;
+      case 'announcement':
+        return integrationSettings.adminNotifAnnouncement ?? false;
       default:
         return false;
     }
@@ -70,11 +90,12 @@ async function shouldSendAdminNotification(
 }
 
 async function sendAdminNotification(
-  notificationType: 'apiBalanceAlerts' | 'supportTickets' | 'newMessages' | 'newManualServiceOrders' | 'failOrders' | 'newManualRefillRequests' | 'newManualCancelRequests' | 'newUsers' | 'userActivityLogs' | 'pendingTransactions' | 'apiSyncLogs' | 'newChildPanelOrders',
+  notificationType: 'apiBalanceAlerts' | 'supportTickets' | 'newMessages' | 'newManualServiceOrders' | 'failOrders' | 'refillRequests' | 'cancelRequests' | 'newUsers' | 'userActivityLogs' | 'pendingTransactions' | 'apiSyncLogs' | 'newChildPanelOrders' | 'announcement',
   title: string,
   message: string,
   link: string,
-  type: string = 'system'
+  type: string = 'system',
+  targetRoles?: string[]
 ): Promise<void> {
   try {
     const shouldSend = await shouldSendAdminNotification(notificationType);
@@ -84,28 +105,57 @@ async function sendAdminNotification(
       return;
     }
 
-    const admins = await db.users.findMany({
+    const roles = targetRoles || ['admin', 'moderator'];
+    let users = await db.users.findMany({
       where: {
-        role: { in: ['admin', 'moderator'] }
+        role: { in: roles as any }
       },
       select: {
         id: true,
+        role: true,
+        permissions: true,
       },
     });
 
-    console.log(`[ADMIN NOTIFICATION] Found ${admins.length} admins/moderators to notify`);
+    // For announcement notifications, skip permission check
+    // For other notifications, filter moderators based on permissions
+    if (notificationType !== 'announcement') {
+      const requiredPermission = NOTIFICATION_PERMISSION_MAP[notificationType];
+      
+      if (requiredPermission) {
+        // Filter moderators based on permissions, keep all admins
+        users = users.filter((user) => {
+          const userRole = user.role as string;
+          if (userRole === 'admin') {
+            return true; // Admins always get notifications
+          }
+          
+          if (userRole === 'moderator') {
+            const userPermissions = Array.isArray(user.permissions) ? user.permissions : [];
+            return userPermissions.includes(requiredPermission);
+          }
+          
+          return false;
+        });
+      } else {
+        // If no permission mapping, only send to admins
+        users = users.filter((user) => (user.role as string) === 'admin');
+      }
+    }
 
-    const notificationPromises = admins.map(async (admin) => {
+    console.log(`[ADMIN NOTIFICATION] Found ${users.length} admins/moderators to notify`);
+
+    const notificationPromises = users.map(async (user) => {
       try {
         await createNotification({
-          userId: admin.id,
+          userId: user.id,
           title,
           message,
           type,
           link,
         });
       } catch (error) {
-        console.error(`[ADMIN NOTIFICATION] Error sending notification to admin ${admin.id}:`, error);
+        console.error(`[ADMIN NOTIFICATION] Error sending notification to user ${user.id}:`, error);
       }
     });
 
@@ -127,6 +177,32 @@ export async function sendAdminSupportTicketNotification(
     'supportTickets',
     `New Support Ticket #${ticketId}`,
     `@${userName} created a new support ticket.`,
+    `/admin/tickets/${ticketId}`,
+    'ticket'
+  );
+}
+
+export async function sendAdminSupportTicketReplyNotification(
+  ticketId: number,
+  userName: string
+): Promise<void> {
+  await sendAdminNotification(
+    'supportTickets',
+    `Support Ticket #${ticketId} Replied`,
+    `@${userName} replied for support ticket #${ticketId}`,
+    `/admin/tickets/${ticketId}`,
+    'ticket'
+  );
+}
+
+export async function sendAdminSupportTicketClosedNotification(
+  ticketId: number,
+  userName: string
+): Promise<void> {
+  await sendAdminNotification(
+    'supportTickets',
+    `Support Ticket #${ticketId} Closed`,
+    `@${userName} closed the support ticket.`,
     `/admin/tickets/${ticketId}`,
     'ticket'
   );
@@ -154,8 +230,8 @@ export async function sendAdminNewManualServiceOrderNotification(
   await sendAdminNotification(
     'newManualServiceOrders',
     `New Manual Service Order #${orderId}`,
-    `@${userName} created a new manual service order for ${serviceName}.`,
-    `/admin/orders`,
+    `@${userName} ordered a manual service for ${serviceName}.`,
+    `/admin/orders?status=pending&provider=self`,
     'order'
   );
 }
@@ -174,30 +250,56 @@ export async function sendAdminFailOrderNotification(
   );
 }
 
-export async function sendAdminNewManualRefillRequestNotification(
-  requestId: number,
+export async function sendAdminNewRefillRequestNotification(
   orderId: number,
   userName: string
 ): Promise<void> {
   await sendAdminNotification(
-    'newManualRefillRequests',
-    `New Manual Order Refill Request #${requestId}`,
-    `@${userName} requested a refill for manual order #${orderId}.`,
-    `/admin/orders/refill-requests`,
+    'refillRequests',
+    `New Refill Request for Order #${orderId}`,
+    `@${userName} has requested a refill for order #${orderId}.`,
+    `/admin/orders/refill-requests?status=pending`,
     'order'
   );
 }
 
-export async function sendAdminNewManualCancelRequestNotification(
-  requestId: number,
+export async function sendAdminRefillRequestFailedNotification(
+  orderId: number,
+  userName: string,
+  providerName: string
+): Promise<void> {
+  await sendAdminNotification(
+    'refillRequests',
+    `Refill Request Failed #${orderId}`,
+    `Failed to forward refill request from @${userName} for order #${orderId} to ${providerName}.`,
+    `/admin/orders/refill-requests?status=failed`,
+    'order'
+  );
+}
+
+export async function sendAdminNewCancelRequestNotification(
   orderId: number,
   userName: string
 ): Promise<void> {
   await sendAdminNotification(
-    'newManualCancelRequests',
-    `New Manual Order Cancel Request #${orderId}`,
-    `@${userName} requested to cancel order #${orderId}.`,
-    `/admin/orders/cancel-requests`,
+    'cancelRequests',
+    `New Cancel Request for Order #${orderId}`,
+    `@${userName} has requested to cancel order #${orderId}.`,
+    `/admin/orders/cancel-requests?status=pending`,
+    'order'
+  );
+}
+
+export async function sendAdminCancelRequestFailedNotification(
+  orderId: number,
+  userName: string,
+  providerName: string
+): Promise<void> {
+  await sendAdminNotification(
+    'cancelRequests',
+    `Cancel Request Failed #${orderId}`,
+    `Failed to forward cancel request from @${userName} for order #${orderId} to ${providerName}.`,
+    `/admin/orders/cancel-requests?status=failed`,
     'order'
   );
 }
@@ -231,44 +333,98 @@ export async function sendAdminPendingTransactionNotification(
 }
 
 export async function sendAdminApiSyncLogNotification(
-  logId: number,
-  serviceName: string,
-  changeType: string
+  logId: string,
+  provider: string,
+  action: string,
+  servicesAffected: number,
+  status: string
 ): Promise<void> {
+  const statusText = status === 'completed' ? 'completed' : status === 'failed' ? 'failed' : 'in progress';
   await sendAdminNotification(
     'apiSyncLogs',
     `API Sync Log #${logId}`,
-    `Service ${serviceName} was ${changeType} during API sync.`,
+    `API sync ${action} for ${provider} ${statusText}. ${servicesAffected} service(s) affected.`,
     `/admin/services/sync-logs`,
     'system'
   );
 }
 
 export async function sendAdminNewChildPanelOrderNotification(
-  orderId: number,
-  serviceName: string,
-  panelName: string
+  userName: string
 ): Promise<void> {
   await sendAdminNotification(
     'newChildPanelOrders',
-    `New Child Panel Order #${orderId}`,
-    `New order for ${serviceName} from child panel: ${panelName}.`,
-    `/admin/orders`,
+    `New Child Panel Order`,
+    `@${userName} has ordered a child panel.`,
+    `/admin/child-panels`,
     'order'
   );
 }
 
 export async function sendAdminApiBalanceAlertNotification(
   providerName: string,
-  balance: number,
-  threshold: number
+  balance: number
 ): Promise<void> {
   await sendAdminNotification(
     'apiBalanceAlerts',
     `API Balance Alert for ${providerName}`,
-    `${providerName} balance is below 50$, please add funds to avoid service interruptions.`,
-    `/admin/settings/providers`,
+    `${providerName} balance is $${balance.toFixed(2)}, below threshold of $50.00`,
+    `/admin/settings/integrations`,
     'system'
   );
 }
 
+export async function sendAdminUserActivityLogNotification(
+  action: string,
+  userName: string,
+  details: string
+): Promise<void> {
+  await sendAdminNotification(
+    'userActivityLogs',
+    `User Activity: ${action}`,
+    `@${userName}: ${details}`,
+    `/admin/activity-logs`,
+    'user'
+  );
+}
+
+export async function sendAdminAnnouncementNotification(
+  announcementTitle: string,
+  announcementType: string = 'info',
+  targetedAudience: string
+): Promise<void> {
+  try {
+    console.log(`[ADMIN NOTIFICATION] Sending announcement notification:`, {
+      announcementTitle,
+      announcementType,
+      targetedAudience
+    });
+
+    let targetRoles: string[] = [];
+    if (targetedAudience === 'admin') {
+      targetRoles = ['admin'];
+    } else if (targetedAudience === 'moderator') {
+      targetRoles = ['moderator'];
+    } else if (targetedAudience === 'all') {
+      targetRoles = ['admin', 'moderator'];
+    } else {
+      return;
+    }
+
+    const notificationType = `announcement-${announcementType}`;
+
+    await sendAdminNotification(
+      'announcement',
+      'New Announcement',
+      announcementTitle,
+      '/admin',
+      notificationType,
+      targetRoles
+    );
+  } catch (error) {
+    console.error('[ADMIN NOTIFICATION] Error sending announcement notification:', error);
+    if (error instanceof Error) {
+      console.error('[ADMIN NOTIFICATION] Error stack:', error.stack);
+    }
+  }
+}

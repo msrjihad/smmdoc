@@ -437,29 +437,8 @@ export default function SideBarNav({
     const isExpanded = title ? (expandedSections[title] === true) : true;
 
     if (collapsed) {
-      const hasActiveSubmenu = !isSingleItem && title && sectionItems.some(item => isActive(item.href));
-      
       return (
         <ul className="nav-links space-y-0">
-          {title && !isSingleItem && sectionIcon && hasActiveSubmenu && (
-            <li className="nav-item relative group">
-              <div
-                className={cn(
-                  'absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[var(--primary)] to-[var(--secondary)] z-10 transition-opacity duration-200',
-                  'opacity-100'
-                )}
-              ></div>
-              <button
-                className="w-full flex items-center justify-center py-3 px-0 transition-all duration-200 relative group bg-slate-700/50 text-white"
-                title={title}
-              >
-                <span className="flex items-center justify-center transition-colors duration-200 text-lg text-white">
-                  {renderIcon(sectionIcon)}
-                </span>
-              </button>
-            </li>
-          )}
-          
           {sectionItems.map((item, index) => {
             const active = isActive(item.href);
 

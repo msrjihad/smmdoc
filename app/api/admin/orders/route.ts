@@ -471,10 +471,14 @@ export async function POST(req: NextRequest) {
 
       try {
         const { sendAdminFailOrderNotification } = await import('@/lib/notifications/admin-notifications');
+        const user = await db.users.findUnique({
+          where: { id: userId },
+          select: { username: true, name: true }
+        });
         await sendAdminFailOrderNotification(
           order.id,
           service.name || 'Service',
-          updatedOrder.user.name || updatedOrder.user.email || 'User'
+          user?.username || user?.name || 'User'
         );
       } catch (notificationError) {
         console.error('Error sending admin fail order notification:', notificationError);
@@ -502,10 +506,14 @@ export async function POST(req: NextRequest) {
 
     try {
       const { sendAdminNewManualServiceOrderNotification } = await import('@/lib/notifications/admin-notifications');
+      const user = await db.users.findUnique({
+        where: { id: userId },
+        select: { username: true, name: true }
+      });
       await sendAdminNewManualServiceOrderNotification(
         updatedOrder.id,
         service.name || 'Service',
-        order.user.name || order.user.email || 'User'
+        user?.username || user?.name || 'User'
       );
     } catch (notificationError) {
       console.error('Error sending admin new manual service order notification:', notificationError);

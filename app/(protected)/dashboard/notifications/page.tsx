@@ -72,6 +72,8 @@ interface UserNotificationPreferences {
   transactionAlertEnabled: boolean;
   transferFundsEnabled: boolean;
   affiliateWithdrawalsEnabled: boolean;
+  supportTicketsEnabled: boolean;
+  contactMessagesEnabled: boolean;
 }
 
 interface AdminNotificationSettings {
@@ -83,6 +85,8 @@ interface AdminNotificationSettings {
   transactionAlertEnabled: boolean;
   transferFundsEnabled: boolean;
   affiliateWithdrawalsEnabled: boolean;
+  supportTicketsEnabled: boolean;
+  contactMessagesEnabled: boolean;
 }
 
 const NotificationPreferencesPage = () => {
@@ -109,6 +113,8 @@ const NotificationPreferencesPage = () => {
     transactionAlertEnabled: false,
     transferFundsEnabled: false,
     affiliateWithdrawalsEnabled: false,
+    supportTicketsEnabled: false,
+    contactMessagesEnabled: false,
   });
 
   const [userPreferences, setUserPreferences] = useState<UserNotificationPreferences>({
@@ -120,6 +126,8 @@ const NotificationPreferencesPage = () => {
     transactionAlertEnabled: true,
     transferFundsEnabled: true,
     affiliateWithdrawalsEnabled: true,
+    supportTicketsEnabled: true,
+    contactMessagesEnabled: true,
   });
 
   useEffect(() => {
@@ -386,6 +394,48 @@ const NotificationPreferencesPage = () => {
                       }))
                     }
                     title="Toggle affiliate withdrawals notifications"
+                  />
+                </div>
+              )}
+
+              {adminSettings.supportTicketsEnabled && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="form-label mb-1">Support Ticket</label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Notify users about support ticket updates
+                    </p>
+                  </div>
+                  <Switch
+                    checked={userPreferences.supportTicketsEnabled}
+                    onClick={() =>
+                      setUserPreferences(prev => ({
+                        ...prev,
+                        supportTicketsEnabled: !prev.supportTicketsEnabled
+                      }))
+                    }
+                    title="Toggle support ticket notifications"
+                  />
+                </div>
+              )}
+
+              {adminSettings.contactMessagesEnabled && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="form-label mb-1">Contact Message</label>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Notify users about contact message responses
+                    </p>
+                  </div>
+                  <Switch
+                    checked={userPreferences.contactMessagesEnabled}
+                    onClick={() =>
+                      setUserPreferences(prev => ({
+                        ...prev,
+                        contactMessagesEnabled: !prev.contactMessagesEnabled
+                      }))
+                    }
+                    title="Toggle contact message notifications"
                   />
                 </div>
               )}

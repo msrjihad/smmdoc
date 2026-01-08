@@ -157,6 +157,19 @@ export async function POST(request: Request) {
 
     console.log(`User ${session.user.email} created child panel: ${domain}`);
 
+    try {
+      const { sendAdminNewChildPanelOrderNotification } = await import('@/lib/notifications/admin-notifications');
+      const user = await db.users.findUnique({
+        where: { id: userId },
+        select: { username: true, name: true }
+      });
+      await sendAdminNewChildPanelOrderNotification(
+        user?.username || user?.name || 'User'
+      );
+    } catch (notificationError) {
+      console.error('Error sending admin new child panel order notification:', notificationError);
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Child panel created successfully. It will be activated within 3-6 hours.',

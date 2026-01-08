@@ -126,6 +126,24 @@ export async function POST(request: Request) {
       },
     });
 
+    if ((targetedAudience === 'users' || targetedAudience === 'all') && status === 'active') {
+      try {
+        const { sendAnnouncementNotification } = await import('@/lib/notifications/user-notifications');
+        await sendAnnouncementNotification(title, type);
+      } catch (error) {
+        console.error('Error sending announcement notification:', error);
+      }
+    }
+
+    if ((targetedAudience === 'admin' || targetedAudience === 'moderator' || targetedAudience === 'all') && status === 'active') {
+      try {
+        const { sendAdminAnnouncementNotification } = await import('@/lib/notifications/admin-notifications');
+        await sendAdminAnnouncementNotification(title, type, targetedAudience);
+      } catch (error) {
+        console.error('Error sending admin announcement notification:', error);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: announcement,

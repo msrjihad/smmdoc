@@ -66,9 +66,9 @@ export async function PUT(
       );
     }
 
-    if (existingRequest.status !== 'pending') {
+    if (existingRequest.status !== 'pending' && existingRequest.status !== 'failed') {
       return NextResponse.json(
-        { error: 'Only pending cancel requests can be declined', success: false },
+        { error: 'Only pending or failed cancel requests can be declined', success: false },
         { status: 400 }
       );
     }

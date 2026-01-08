@@ -57,6 +57,25 @@ export async function logActivity(data: ActivityLogData) {
         metadata: data.metadata ? JSON.stringify(data.metadata) : null,
       },
     });
+
+    const importantActions = [
+      'login', 'admin_login', 'order_created', 'fund_added', 
+      'balance_added', 'balance_deducted', 'user_created', 
+      'user_deleted', 'order_status_changed', 'api_key_changed'
+    ];
+    
+    if (data.username && importantActions.includes(data.action)) {
+      try {
+        const { sendAdminUserActivityLogNotification } = await import('@/lib/notifications/admin-notifications');
+        await sendAdminUserActivityLogNotification(
+          data.action,
+          data.username,
+          data.details
+        );
+      } catch (notificationError) {
+        console.error('Failed to send activity log notification:', notificationError);
+      }
+    }
   } catch (error) {
     console.error('Failed to log activity:', error);
   }

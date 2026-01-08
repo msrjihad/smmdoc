@@ -172,17 +172,11 @@ const TicketPage: React.FC = () => {
   const subcategories = [
     { value: '2', label: 'Refill' },
     { value: '4', label: 'Cancel' },
-    { value: '6', label: 'Speed up' },
-    { value: '14', label: 'Restart' },
-    { value: '66', label: 'Fake complete' },
   ];
 
   const aiSubcategories = [
     { value: 'Refill', label: 'Refill' },
     { value: 'Cancel', label: 'Cancel' },
-    { value: 'Speed Up', label: 'Speed Up' },
-    { value: 'Restart', label: 'Restart' },
-    { value: 'Fake Complete', label: 'Fake Complete' },
   ];
 
   useEffect(() => {
@@ -206,10 +200,28 @@ const TicketPage: React.FC = () => {
 
       setShowMessageField(false);
       setShowFileUpload(false);
+      const subcategoryMap: Record<string, string> = {
+        'Refill': '2',
+        'Cancel': '4',
+      };
+      const mappedSubcategory = subcategoryMap[formData.aiSubcategory] || '2';
+      
+      const formattedOrderIds = formData.orderIds 
+        ? formData.orderIds.split(',').map(id => id.trim()).join(', ')
+        : 'Order ID Not Found';
+      
+      const orderIdsArray = formData.orderIds 
+        ? formData.orderIds.split(',').map(id => id.trim()).filter(id => id)
+        : [];
+      const orderIdLabel = orderIdsArray.length === 1 ? 'Order ID' : 'Order IDs';
+      
+      const formattedMessage = `Category: ${formData.aiSubcategory}\n${orderIdLabel}: ${formattedOrderIds}`;
+      
       setFormData((prev) => ({
         ...prev,
         category: '1',
-        message: `${formData.orderIds || 'Order ID Not Found'} ${formData.aiSubcategory}`,
+        subcategory: mappedSubcategory,
+        message: formattedMessage,
       }));
     }
   }, [formData.ticketType, formData.aiSubcategory, formData.orderIds]);

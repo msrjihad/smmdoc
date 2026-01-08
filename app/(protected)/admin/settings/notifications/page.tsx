@@ -22,7 +22,7 @@ const NotificationSettingsSkeleton = () => {
           <div className="h-6 w-40 gradient-shimmer rounded ml-3" />
         </div>
         <div className="space-y-6">
-          {Array.from({ length: 12 }).map((_, idx) => (
+          {Array.from({ length: 13 }).map((_, idx) => (
             <div key={idx} className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="h-5 w-48 gradient-shimmer rounded mb-2" />
@@ -40,7 +40,7 @@ const NotificationSettingsSkeleton = () => {
           <div className="h-6 w-36 gradient-shimmer rounded ml-3" />
         </div>
         <div className="space-y-6">
-          {Array.from({ length: 5 }).map((_, idx) => (
+          {Array.from({ length: 12 }).map((_, idx) => (
             <div key={idx} className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="h-5 w-40 gradient-shimmer rounded mb-2" />
@@ -95,6 +95,10 @@ interface UserNotifications {
   transactionAlertEnabled: boolean;
   transferFundsEnabled: boolean;
   affiliateWithdrawalsEnabled: boolean;
+  supportTicketsEnabled: boolean;
+  contactMessagesEnabled: boolean;
+  blogPostEnabled: boolean;
+  announcementEnabled: boolean;
 }
 
 interface AdminNotifications {
@@ -103,13 +107,14 @@ interface AdminNotifications {
   newMessagesEnabled: boolean;
   newManualServiceOrdersEnabled: boolean;
   failOrdersEnabled: boolean;
-  newManualRefillRequestsEnabled: boolean;
-  newManualCancelRequestsEnabled: boolean;
+  refillRequestsEnabled: boolean;
+  cancelRequestsEnabled: boolean;
   newUsersEnabled: boolean;
   userActivityLogsEnabled: boolean;
   pendingTransactionsEnabled: boolean;
   apiSyncLogsEnabled: boolean;
   newChildPanelOrdersEnabled: boolean;
+  announcementEnabled: boolean;
 }
 
 const NotificationSettingsPage = () => {
@@ -138,6 +143,10 @@ const NotificationSettingsPage = () => {
     transactionAlertEnabled: true,
     transferFundsEnabled: true,
     affiliateWithdrawalsEnabled: true,
+    supportTicketsEnabled: true,
+    contactMessagesEnabled: true,
+    blogPostEnabled: true,
+    announcementEnabled: true,
   });
 
   const [adminNotifications, setAdminNotifications] = useState<AdminNotifications>({
@@ -146,13 +155,14 @@ const NotificationSettingsPage = () => {
     newMessagesEnabled: true,
     newManualServiceOrdersEnabled: true,
     failOrdersEnabled: true,
-    newManualRefillRequestsEnabled: true,
-    newManualCancelRequestsEnabled: true,
+    refillRequestsEnabled: true,
+    cancelRequestsEnabled: true,
     newUsersEnabled: true,
     userActivityLogsEnabled: false,
     pendingTransactionsEnabled: true,
     apiSyncLogsEnabled: false,
     newChildPanelOrdersEnabled: true,
+    announcementEnabled: true,
   });
 
   useEffect(() => {
@@ -326,7 +336,7 @@ const NotificationSettingsPage = () => {
                 <div>
                   <label className="form-label mb-1">New Manual Service Orders</label>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Get notified about new manual service orders
+                    Get notified when user orders a manual service
                   </p>
                 </div>
                 <Switch
@@ -364,15 +374,15 @@ const NotificationSettingsPage = () => {
                 <div>
                   <label className="form-label mb-1">Refill Requests</label>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Get notified about refill requests
+                    Get notified about refill requests and failures
                   </p>
                 </div>
                 <Switch
-                  checked={adminNotifications.newManualRefillRequestsEnabled}
+                  checked={adminNotifications.refillRequestsEnabled}
                   onClick={() =>
                     setAdminNotifications(prev => ({
                       ...prev,
-                      newManualRefillRequestsEnabled: !prev.newManualRefillRequestsEnabled
+                      refillRequestsEnabled: !prev.refillRequestsEnabled
                     }))
                   }
                   title="Toggle manual refill request notifications"
@@ -381,17 +391,17 @@ const NotificationSettingsPage = () => {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="form-label mb-1">New Manual Cancel Requests</label>
+                  <label className="form-label mb-1">Cancel Requests</label>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Get notified about new manual cancel requests
+                    Get notified about cancel requests and failures
                   </p>
                 </div>
                 <Switch
-                  checked={adminNotifications.newManualCancelRequestsEnabled}
+                  checked={adminNotifications.cancelRequestsEnabled}
                   onClick={() =>
                     setAdminNotifications(prev => ({
                       ...prev,
-                      newManualCancelRequestsEnabled: !prev.newManualCancelRequestsEnabled
+                      cancelRequestsEnabled: !prev.cancelRequestsEnabled
                     }))
                   }
                   title="Toggle manual cancel request notifications"
@@ -490,6 +500,25 @@ const NotificationSettingsPage = () => {
                     }))
                   }
                   title="Toggle child panel order notifications"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="form-label mb-1">Announcement</label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Get notified about new announcements
+                  </p>
+                </div>
+                <Switch
+                  checked={adminNotifications.announcementEnabled}
+                  onClick={() =>
+                    setAdminNotifications(prev => ({
+                      ...prev,
+                      announcementEnabled: !prev.announcementEnabled
+                    }))
+                  }
+                  title="Toggle announcement notifications"
                 />
               </div>
 
@@ -660,6 +689,82 @@ const NotificationSettingsPage = () => {
                     }))
                   }
                   title="Toggle affiliate withdrawals notifications"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="form-label mb-1">Support Ticket</label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Notify users about support ticket updates
+                  </p>
+                </div>
+                <Switch
+                  checked={userNotifications.supportTicketsEnabled}
+                  onClick={() =>
+                    setUserNotifications(prev => ({
+                      ...prev,
+                      supportTicketsEnabled: !prev.supportTicketsEnabled
+                    }))
+                  }
+                  title="Toggle support ticket notifications"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="form-label mb-1">Contact Message</label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Notify users about contact message responses
+                  </p>
+                </div>
+                <Switch
+                  checked={userNotifications.contactMessagesEnabled}
+                  onClick={() =>
+                    setUserNotifications(prev => ({
+                      ...prev,
+                      contactMessagesEnabled: !prev.contactMessagesEnabled
+                    }))
+                  }
+                  title="Toggle contact message notifications"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="form-label mb-1">Blog Post</label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Notify users about new blog posts
+                  </p>
+                </div>
+                <Switch
+                  checked={userNotifications.blogPostEnabled}
+                  onClick={() =>
+                    setUserNotifications(prev => ({
+                      ...prev,
+                      blogPostEnabled: !prev.blogPostEnabled
+                    }))
+                  }
+                  title="Toggle blog post notifications"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="form-label mb-1">Announcement</label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Notify users about new announcements
+                  </p>
+                </div>
+                <Switch
+                  checked={userNotifications.announcementEnabled}
+                  onClick={() =>
+                    setUserNotifications(prev => ({
+                      ...prev,
+                      announcementEnabled: !prev.announcementEnabled
+                    }))
+                  }
+                  title="Toggle announcement notifications"
                 />
               </div>
 

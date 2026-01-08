@@ -151,6 +151,7 @@ export async function GET(request: NextRequest) {
       username: ticket.user?.username || 'N/A',
       name: ticket.user?.name || 'Unknown User',
       subject: ticket.subject,
+      ticketType: ticket.ticketType || 'Human',
       createdAt: ticket.createdAt.toISOString(),
       lastUpdated: ticket.updatedAt ? ticket.updatedAt.toISOString() : ticket.createdAt.toISOString(),
       status: mapDatabaseStatusToFrontend(ticket.status),

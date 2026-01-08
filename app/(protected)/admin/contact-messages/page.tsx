@@ -511,8 +511,7 @@ const ContactMessagesPage = () => {
   };
 
   const handleViewEditMessage = (messageId: string) => {
-
-    window.open(`/admin/contact-messages/${messageId}`, '_blank');
+    router.push(`/admin/contact-messages/${messageId}`);
   };
 
   const handleDeleteMessage = async (messageId: string) => {

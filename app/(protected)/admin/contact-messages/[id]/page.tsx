@@ -148,21 +148,32 @@ interface ContactMessageDetails {
   };
 }
 
-const ContactDetailsPage = () => {
+const ContactDetailsPage = ({ params }: { params: Promise<{ id: string }> }) => {
   const router = useRouter();
   const { appName } = useAppNameWithFallback();
   const currentUser = useCurrentUser();
   const userDetails = useSelector((state: any) => state.userDetails);
   const [timeFormat, setTimeFormat] = useState<string>('24');
   const [userTimezone, setUserTimezone] = useState<string>('Asia/Dhaka');
-
-  const messageId: string = typeof window !== 'undefined'
-    ? (window.location.pathname.split('/').pop() ?? '1')
-    : '1';
+  const [messageId, setMessageId] = useState<string | null>(null);
 
   useEffect(() => {
-    setPageTitle(`Message Details ${formatMessageID(messageId)}`, appName);
-  }, [messageId]);
+    const resolveParams = async () => {
+      try {
+        const resolvedParams = await params;
+        setMessageId(resolvedParams.id);
+      } catch (error) {
+        console.error('Error resolving params:', error);
+      }
+    };
+    resolveParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (messageId) {
+      setPageTitle(`Message Details ${formatMessageID(messageId)}`, appName);
+    }
+  }, [messageId, appName]);
 
   useEffect(() => {
     const loadTimeFormat = async () => {
@@ -282,6 +293,7 @@ const ContactDetailsPage = () => {
   };
 
   const fetchContactDetails = async () => {
+    if (!messageId) return;
     try {
       const response = await fetch(`/api/admin/contact-messages/${messageId}?include_notes=true`);
       const data = await response.json();
@@ -491,6 +503,7 @@ const ContactDetailsPage = () => {
   };
 
   const markAsRead = async () => {
+    if (!messageId) return;
     try {
       await fetch(`/api/admin/contact-messages/${messageId}`, {
         method: 'PATCH',
@@ -539,6 +552,10 @@ const ContactDetailsPage = () => {
 
   const handleReplySubmit = async () => {
     if (!replyContent.trim()) return;
+    if (!messageId) {
+      showToast('Invalid message ID', 'error');
+      return;
+    }
 
     setIsReplying(true);
 
@@ -632,6 +649,10 @@ const ContactDetailsPage = () => {
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
+    if (!messageId) {
+      showToast('Invalid message ID', 'error');
+      return;
+    }
 
     setIsAddingNote(true);
 

@@ -355,6 +355,9 @@ const OrderTable: React.FC<OrderTableProps> = ({
                             (order.cancelRequests && order.cancelRequests.some((req: CancelRequest) => req.status === 'pending')) ||
                             localPendingCancelRequests.has(order.id);
 
+                          const hasFailedCancelRequest =
+                            order.cancelRequests && order.cancelRequests.some((req: CancelRequest) => req.status === 'failed');
+
                           const hasDeclinedCancelRequest =
                             order.cancelRequests && order.cancelRequests.some((req: CancelRequest) => req.status === 'declined');
 
@@ -362,7 +365,7 @@ const OrderTable: React.FC<OrderTableProps> = ({
                             return (
                               <button
                                 disabled
-                                className="text-gray-500 text-xs px-2 py-1 border border-gray-400 rounded bg-gray-100 opacity-70 cursor-not-allowed"
+                                className="text-gray-400 text-xs px-2 py-1 border border-gray-300 rounded bg-gray-50 opacity-60 cursor-not-allowed"
                                 title="Cancel request was declined"
                               >
                                 Cancel Declined
@@ -370,15 +373,19 @@ const OrderTable: React.FC<OrderTableProps> = ({
                             );
                           }
 
-                          return hasPendingCancelRequest ? (
-                            <button
-                              disabled
-                              className="text-gray-400 text-xs px-2 py-1 border border-gray-300 rounded bg-gray-50 opacity-60 cursor-not-allowed"
-                              title="Cancel request submitted"
-                            >
-                              Cancel Requested
-                            </button>
-                          ) : (
+                          if (hasPendingCancelRequest || hasFailedCancelRequest) {
+                            return (
+                              <button
+                                disabled
+                                className="text-gray-400 text-xs px-2 py-1 border border-gray-300 rounded bg-gray-50 opacity-60 cursor-not-allowed"
+                                title={hasFailedCancelRequest ? "Cancel request failed but was submitted" : "Cancel request submitted"}
+                              >
+                                Cancel Requested
+                              </button>
+                            );
+                          }
+
+                          return (
                             <button
                               onClick={() => onOpenCancelModal(order.id)}
                               className="text-red-600 hover:text-red-800 text-xs px-2 py-1 border border-red-300 rounded hover:bg-red-50"

@@ -90,8 +90,8 @@ interface NotificationSettings {
     newMessages: boolean;
     newManualServiceOrders: boolean;
     failOrders: boolean;
-    newManualRefillRequests: boolean;
-    newManualCancelRequests: boolean;
+    refillRequests: boolean;
+    cancelRequests: boolean;
     newUsers: boolean;
     userActivityLogs: boolean;
     pendingTransactions: boolean;
@@ -189,8 +189,8 @@ const IntegrationPage = () => {
       newMessages: false,
       newManualServiceOrders: false,
       failOrders: false,
-      newManualRefillRequests: false,
-      newManualCancelRequests: false,
+      refillRequests: false,
+      cancelRequests: false,
       newUsers: false,
       userActivityLogs: false,
       pendingTransactions: false,
@@ -304,8 +304,8 @@ const IntegrationPage = () => {
                 newMessages: settings.adminNotifNewMessages,
                 newManualServiceOrders: settings.adminNotifNewManualServiceOrders,
                 failOrders: settings.adminNotifFailOrders,
-                newManualRefillRequests: settings.adminNotifNewManualRefillRequests,
-                newManualCancelRequests: settings.adminNotifNewManualCancelRequests,
+                refillRequests: settings.adminNotifNewManualRefillRequests,
+                cancelRequests: settings.adminNotifNewManualCancelRequests,
                 newUsers: settings.adminNotifNewUsers,
                 userActivityLogs: settings.adminNotifUserActivityLogs,
                 pendingTransactions: settings.adminNotifPendingTransactions,
@@ -1865,8 +1865,8 @@ const IntegrationPage = () => {
                                   newMessages: allSelected,
                                   newManualServiceOrders: allSelected,
                                   failOrders: allSelected,
-                                  newManualRefillRequests: allSelected,
-                                  newManualCancelRequests: allSelected,
+                                  refillRequests: allSelected,
+                                  cancelRequests: allSelected,
                                   newUsers: allSelected,
                                   userActivityLogs: allSelected,
                                   pendingTransactions: allSelected,
@@ -2012,11 +2012,11 @@ const IntegrationPage = () => {
                               <input
                                 type="checkbox"
                                 id="admin-new-manual-refill-requests"
-                                checked={notificationSettings.adminNotifications.newManualRefillRequests}
+                                checked={notificationSettings.adminNotifications.refillRequests}
                                 onChange={(e) =>
                                   setNotificationSettings(prev => ({
                                     ...prev,
-                                    adminNotifications: { ...prev.adminNotifications, newManualRefillRequests: e.target.checked }
+                                    adminNotifications: { ...prev.adminNotifications, refillRequests: e.target.checked }
                                   }))
                                 }
                                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
@@ -2037,11 +2037,11 @@ const IntegrationPage = () => {
                               <input
                                 type="checkbox"
                                 id="admin-new-manual-cancel-requests"
-                                checked={notificationSettings.adminNotifications.newManualCancelRequests}
+                                checked={notificationSettings.adminNotifications.cancelRequests}
                                 onChange={(e) =>
                                   setNotificationSettings(prev => ({
                                     ...prev,
-                                    adminNotifications: { ...prev.adminNotifications, newManualCancelRequests: e.target.checked }
+                                    adminNotifications: { ...prev.adminNotifications, cancelRequests: e.target.checked }
                                   }))
                                 }
                                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"

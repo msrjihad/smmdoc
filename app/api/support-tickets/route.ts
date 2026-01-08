@@ -3,6 +3,74 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
 import { getTicketSettings } from '@/lib/utils/ticket-settings';
+import { ApiRequestBuilder, ApiResponseParser, createApiSpecFromProvider } from '@/lib/provider-api-specification';
+
+async function checkProviderRefillEligibility(
+  provider: any,
+  providerOrderId: string
+): Promise<{ eligible: boolean; reason?: string }> {
+  try {
+    const apiSpec = createApiSpecFromProvider(provider);
+    const requestBuilder = new ApiRequestBuilder(
+      apiSpec,
+      provider.api_url,
+      provider.api_key,
+      (provider as any).http_method || (provider as any).httpMethod || 'POST'
+    );
+
+    const statusRequest = requestBuilder.buildOrderStatusRequest(providerOrderId);
+
+    const response = await fetch(statusRequest.url, {
+      method: statusRequest.method,
+      headers: statusRequest.headers || {},
+      body: statusRequest.data,
+      signal: AbortSignal.timeout((apiSpec.timeoutSeconds || 30) * 1000)
+    });
+
+    if (!response.ok) {
+      console.warn(`Provider API error when checking refill eligibility: ${response.status}`);
+      return { eligible: true };
+    }
+
+    const result = await response.json();
+
+    if (result.error) {
+      console.warn(`Provider error when checking refill eligibility: ${result.error}`);
+      return { eligible: true };
+    }
+
+    const responseParser = new ApiResponseParser(apiSpec);
+    const parsedStatus = responseParser.parseOrderStatusResponse(result);
+
+    const eligibleStatuses = ['completed', 'partial'];
+    if (!eligibleStatuses.includes(parsedStatus.status?.toLowerCase())) {
+      return {
+        eligible: false,
+        reason: `Order status from provider is "${parsedStatus.status}", which is not eligible for refill. Only completed or partial orders can be refilled.`
+      };
+    }
+
+    const refillAvailable = 
+      result.refill_available !== undefined ? result.refill_available :
+      result.refillAvailable !== undefined ? result.refillAvailable :
+      result.can_refill !== undefined ? result.can_refill :
+      result.canRefill !== undefined ? result.canRefill :
+      null;
+
+    if (refillAvailable === false || refillAvailable === 0 || refillAvailable === '0' || refillAvailable === 'false') {
+      return {
+        eligible: false,
+        reason: 'Provider indicates this order is not eligible for refill at this time.'
+      };
+    }
+
+    return { eligible: true };
+
+  } catch (error) {
+    console.error('Error checking provider refill eligibility:', error);
+    return { eligible: true };
+  }
+}
 
 async function processRefillRequest(orderIds: string[], userId: number) {
   try {
@@ -14,13 +82,20 @@ async function processRefillRequest(orderIds: string[], userId: number) {
       try {
         const order = await db.newOrders.findUnique({
           where: { id: parseInt(orderId) },
-          include: {
+          select: {
+            id: true,
+            userId: true,
+            status: true,
+            updatedAt: true,
+            providerOrderId: true,
             service: {
               select: {
                 id: true,
                 name: true,
                 refill: true,
-                refillDays: true
+                refillDays: true,
+                providerId: true,
+                providerServiceId: true
               }
             }
           }
@@ -39,7 +114,7 @@ async function processRefillRequest(orderIds: string[], userId: number) {
         }
 
         if (!order.service.refill) {
-          results.push({ orderId, success: false, message: 'Service does not support refill' });
+          results.push({ orderId, success: false, message: 'This service does not support refill' });
           failureCount++;
           continue;
         }
@@ -47,17 +122,57 @@ async function processRefillRequest(orderIds: string[], userId: number) {
         const existingRequest = await db.refillRequests.findFirst({
           where: {
             orderId: parseInt(orderId),
-            status: { in: ['pending', 'approved'] }
+            status: {
+              in: ['pending', 'approved']
+            }
           }
         });
 
         if (existingRequest) {
-          results.push({ orderId, success: false, message: 'Refill request already exists' });
+          results.push({ orderId, success: false, message: 'A refill request already exists for this order' });
           failureCount++;
           continue;
         }
 
-        await db.refillRequests.create({
+        const completionTime = new Date(order.updatedAt).getTime();
+        const currentTime = new Date().getTime();
+
+        if (order.service.refillDays) {
+          const daysSinceCompletion = Math.floor(
+            (currentTime - completionTime) / (1000 * 60 * 60 * 24)
+          );
+          
+          if (daysSinceCompletion > order.service.refillDays) {
+            results.push({ orderId, success: false, message: `Refill requests must be made within ${order.service.refillDays} days of order completion` });
+            failureCount++;
+            continue;
+          }
+        }
+
+        if (order.service.providerId && order.providerOrderId) {
+          try {
+            const provider = await db.apiProviders.findUnique({
+              where: { id: order.service.providerId }
+            });
+
+            if (provider && provider.status === 'active') {
+              const providerEligibility = await checkProviderRefillEligibility(
+                provider,
+                order.providerOrderId
+              );
+
+              if (!providerEligibility.eligible) {
+                results.push({ orderId, success: false, message: providerEligibility.reason || 'Provider indicates this order is not eligible for refill' });
+                failureCount++;
+                continue;
+              }
+            }
+          } catch (error) {
+            console.error(`Error checking provider refill eligibility for order ${orderId}:`, error);
+          }
+        }
+
+        const refillRequest = await db.refillRequests.create({
           data: {
             orderId: parseInt(orderId),
             userId: userId,
@@ -66,10 +181,63 @@ async function processRefillRequest(orderIds: string[], userId: number) {
           }
         });
 
-        await db.newOrders.update({
-          where: { id: parseInt(orderId) },
-          data: { status: 'Refill Started' }
-        });
+        try {
+          const { sendAdminNewRefillRequestNotification } = await import('@/lib/notifications/admin-notifications');
+          const user = await db.users.findUnique({
+            where: { id: userId },
+            select: { username: true, name: true }
+          });
+          await sendAdminNewRefillRequestNotification(
+            parseInt(orderId),
+            user?.username || user?.name || 'User'
+          );
+        } catch (notificationError) {
+          console.error('Error sending admin new refill request notification:', notificationError);
+        }
+
+        if (order.service.providerId && order.providerOrderId) {
+          try {
+            const provider = await db.apiProviders.findUnique({
+              where: { id: order.service.providerId }
+            });
+
+            if (provider && provider.status === 'active') {
+              const providerOrderId = order.providerOrderId;
+              
+              if (providerOrderId) {
+                const apiSpec = createApiSpecFromProvider(provider);
+                const requestBuilder = new ApiRequestBuilder(
+                  apiSpec,
+                  provider.api_url,
+                  provider.api_key,
+                  (provider as any).http_method || (provider as any).httpMethod || 'POST'
+                );
+
+                const refillRequestConfig = requestBuilder.buildRefillRequest(String(providerOrderId));
+
+                try {
+                  const providerResponse = await fetch(refillRequestConfig.url, {
+                    method: refillRequestConfig.method,
+                    headers: refillRequestConfig.headers || {},
+                    body: refillRequestConfig.data,
+                    signal: AbortSignal.timeout((apiSpec.timeoutSeconds || 30) * 1000)
+                  });
+
+                  if (providerResponse.ok) {
+                    const providerResult = await providerResponse.json();
+                    if (!providerResult.error) {
+                      console.log('Refill request submitted to provider successfully');
+                    }
+                  }
+                } catch (providerError) {
+                  console.error('Error submitting refill to provider:', providerError);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error processing provider refill:', error);
+          }
+        }
 
         results.push({ orderId, success: true, message: 'Refill request created successfully' });
         successCount++;
@@ -83,7 +251,9 @@ async function processRefillRequest(orderIds: string[], userId: number) {
     return {
       success: successCount > 0,
       message: `Processed ${successCount} refill requests successfully, ${failureCount} failed`,
-      details: results
+      details: results,
+      successOrderIds: results.filter(r => r.success).map(r => r.orderId),
+      failedOrderIds: results.filter(r => !r.success).map(r => r.orderId)
     };
   } catch (error) {
     console.error('Error processing refill requests:', error);
@@ -101,12 +271,27 @@ async function processCancelRequest(orderIds: string[], userId: number) {
       try {
         const order = await db.newOrders.findUnique({
           where: { id: parseInt(orderId) },
-          include: {
+          select: {
+            id: true,
+            userId: true,
+            status: true,
+            createdAt: true,
+            price: true,
+            providerOrderId: true,
             service: {
               select: {
                 id: true,
                 name: true,
-                cancel: true
+                cancel: true,
+                providerId: true,
+                providerServiceId: true
+              }
+            },
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
               }
             }
           }
@@ -118,44 +303,156 @@ async function processCancelRequest(orderIds: string[], userId: number) {
           continue;
         }
 
-        if (!['pending', 'processing', 'in progress'].includes(order.status.toLowerCase())) {
-          results.push({ orderId, success: false, message: 'Only pending/processing orders can be cancelled' });
+        if (!order.service.cancel) {
+          results.push({ orderId, success: false, message: 'This service does not support cancellation' });
           failureCount++;
           continue;
         }
 
-        if (!order.service.cancel) {
-          results.push({ orderId, success: false, message: 'Service does not support cancellation' });
+        if (!['pending', 'processing', 'in_progress'].includes(order.status.toLowerCase())) {
+          results.push({ orderId, success: false, message: 'Only pending or processing orders can be cancelled' });
           failureCount++;
           continue;
         }
 
         const existingRequest = await db.cancelRequests.findFirst({
           where: {
-            orderId: parseInt(orderId),
-            status: { in: ['pending', 'approved'] }
+            orderId: parseInt(orderId)
+          },
+          orderBy: {
+            createdAt: 'desc'
           }
         });
 
         if (existingRequest) {
-          results.push({ orderId, success: false, message: 'Cancel request already exists' });
+          results.push({ orderId, success: false, message: 'A cancellation request for this order already exists. Unable to request to cancel.' });
           failureCount++;
           continue;
         }
 
-        await db.cancelRequests.create({
+        const refundAmount = order.price;
+
+        const isSelfService = !order.service.providerId;
+
+        const cancelRequest = await db.cancelRequests.create({
           data: {
             orderId: parseInt(orderId),
             userId: userId,
             reason: 'Automated cancel request from AI support ticket',
-            status: 'pending'
+            status: isSelfService ? 'approved' : 'pending',
+            refundAmount: refundAmount,
+            ...(isSelfService ? {
+              processedAt: new Date(),
+              adminNotes: 'Automatically approved for self service order'
+            } : {})
           }
         });
 
-        await db.newOrders.update({
-          where: { id: parseInt(orderId) },
-          data: { status: 'Canceled' }
-        });
+        if (isSelfService) {
+          await db.$transaction(async (tx) => {
+            await tx.newOrders.update({
+              where: { id: parseInt(orderId) },
+              data: { status: 'cancelled' }
+            });
+
+            await tx.users.update({
+              where: { id: userId },
+              data: {
+                balance: {
+                  increment: refundAmount
+                }
+              }
+            });
+          });
+
+          results.push({ orderId, success: true, message: 'Order cancelled successfully (self service)' });
+          successCount++;
+          continue;
+        }
+
+        try {
+          const { sendAdminNewCancelRequestNotification } = await import('@/lib/notifications/admin-notifications');
+          const user = await db.users.findUnique({
+            where: { id: userId },
+            select: { username: true, name: true }
+          });
+          await sendAdminNewCancelRequestNotification(
+            parseInt(orderId),
+            user?.username || user?.name || 'User'
+          );
+        } catch (notificationError) {
+          console.error('Error sending admin new cancel request notification:', notificationError);
+        }
+
+        let providerCancelSubmitted = false;
+        let providerCancelError: string | null = null;
+        let shouldMarkAsFailed = false;
+
+        if (order.service.providerId && order.providerOrderId) {
+          try {
+            const provider = await db.apiProviders.findUnique({
+              where: { id: order.service.providerId }
+            });
+
+            if (provider && provider.status === 'active') {
+              const providerOrderId = order.providerOrderId;
+              
+              if (providerOrderId) {
+                const apiSpec = createApiSpecFromProvider(provider);
+                const requestBuilder = new ApiRequestBuilder(
+                  apiSpec,
+                  provider.api_url,
+                  provider.api_key,
+                  (provider as any).http_method || (provider as any).httpMethod || 'POST'
+                );
+
+                const cancelRequestConfig = requestBuilder.buildCancelRequest([String(providerOrderId)]);
+
+                try {
+                  const providerResponse = await fetch(cancelRequestConfig.url, {
+                    method: cancelRequestConfig.method,
+                    headers: cancelRequestConfig.headers || {},
+                    body: cancelRequestConfig.data,
+                    signal: AbortSignal.timeout((apiSpec.timeoutSeconds || 30) * 1000)
+                  });
+
+                  if (providerResponse.ok) {
+                    const providerResult = await providerResponse.json();
+                    
+                    if (providerResult.error) {
+                      providerCancelError = `Provider error: ${providerResult.error}`;
+                      shouldMarkAsFailed = true;
+                    } else {
+                      providerCancelSubmitted = true;
+                    }
+                  } else {
+                    providerCancelError = `Provider API error: ${providerResponse.status} ${providerResponse.statusText}`;
+                    shouldMarkAsFailed = true;
+                  }
+                } catch (error) {
+                  providerCancelError = error instanceof Error ? error.message : 'Unknown error submitting to provider';
+                  shouldMarkAsFailed = true;
+                }
+              }
+            }
+          } catch (error) {
+            providerCancelError = error instanceof Error ? error.message : 'Unknown error submitting to provider';
+            shouldMarkAsFailed = true;
+            console.error('Error submitting cancel request to provider:', error);
+          }
+        }
+
+        if (shouldMarkAsFailed) {
+          await db.cancelRequests.update({
+            where: { id: cancelRequest.id },
+            data: { 
+              status: 'failed',
+              adminNotes: `Provider submission failed: ${providerCancelError}`,
+              updatedAt: new Date()
+            }
+          });
+          cancelRequest.status = 'failed';
+        }
 
         results.push({ orderId, success: true, message: 'Cancel request created successfully' });
         successCount++;
@@ -169,7 +466,9 @@ async function processCancelRequest(orderIds: string[], userId: number) {
     return {
       success: successCount > 0,
       message: `Processed ${successCount} cancel requests successfully, ${failureCount} failed`,
-      details: results
+      details: results,
+      successOrderIds: results.filter(r => r.success).map(r => r.orderId),
+      failedOrderIds: results.filter(r => !r.success).map(r => r.orderId)
     };
   } catch (error) {
     console.error('Error processing cancel requests:', error);
@@ -442,20 +741,45 @@ export async function POST(request: NextRequest) {
 
     let systemMessage = '';
     let ticketStatus = 'Open';
+    let finalMessage = validatedData.message;
     
     if (validatedData.ticketType === 'AI' && validatedData.aiSubcategory) {
       if (orderIds.length > 0) {
         try {
           if (validatedData.aiSubcategory === 'Refill') {
             const refillResult = await processRefillRequest(orderIds, parseInt(session.user.id));
-            systemMessage = refillResult.success 
-              ? '✅ Refill Request successful.'
-              : '❌ Refill request failed. Because the service is not allowed to refill.';
+            const successIds = refillResult.successOrderIds || [];
+            const failedIds = refillResult.failedOrderIds || [];
+            
+            const successLabel = successIds.length === 1 ? 'Order ID' : 'Order IDs';
+            const failedLabel = failedIds.length === 1 ? 'order' : 'order';
+            const allOrderLabel = orderIds.length === 1 ? 'Order ID' : 'Order IDs';
+            
+            if (successIds.length > 0 && failedIds.length === 0) {
+              systemMessage = `Your ${successLabel} ${successIds.join(', ')} has been requested to refill.\n\nThank you for using our service.`;
+            } else if (successIds.length > 0 && failedIds.length > 0) {
+              systemMessage = `Your ${successLabel} ${successIds.join(', ')} has been request to refill and ${failedIds.join(', ')} ${failedLabel} cannot be request to refill because of error or not eligibility.\n\nThank you for using our service.`;
+            } else {
+              systemMessage = `Unable to request to refill the ${allOrderLabel} ${orderIds.join(', ')}.\n\nThank you for using our service.`;
+            }
+            ticketStatus = 'closed';
           } else if (validatedData.aiSubcategory === 'Cancel') {
             const cancelResult = await processCancelRequest(orderIds, parseInt(session.user.id));
-            systemMessage = cancelResult.success 
-              ? '✅ Cancel Request successful.'
-              : '❌ Cancel request failed. Order may not be eligible for cancellation.';
+            const successIds = cancelResult.successOrderIds || [];
+            const failedIds = cancelResult.failedOrderIds || [];
+            
+            const successLabel = successIds.length === 1 ? 'Order ID' : 'Order IDs';
+            const failedLabel = failedIds.length === 1 ? 'order' : 'order';
+            const allOrderLabel = orderIds.length === 1 ? 'Order ID' : 'Order IDs';
+            
+            if (successIds.length > 0 && failedIds.length === 0) {
+              systemMessage = `Your ${successLabel} ${successIds.join(', ')} has been requested to cancel.\n\nThank you for using our service.`;
+            } else if (successIds.length > 0 && failedIds.length > 0) {
+              systemMessage = `Your ${successLabel} ${successIds.join(', ')} has been request to cancel and ${failedIds.join(', ')} ${failedLabel} cannot be request to cancel because of error or not eligibility.\n\nThank you for using our service.`;
+            } else {
+              systemMessage = `Unable to request to cancel the ${allOrderLabel} ${orderIds.join(', ')}.\n\nThank you for using our service.`;
+            }
+            ticketStatus = 'closed';
           } else if (validatedData.aiSubcategory === 'Speed Up') {
             const speedUpResult = await processSpeedUpRequest(orderIds, parseInt(session.user.id));
             systemMessage = speedUpResult.success 
@@ -479,13 +803,14 @@ export async function POST(request: NextRequest) {
       } else {
         systemMessage = 'No valid order IDs provided for processing.';
       }
+      
     }
 
     const ticket = await db.supportTickets.create({
       data: {
         userId: parseInt(session.user.id),
         subject: validatedData.subject,
-        message: validatedData.message,
+        message: finalMessage,
         category: validatedData.category,
         subcategory: validatedData.subcategory,
         ticketType: validatedData.ticketType,
@@ -495,6 +820,7 @@ export async function POST(request: NextRequest) {
         priority: validatedData.priority,
         attachments: validatedData.attachments ? JSON.stringify(validatedData.attachments) : null,
         status: ticketStatus,
+        isRead: validatedData.ticketType === 'AI' ? true : false,
       },
       include: {
         user: {
@@ -512,21 +838,41 @@ export async function POST(request: NextRequest) {
       data: {
         ticketId: ticket.id,
         userId: parseInt(session.user.id),
-        message: validatedData.message,
+        message: finalMessage,
         messageType: 'customer',
         isFromAdmin: false,
         attachments: validatedData.attachments ? JSON.stringify(validatedData.attachments) : null,
       }
     });
 
-    try {
-      const { sendAdminSupportTicketNotification } = await import('@/lib/notifications/admin-notifications');
-      await sendAdminSupportTicketNotification(
-        ticket.id,
-        ticket.user.username || ticket.user.name || 'User'
-      );
-    } catch (notificationError) {
-      console.error('Error sending admin support ticket notification:', notificationError);
+    if (systemMessage && validatedData.ticketType === 'AI') {
+      await db.$transaction([
+        db.ticketMessages.create({
+          data: {
+            ticketId: ticket.id,
+            userId: parseInt(session.user.id),
+            message: systemMessage,
+            messageType: 'system',
+            isFromAdmin: false,
+          }
+        }),
+        db.supportTickets.update({
+          where: { id: ticket.id },
+          data: { updatedAt: new Date() }
+        })
+      ]);
+    }
+
+    if (validatedData.ticketType === 'Human') {
+      try {
+        const { sendAdminSupportTicketNotification } = await import('@/lib/notifications/admin-notifications');
+        await sendAdminSupportTicketNotification(
+          ticket.id,
+          ticket.user.username || ticket.user.name || 'User'
+        );
+      } catch (notificationError) {
+        console.error('Error sending admin support ticket notification:', notificationError);
+      }
     }
 
     return NextResponse.json({

@@ -181,6 +181,15 @@ export async function PUT(
       }
     });
 
+    if (status === 'published' && !existingPost.publishedAt) {
+      try {
+        const { sendBlogPostNotification } = await import('@/lib/notifications/user-notifications');
+        await sendBlogPostNotification(updatedPost.title, updatedPost.slug);
+      } catch (error) {
+        console.error('Error sending blog post notification:', error);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Blog post updated successfully',

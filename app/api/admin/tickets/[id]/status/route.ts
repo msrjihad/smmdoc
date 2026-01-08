@@ -55,7 +55,14 @@ export async function PATCH(
     }
 
     const existingTicket = await db.supportTickets.findUnique({
-      where: { id: ticketId }
+      where: { id: ticketId },
+      include: {
+        user: {
+          select: {
+            id: true
+          }
+        }
+      }
     });
 
     if (!existingTicket) {
@@ -98,6 +105,28 @@ export async function PATCH(
           isFromAdmin: true
         }
       });
+
+      if (updatedTicket.user?.id) {
+        try {
+          const { sendSupportTicketClosedNotification, sendSupportTicketStatusUpdatedNotification } = await import('@/lib/notifications/user-notifications');
+          
+          if (status.toLowerCase() === 'closed') {
+            await sendSupportTicketClosedNotification(
+              updatedTicket.user.id,
+              ticketId
+            );
+          } else {
+            const statusName = capitalizeStatus(status);
+            await sendSupportTicketStatusUpdatedNotification(
+              updatedTicket.user.id,
+              ticketId,
+              statusName
+            );
+          }
+        } catch (notificationError) {
+          console.error('Error sending user support ticket notification:', notificationError);
+        }
+      }
     }
 
     return NextResponse.json({

@@ -191,14 +191,17 @@ export async function POST(
     }
 
     try {
-      const { sendAdminNewManualCancelRequestNotification } = await import('@/lib/notifications/admin-notifications');
-      await sendAdminNewManualCancelRequestNotification(
-        cancelRequest.id,
+      const { sendAdminNewCancelRequestNotification } = await import('@/lib/notifications/admin-notifications');
+      const user = await db.users.findUnique({
+        where: { id: parseInt(session.user.id) },
+        select: { username: true, name: true }
+      });
+      await sendAdminNewCancelRequestNotification(
         parseInt(id),
-        order.user.name || order.user.email || 'User'
+        user?.username || user?.name || 'User'
       );
     } catch (notificationError) {
-      console.error('Error sending admin new manual cancel request notification:', notificationError);
+      console.error('Error sending admin new cancel request notification:', notificationError);
     }
 
     console.log('Cancel request created successfully:', {
@@ -282,6 +285,25 @@ export async function POST(
         }
       });
       cancelRequest.status = 'failed';
+
+      try {
+        const { sendAdminCancelRequestFailedNotification } = await import('@/lib/notifications/admin-notifications');
+        const user = await db.users.findUnique({
+          where: { id: parseInt(session.user.id) },
+          select: { username: true, name: true }
+        });
+        const provider = order.service.providerId ? await db.apiProviders.findUnique({
+          where: { id: order.service.providerId },
+          select: { name: true }
+        }) : null;
+        await sendAdminCancelRequestFailedNotification(
+          parseInt(id),
+          user?.username || user?.name || 'User',
+          provider?.name || 'Provider'
+        );
+      } catch (notificationError) {
+        console.error('Error sending admin cancel request failed notification:', notificationError);
+      }
     }
 
     return NextResponse.json({

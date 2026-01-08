@@ -27,7 +27,8 @@ import {
   FaStar,
   FaHandPaper,
   FaKey,
-  FaRocket,
+  FaRegNewspaper,
+  FaBullhorn,
   FaClock,
 } from 'react-icons/fa';
 import {
@@ -283,6 +284,14 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
     const messageLower = message?.toLowerCase() || '';
     const combinedText = `${titleLower} ${messageLower}`;
 
+    if (titleLower.includes('support message replied') || (titleLower.includes('contact message') && titleLower.includes('replied'))) {
+      return {
+        icon: FaEnvelope,
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+        iconColor: 'text-green-600 dark:text-green-400'
+      };
+    }
+
     if (titleLower.includes('new contact message') || titleLower.includes('contact message')) {
       return {
         icon: FaEnvelope,
@@ -291,7 +300,21 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
       };
     }
 
-    if (titleLower.includes('new support ticket') || titleLower.includes('support ticket')) {
+    if (titleLower.includes('support ticket')) {
+      if (titleLower.includes('closed')) {
+        return {
+          icon: FaTicketAlt,
+          bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+          iconColor: 'text-purple-600 dark:text-purple-400'
+        };
+      }
+      if (titleLower.includes('replied') || titleLower.includes('status updated')) {
+        return {
+          icon: FaTicketAlt,
+          bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+          iconColor: 'text-yellow-600 dark:text-yellow-400'
+        };
+      }
       return {
         icon: FaTicketAlt,
         bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
@@ -337,13 +360,13 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
       };
     }
     if (titleLower.includes('received from') || titleLower.includes('received')) {
-      return {
+      return { 
         icon: FaArrowLeft,
-        bgColor: 'bg-green-100 dark:bg-green-900/30',
-        iconColor: 'text-green-600 dark:text-green-400'
+        bgColor: 'bg-green-100 dark:bg-green-900/30', 
+        iconColor: 'text-green-600 dark:text-green-400' 
       };
     }
-
+    
     if (titleLower.includes('new service added') || titleLower.includes('service added')) {
       return {
         icon: FaBriefcase,
@@ -358,7 +381,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
         iconColor: 'text-blue-600 dark:text-blue-400'
       };
     }
-
+    
     if (titleLower.includes('order') && (titleLower.includes('completed') || titleLower.includes('success'))) {
       return {
         icon: FaCheckCircle,
@@ -465,10 +488,47 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
       };
     }
 
+    if (type.startsWith('announcement-')) {
+      const announcementType = type.replace('announcement-', '');
+      switch (announcementType) {
+        case 'info':
+          return {
+            icon: FaBullhorn,
+            bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+            iconColor: 'text-blue-600 dark:text-blue-400'
+          };
+        case 'warning':
+          return {
+            icon: FaBullhorn,
+            bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+            iconColor: 'text-yellow-600 dark:text-yellow-400'
+          };
+        case 'success':
+          return {
+            icon: FaBullhorn,
+            bgColor: 'bg-green-100 dark:bg-green-900/30',
+            iconColor: 'text-green-600 dark:text-green-400'
+          };
+        case 'critical':
+          return {
+            icon: FaBullhorn,
+            bgColor: 'bg-red-100 dark:bg-red-900/30',
+            iconColor: 'text-red-600 dark:text-red-400'
+          };
+        default:
+          return {
+            icon: FaBullhorn,
+            bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+            iconColor: 'text-blue-600 dark:text-blue-400'
+          };
+      }
+    }
+    
     const iconMap: { [key: string]: { icon: any; bgColor: string; iconColor: string } } = {
       order: { icon: FaShoppingCart, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
       payment: { icon: FaWallet, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
       ticket: { icon: FaTicketAlt, bgColor: 'bg-purple-100 dark:bg-purple-900/30', iconColor: 'text-purple-600 dark:text-purple-400' },
+      blog: { icon: FaRegNewspaper, bgColor: 'bg-purple-100 dark:bg-purple-900/30', iconColor: 'text-purple-600 dark:text-purple-400' },
       user: { icon: FaUserCog, bgColor: 'bg-orange-100 dark:bg-orange-900/30', iconColor: 'text-orange-600 dark:text-orange-400' },
       system: { icon: FaPlug, bgColor: 'bg-gray-100 dark:bg-gray-900/30', iconColor: 'text-gray-600 dark:text-gray-400' },
       revenue: { icon: FaMoneyBillWave, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
@@ -515,7 +575,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
         }
         window.location.href = link;
       } else {
-        router.push(notification.link);
+      router.push(notification.link);
       }
     }
   };
@@ -610,11 +670,12 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
               <div className="p-2">
                 {notifications.map((notification) => {
                   const { icon: IconComponent, bgColor, iconColor } = getNotificationIcon(notification.type || 'default', notification.title, notification.message);
+                  const hasLink = notification.link && notification.link.trim() !== '';
                   return (
                     <div
                       key={notification.id}
-                      onClick={() => handleNotificationClick(notification)}
-                      className="flex items-start gap-3 p-3 rounded-lg mb-2 hover:opacity-80 transition-all duration-200 cursor-pointer"
+                      onClick={hasLink ? () => handleNotificationClick(notification) : undefined}
+                      className={`flex items-start gap-3 p-3 rounded-lg mb-2 transition-all duration-200 ${hasLink ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}`}
                       style={{ backgroundColor: 'var(--dropdown-hover)' }}
                     >
                       <div className={`w-8 h-8 rounded-full ${bgColor} flex items-center justify-center flex-shrink-0`}>

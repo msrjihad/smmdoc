@@ -287,14 +287,23 @@ const CancelRequestTable: React.FC<CancelRequestTableProps> = ({
                     </button>
 
                     {request.status === 'failed' && (
-                      <button
-                        className="btn btn-primary p-2"
-                        title="Resend to Provider"
-                        onClick={() => onResendRequest(request.id)}
-                        disabled={resendingRequestId === request.id}
-                      >
-                        <FaRedo className={`h-3 w-3 ${resendingRequestId === request.id ? 'animate-spin' : ''}`} />
-                      </button>
+                      <>
+                        <button
+                          className="btn btn-primary p-2"
+                          title="Resend to Provider"
+                          onClick={() => onResendRequest(request.id)}
+                          disabled={resendingRequestId === request.id}
+                        >
+                          <FaRedo className={`h-3 w-3 ${resendingRequestId === request.id ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button
+                          className="btn btn-secondary p-2"
+                          title="Decline Request"
+                          onClick={() => onDeclineRequest(request.id)}
+                        >
+                          <FaTimesCircle className="h-3 w-3" />
+                        </button>
+                      </>
                     )}
 
                     {request.status !== 'declined' &&

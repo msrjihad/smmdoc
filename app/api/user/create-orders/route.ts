@@ -392,6 +392,18 @@ export async function POST(request: Request) {
             } else {
               console.log(`Provider ${provider.name} has sufficient balance (${providerBalance.toFixed(2)}). Proceeding with order forwarding...`);
             }
+
+            if (providerBalance < 50) {
+              try {
+                const { sendAdminApiBalanceAlertNotification } = await import('@/lib/notifications/admin-notifications');
+                await sendAdminApiBalanceAlertNotification(
+                  provider.name,
+                  providerBalance
+                );
+              } catch (notificationError) {
+                console.error('Error sending API balance alert notification:', notificationError);
+              }
+            }
           } catch (balanceError) {
             console.error('Error checking provider balance:', balanceError);
             const errorMessage = balanceError instanceof Error ? balanceError.message : 'Unknown error';
@@ -720,12 +732,12 @@ export async function POST(request: Request) {
             const { sendAdminFailOrderNotification } = await import('@/lib/notifications/admin-notifications');
             const user = await prisma.users.findUnique({
               where: { id: userIdNum },
-              select: { name: true, email: true }
+              select: { username: true, name: true }
             });
             await sendAdminFailOrderNotification(
               order.id,
               order.service.name || 'Service',
-              user?.name || user?.email || 'User'
+              user?.username || user?.name || 'User'
             );
           } catch (notificationError) {
             console.error('Error sending admin fail order notification:', notificationError);

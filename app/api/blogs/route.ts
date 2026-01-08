@@ -191,6 +191,15 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    if (status === 'published') {
+      try {
+        const { sendBlogPostNotification } = await import('@/lib/notifications/user-notifications');
+        await sendBlogPostNotification(title, finalSlug);
+      } catch (error) {
+        console.error('Error sending blog post notification:', error);
+      }
+    }
+
     const responsePost = {
       ...post,
       excerpt: excerpt || null,
