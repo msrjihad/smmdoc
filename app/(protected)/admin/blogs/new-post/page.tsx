@@ -15,6 +15,7 @@ import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import { validateBlogSlug, generateBlogSlug } from '@/lib/utils';
 
 const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   <div className={`${size} ${className} relative`}>
@@ -202,17 +203,18 @@ const NewPostPage = () => {
     editorCssClass: isDarkMode ? 'jodit-editor-dark-bg' : 'jodit-editor-white-bg'
   }), [isDarkMode]);
 
-  const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .trim();
-  };
-
   const checkSlugAvailability = async (slug: string) => {
+    const validation = validateBlogSlug(slug);
+    
+    if (!validation.isValid) {
+      setSlugStatus({
+        isChecking: false,
+        isAvailable: false,
+        message: validation.error || 'Invalid slug format'
+      });
+      return;
+    }
+
     if (!slug || slug.length < 3) {
       setSlugStatus({ isChecking: false, isAvailable: null, message: '' });
       return;
@@ -221,17 +223,31 @@ const NewPostPage = () => {
     setSlugStatus({ isChecking: true, isAvailable: null, message: 'Checking availability...' });
 
     try {
+      const response = await fetch('/api/blogs/check-slug', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ slug }),
+      });
 
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const result = await response.json();
 
-      const isAvailable = !slug.includes('test');
+      if (!result.success) {
+        setSlugStatus({
+          isChecking: false,
+          isAvailable: false,
+          message: result.error || 'Error checking availability'
+        });
+        return;
+      }
 
       setSlugStatus({
         isChecking: false,
-        isAvailable,
-        message: isAvailable 
-          ? 'URL is available' 
-          : 'URL is already taken'
+        isAvailable: result.available,
+        message: result.available 
+          ? 'URL slug is available' 
+          : result.error || 'URL slug is already taken'
       });
     } catch (error) {
       setSlugStatus({
@@ -263,31 +279,46 @@ const NewPostPage = () => {
     }));
 
     if (field === 'title' && value && !isSlugManuallyEdited) {
-      const newSlug = generateSlug(value);
+      const newSlug = generateBlogSlug(value);
       setFormData(prev => ({
         ...prev,
         slug: newSlug
       }));
 
-      debouncedSlugCheck(newSlug);
+      if (newSlug) {
+        debouncedSlugCheck(newSlug);
+      }
     }
 
     if (field === 'slug') {
       setIsSlugManuallyEdited(true);
-
-      debouncedSlugCheck(value);
+      
+      const normalizedSlug = generateBlogSlug(value);
+      if (normalizedSlug !== value) {
+        setFormData(prev => ({
+          ...prev,
+          slug: normalizedSlug
+        }));
+        if (normalizedSlug) {
+          debouncedSlugCheck(normalizedSlug);
+        }
+      } else {
+        debouncedSlugCheck(value);
+      }
     }
   };
 
   const regenerateSlug = () => {
     if (formData.title) {
-      const newSlug = generateSlug(formData.title);
+      const newSlug = generateBlogSlug(formData.title);
       setFormData(prev => ({
         ...prev,
         slug: newSlug
       }));
       setIsSlugManuallyEdited(false);
-      debouncedSlugCheck(newSlug);
+      if (newSlug) {
+        debouncedSlugCheck(newSlug);
+      }
     }
   };
 
@@ -341,12 +372,38 @@ const NewPostPage = () => {
 
       if (!formData.title.trim()) {
         showToast('Please enter a post title', 'error');
+        setIsLoading(false);
         return;
       }
 
       if (!formData.content.trim()) {
         showToast('Please enter post content', 'error');
+        setIsLoading(false);
         return;
+      }
+
+      const slugValidation = validateBlogSlug(formData.slug);
+      if (!slugValidation.isValid) {
+        showToast(slugValidation.error || 'Invalid slug format', 'error');
+        setIsLoading(false);
+        return;
+      }
+
+      if (formData.slug) {
+        const response = await fetch('/api/blogs/check-slug', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ slug: formData.slug }),
+        });
+
+        const result = await response.json();
+        if (!result.success || !result.available) {
+          showToast(result.error || 'Slug is not available', 'error');
+          setIsLoading(false);
+          return;
+        }
       }
 
       const postData = {

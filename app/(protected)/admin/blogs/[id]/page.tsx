@@ -17,6 +17,7 @@ import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useSelector } from 'react-redux';
 import { getUserDetails } from '@/lib/actions/getUser';
+import { validateBlogSlug, generateBlogSlug } from '@/lib/utils';
 
 const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   <div className={`${size} ${className} relative`}>
@@ -193,6 +194,18 @@ const EditBlogPostPage = () => {
   const [imageUploading, setImageUploading] = useState(false);
   const [isLoadingPost, setIsLoadingPost] = useState(true);
 
+  const [slugStatus, setSlugStatus] = useState<{
+    isChecking: boolean;
+    isAvailable: boolean | null;
+    message: string;
+  }>({
+    isChecking: false,
+    isAvailable: null,
+    message: ''
+  });
+
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
+
   useEffect(() => {
     setPageTitle('Edit Post', appName);
   }, [appName]);
@@ -265,6 +278,7 @@ const EditBlogPostPage = () => {
         setFormData(formDataToSet);
         setOriginalFormData(formDataToSet);
         setAutoFilledFields(autoFilled);
+        setIsSlugManuallyEdited(false);
 
       } catch (error) {
         showToast('Error loading post data', 'error');
@@ -292,14 +306,74 @@ const EditBlogPostPage = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim();
+  const checkSlugAvailability = async (slug: string) => {
+    const validation = validateBlogSlug(slug);
+    
+    if (!validation.isValid) {
+      setSlugStatus({
+        isChecking: false,
+        isAvailable: false,
+        message: validation.error || 'Invalid slug format'
+      });
+      return;
+    }
+
+    if (!slug || slug.length < 3) {
+      setSlugStatus({ isChecking: false, isAvailable: null, message: '' });
+      return;
+    }
+
+    setSlugStatus({ isChecking: true, isAvailable: null, message: 'Checking availability...' });
+
+    try {
+      const response = await fetch('/api/blogs/check-slug', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ slug, excludeId: formData.id }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        setSlugStatus({
+          isChecking: false,
+          isAvailable: false,
+          message: result.error || 'Error checking availability'
+        });
+        return;
+      }
+
+      setSlugStatus({
+        isChecking: false,
+        isAvailable: result.available,
+        message: result.available 
+          ? 'URL slug is available' 
+          : result.error || 'URL slug is already taken'
+      });
+    } catch (error) {
+      setSlugStatus({
+        isChecking: false,
+        isAvailable: null,
+        message: 'Error checking availability'
+      });
+    }
   };
+
+  const debounce = (func: Function, wait: number) => {
+    let timeout: NodeJS.Timeout;
+    return function executedFunction(...args: any[]) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  };
+
+  const debouncedSlugCheck = debounce(checkSlugAvailability, 1000);
 
   const handleInputChange = (field: keyof PostFormData, value: any) => {
     console.log(`Updating field ${field} with value:`, value);
@@ -320,13 +394,48 @@ const EditBlogPostPage = () => {
       }));
     }
 
-    if (field === 'title' && value) {
-      const generatedSlug = generateSlug(value);
-      if (formData.slug === generateSlug(originalFormData.title)) {
+    if (field === 'title' && value && !isSlugManuallyEdited) {
+      const generatedSlug = generateBlogSlug(value);
+      const originalSlug = generateBlogSlug(originalFormData.title);
+      if (formData.slug === originalSlug || !formData.slug) {
         setFormData(prev => ({
           ...prev,
           slug: generatedSlug
         }));
+        if (generatedSlug) {
+          debouncedSlugCheck(generatedSlug);
+        }
+      }
+    }
+
+    if (field === 'slug') {
+      setIsSlugManuallyEdited(true);
+      
+      const normalizedSlug = generateBlogSlug(value);
+      if (normalizedSlug !== value) {
+        setFormData(prev => ({
+          ...prev,
+          slug: normalizedSlug
+        }));
+        if (normalizedSlug) {
+          debouncedSlugCheck(normalizedSlug);
+        }
+      } else {
+        debouncedSlugCheck(value);
+      }
+    }
+  };
+
+  const regenerateSlug = () => {
+    if (formData.title) {
+      const newSlug = generateBlogSlug(formData.title);
+      setFormData(prev => ({
+        ...prev,
+        slug: newSlug
+      }));
+      setIsSlugManuallyEdited(false);
+      if (newSlug) {
+        debouncedSlugCheck(newSlug);
       }
     }
   };
@@ -413,12 +522,38 @@ const EditBlogPostPage = () => {
 
       if (!formData.title.trim()) {
         showToast('Please enter a post title', 'error');
+        setIsLoading(false);
         return;
       }
 
       if (!formData.content.trim()) {
         showToast('Please enter post content', 'error');
+        setIsLoading(false);
         return;
+      }
+
+      const slugValidation = validateBlogSlug(formData.slug);
+      if (!slugValidation.isValid) {
+        showToast(slugValidation.error || 'Invalid slug format', 'error');
+        setIsLoading(false);
+        return;
+      }
+
+      if (formData.slug && formData.slug !== originalFormData.slug) {
+        const response = await fetch('/api/blogs/check-slug', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ slug: formData.slug, excludeId: formData.id }),
+        });
+
+        const result = await response.json();
+        if (!result.success || !result.available) {
+          showToast(result.error || 'Slug is not available', 'error');
+          setIsLoading(false);
+          return;
+        }
       }
 
       const postData = {
@@ -580,20 +715,53 @@ const EditBlogPostPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="form-label mb-2">URL Slug</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="form-label">URL Slug</label>
+                    {isSlugManuallyEdited && formData.title && (
+                      <button
+                        type="button"
+                        onClick={regenerateSlug}
+                        className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
+                      >
+                        Regenerate from title
+                      </button>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-500 dark:text-gray-400">/blog/</span>
-                      <div className="flex-1">
+                      <div className="flex-1 relative">
                         <input
                           type="text"
                           value={formData.slug}
                           onChange={(e) => handleInputChange('slug', e.target.value)}
-                          className="form-field w-full px-3 py-2 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
+                          className={`form-field w-full px-3 py-2 pr-8 bg-white dark:bg-gray-700/50 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 ${
+                            slugStatus.isAvailable === true
+                              ? 'border-green-300 dark:border-green-600 focus:ring-green-500'
+                              : slugStatus.isAvailable === false
+                              ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
+                              : 'border-gray-300 dark:border-gray-600 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)]'
+                          }`}
                           placeholder="post-url-slug"
                         />
+                        {slugStatus.isChecking && (
+                          <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                            <GradientSpinner size="w-4 h-4" />
+                          </div>
+                        )}
                       </div>
                     </div>
+                    {slugStatus.message && (
+                      <div className={`text-xs flex items-center gap-1 ${
+                        slugStatus.isAvailable === true
+                          ? 'text-green-600 dark:text-green-400'
+                          : slugStatus.isAvailable === false
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}>
+                        {slugStatus.message}
+                      </div>
+                    )}
                     <div className="text-xs text-gray-500 dark:text-gray-400">
                       Preview: <span className="font-mono">/blog/{formData.slug || 'your-post-slug'}</span>
                     </div>

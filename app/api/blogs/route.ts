@@ -1,6 +1,7 @@
 ﻿import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { validateBlogSlug, generateBlogSlug } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   try {
@@ -128,10 +129,30 @@ export async function POST(req: NextRequest) {
 
     let finalSlug = slug;
     if (!finalSlug) {
-      finalSlug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
+      finalSlug = generateBlogSlug(title);
+    } else {
+      const validation = validateBlogSlug(finalSlug);
+      if (!validation.isValid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: validation.error || 'Invalid slug format',
+            data: null
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (!finalSlug || finalSlug.trim().length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Unable to generate a valid slug from the title. Please provide a slug manually.',
+          data: null
+        },
+        { status: 400 }
+      );
     }
 
     const existingPost = await db.blogPosts.findUnique({

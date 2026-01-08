@@ -9,9 +9,8 @@ interface NotificationData {
   link: string;
 }
 
-// Map notification types to their required permissions
 const NOTIFICATION_PERMISSION_MAP: Record<string, string | null> = {
-  'apiBalanceAlerts': null, // No specific page, admins only
+  'apiBalanceAlerts': null,
   'supportTickets': 'support_tickets',
   'newMessages': 'contact_messages',
   'newManualServiceOrders': 'all_orders',
@@ -23,7 +22,7 @@ const NOTIFICATION_PERMISSION_MAP: Record<string, string | null> = {
   'pendingTransactions': 'all_transactions',
   'apiSyncLogs': 'api_sync_logs',
   'newChildPanelOrders': 'child_panels',
-  'announcement': null, // Special case: based on audience, not permissions
+  'announcement': null,
 };
 
 async function createNotification(data: NotificationData): Promise<void> {
@@ -117,17 +116,14 @@ async function sendAdminNotification(
       },
     });
 
-    // For announcement notifications, skip permission check
-    // For other notifications, filter moderators based on permissions
     if (notificationType !== 'announcement') {
       const requiredPermission = NOTIFICATION_PERMISSION_MAP[notificationType];
       
       if (requiredPermission) {
-        // Filter moderators based on permissions, keep all admins
         users = users.filter((user) => {
           const userRole = user.role as string;
           if (userRole === 'admin') {
-            return true; // Admins always get notifications
+            return true;
           }
           
           if (userRole === 'moderator') {
@@ -138,7 +134,6 @@ async function sendAdminNotification(
           return false;
         });
       } else {
-        // If no permission mapping, only send to admins
         users = users.filter((user) => (user.role as string) === 'admin');
       }
     }

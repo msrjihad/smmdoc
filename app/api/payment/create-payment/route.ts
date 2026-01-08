@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
             const { sendAdminPendingTransactionNotification } = await import('@/lib/notifications/admin-notifications');
             await sendAdminPendingTransactionNotification(
               payment.id,
-              parseFloat(amountUSDConverted),
+              amountUSDConverted,
               session.user.name || session.user.email || 'User'
             );
           } catch (adminNotifError) {

@@ -98,6 +98,35 @@ interface NotificationSettings {
     apiSyncLogs: boolean;
     newChildPanelOrders: boolean;
   };
+  pushUserNotifications: {
+    welcome: boolean;
+    apiKeyChanged: boolean;
+    orderStatusChanged: boolean;
+    newService: boolean;
+    serviceUpdates: boolean;
+    transactionAlert: boolean;
+    transferFunds: boolean;
+    affiliateWithdrawals: boolean;
+    supportTickets: boolean;
+    contactMessages: boolean;
+    blogPost: boolean;
+    announcement: boolean;
+  };
+  pushAdminNotifications: {
+    apiBalanceAlerts: boolean;
+    supportTickets: boolean;
+    newMessages: boolean;
+    newManualServiceOrders: boolean;
+    failOrders: boolean;
+    refillRequests: boolean;
+    cancelRequests: boolean;
+    newUsers: boolean;
+    userActivityLogs: boolean;
+    pendingTransactions: boolean;
+    apiSyncLogs: boolean;
+    newChildPanelOrders: boolean;
+    announcement: boolean;
+  };
 }
 
 interface ReCAPTCHASettings {
@@ -196,6 +225,35 @@ const IntegrationPage = () => {
       pendingTransactions: false,
       apiSyncLogs: false,
       newChildPanelOrders: false,
+    },
+    pushUserNotifications: {
+      welcome: false,
+      apiKeyChanged: false,
+      orderStatusChanged: false,
+      newService: false,
+      serviceUpdates: false,
+      transactionAlert: false,
+      transferFunds: false,
+      affiliateWithdrawals: false,
+      supportTickets: false,
+      contactMessages: false,
+      blogPost: false,
+      announcement: false,
+    },
+    pushAdminNotifications: {
+      apiBalanceAlerts: false,
+      supportTickets: false,
+      newMessages: false,
+      newManualServiceOrders: false,
+      failOrders: false,
+      refillRequests: false,
+      cancelRequests: false,
+      newUsers: false,
+      userActivityLogs: false,
+      pendingTransactions: false,
+      apiSyncLogs: false,
+      newChildPanelOrders: false,
+      announcement: false,
     },
   });
 
@@ -312,6 +370,35 @@ const IntegrationPage = () => {
                 apiSyncLogs: settings.adminNotifApiSyncLogs,
                 newChildPanelOrders: settings.adminNotifNewChildPanelOrders,
               },
+              pushUserNotifications: {
+                welcome: settings.userNotifWelcome || false,
+                apiKeyChanged: settings.userNotifApiKeyChanged || false,
+                orderStatusChanged: settings.userNotifOrderStatusChanged || false,
+                newService: settings.userNotifNewService || false,
+                serviceUpdates: settings.userNotifServiceUpdates || false,
+                transactionAlert: settings.userNotifTransactionAlert || false,
+                transferFunds: settings.userNotifTransferFunds || false,
+                affiliateWithdrawals: settings.userNotifAffiliateWithdrawals || false,
+                supportTickets: settings.userNotifSupportTickets || false,
+                contactMessages: settings.userNotifContactMessages || false,
+                blogPost: settings.userNotifBlogPost || false,
+                announcement: settings.userNotifAnnouncement || false,
+              },
+              pushAdminNotifications: {
+                apiBalanceAlerts: settings.adminNotifApiBalanceAlerts || false,
+                supportTickets: settings.adminNotifSupportTickets || false,
+                newMessages: settings.adminNotifNewMessages || false,
+                newManualServiceOrders: settings.adminNotifNewManualServiceOrders || false,
+                failOrders: settings.adminNotifFailOrders || false,
+                refillRequests: settings.adminNotifNewManualRefillRequests || false,
+                cancelRequests: settings.adminNotifNewManualCancelRequests || false,
+                newUsers: settings.adminNotifNewUsers || false,
+                userActivityLogs: settings.adminNotifUserActivityLogs || false,
+                pendingTransactions: settings.adminNotifPendingTransactions || false,
+                apiSyncLogs: settings.adminNotifApiSyncLogs || false,
+                newChildPanelOrders: settings.adminNotifNewChildPanelOrders || false,
+                announcement: settings.adminNotifAnnouncement || false,
+              },
             });
           }
         } else {
@@ -425,6 +512,33 @@ const IntegrationPage = () => {
             emailNotificationsEnabled: notificationSettings.emailNotificationsEnabled,
             userNotifications: notificationSettings.userNotifications,
             adminNotifications: notificationSettings.adminNotifications,
+            pushUserNotifications: notificationSettings.pushUserNotifications,
+            pushAdminNotifications: notificationSettings.pushAdminNotifications,
+            userNotifWelcome: notificationSettings.pushUserNotifications.welcome,
+            userNotifApiKeyChanged: notificationSettings.pushUserNotifications.apiKeyChanged,
+            userNotifOrderStatusChanged: notificationSettings.pushUserNotifications.orderStatusChanged,
+            userNotifNewService: notificationSettings.pushUserNotifications.newService,
+            userNotifServiceUpdates: notificationSettings.pushUserNotifications.serviceUpdates,
+            userNotifTransactionAlert: notificationSettings.pushUserNotifications.transactionAlert,
+            userNotifTransferFunds: notificationSettings.pushUserNotifications.transferFunds,
+            userNotifAffiliateWithdrawals: notificationSettings.pushUserNotifications.affiliateWithdrawals,
+            userNotifSupportTickets: notificationSettings.pushUserNotifications.supportTickets,
+            userNotifContactMessages: notificationSettings.pushUserNotifications.contactMessages,
+            userNotifBlogPost: notificationSettings.pushUserNotifications.blogPost,
+            userNotifAnnouncement: notificationSettings.pushUserNotifications.announcement,
+            adminNotifApiBalanceAlerts: notificationSettings.pushAdminNotifications.apiBalanceAlerts,
+            adminNotifSupportTickets: notificationSettings.pushAdminNotifications.supportTickets,
+            adminNotifNewMessages: notificationSettings.pushAdminNotifications.newMessages,
+            adminNotifNewManualServiceOrders: notificationSettings.pushAdminNotifications.newManualServiceOrders,
+            adminNotifFailOrders: notificationSettings.pushAdminNotifications.failOrders,
+            adminNotifNewManualRefillRequests: notificationSettings.pushAdminNotifications.refillRequests,
+            adminNotifNewManualCancelRequests: notificationSettings.pushAdminNotifications.cancelRequests,
+            adminNotifNewUsers: notificationSettings.pushAdminNotifications.newUsers,
+            adminNotifUserActivityLogs: notificationSettings.pushAdminNotifications.userActivityLogs,
+            adminNotifPendingTransactions: notificationSettings.pushAdminNotifications.pendingTransactions,
+            adminNotifApiSyncLogs: notificationSettings.pushAdminNotifications.apiSyncLogs,
+            adminNotifNewChildPanelOrders: notificationSettings.pushAdminNotifications.newChildPanelOrders,
+            adminNotifAnnouncement: notificationSettings.pushAdminNotifications.announcement,
           }
         }),
       });
@@ -1617,7 +1731,7 @@ const IntegrationPage = () => {
                   />
                 </div>
                 {notificationSettings.pushNotificationsEnabled && (
-                  <div className="space-y-4 pl-4 border-l-2 border-gray-200 dark:border-gray-600">
+                  <div className="space-y-6 pl-4 border-l-2 border-gray-200 dark:border-gray-600">
                     <div className="form-group">
                       <label className="form-label">OneSignal Code</label>
                       <textarea
@@ -1649,6 +1763,718 @@ const IntegrationPage = () => {
                         <option value="not-logged-in">Not logged in</option>
                         <option value="signed-in">Signed in</option>
                       </select>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">User Notifications</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Push notifications sent to users
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center space-x-3 pb-2 border-b border-gray-200 dark:border-gray-600">
+                          <input
+                            type="checkbox"
+                            id="push-user-notifications-select-all"
+                            checked={Object.values(notificationSettings.pushUserNotifications).every(Boolean)}
+                            onChange={(e) => {
+                              const allSelected = e.target.checked;
+                              setNotificationSettings(prev => ({
+                                ...prev,
+                                pushUserNotifications: {
+                                  welcome: allSelected,
+                                  apiKeyChanged: allSelected,
+                                  orderStatusChanged: allSelected,
+                                  newService: allSelected,
+                                  serviceUpdates: allSelected,
+                                  transactionAlert: allSelected,
+                                  transferFunds: allSelected,
+                                  affiliateWithdrawals: allSelected,
+                                  supportTickets: allSelected,
+                                  contactMessages: allSelected,
+                                  blogPost: allSelected,
+                                  announcement: allSelected,
+                                }
+                              }));
+                            }}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                          />
+                          <label htmlFor="push-user-notifications-select-all" className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer">
+                            Select All User Notifications
+                          </label>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-welcome"
+                                checked={notificationSettings.pushUserNotifications.welcome}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, welcome: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-welcome" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Welcome
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Send welcome notification to new users
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-api-key-changed"
+                                checked={notificationSettings.pushUserNotifications.apiKeyChanged}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, apiKeyChanged: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-api-key-changed" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  API Key Changed
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Notify users when their API key is changed
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-order-status-changed"
+                                checked={notificationSettings.pushUserNotifications.orderStatusChanged}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, orderStatusChanged: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-order-status-changed" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Order Status Changed
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Notify users when order status changes
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-new-service"
+                                checked={notificationSettings.pushUserNotifications.newService}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, newService: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-new-service" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  New Service
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Notify users about new services
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-service-updates"
+                                checked={notificationSettings.pushUserNotifications.serviceUpdates}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, serviceUpdates: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-service-updates" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Service Updates
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Notify users about service updates
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-transaction-alert"
+                                checked={notificationSettings.pushUserNotifications.transactionAlert}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, transactionAlert: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-transaction-alert" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Transaction Alert
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Notify users about transaction alerts
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-transfer-funds"
+                                checked={notificationSettings.pushUserNotifications.transferFunds}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, transferFunds: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-transfer-funds" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Transfer Funds
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Notify users about transfer funds
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-affiliate-withdrawals"
+                                checked={notificationSettings.pushUserNotifications.affiliateWithdrawals}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, affiliateWithdrawals: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-affiliate-withdrawals" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Affiliate Withdrawals
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Notify users about affiliate withdrawals
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-support-tickets"
+                                checked={notificationSettings.pushUserNotifications.supportTickets}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, supportTickets: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-support-tickets" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Support Tickets
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Notify users about support ticket updates
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-contact-messages"
+                                checked={notificationSettings.pushUserNotifications.contactMessages}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, contactMessages: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-contact-messages" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Contact Messages
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Notify users about contact message responses
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-blog-post"
+                                checked={notificationSettings.pushUserNotifications.blogPost}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, blogPost: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-blog-post" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Blog Post
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Notify users about new blog posts
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-user-announcement"
+                                checked={notificationSettings.pushUserNotifications.announcement}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushUserNotifications: { ...prev.pushUserNotifications, announcement: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-user-announcement" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Announcement
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Notify users about new announcements
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Admin Notifications</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Push notifications sent to administrators
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center space-x-3 pb-2 border-b border-gray-200 dark:border-gray-600">
+                          <input
+                            type="checkbox"
+                            id="push-admin-notifications-select-all"
+                            checked={Object.values(notificationSettings.pushAdminNotifications).every(Boolean)}
+                            onChange={(e) => {
+                              const allSelected = e.target.checked;
+                              setNotificationSettings(prev => ({
+                                ...prev,
+                                pushAdminNotifications: {
+                                  apiBalanceAlerts: allSelected,
+                                  supportTickets: allSelected,
+                                  newMessages: allSelected,
+                                  newManualServiceOrders: allSelected,
+                                  failOrders: allSelected,
+                                  refillRequests: allSelected,
+                                  cancelRequests: allSelected,
+                                  newUsers: allSelected,
+                                  userActivityLogs: allSelected,
+                                  pendingTransactions: allSelected,
+                                  apiSyncLogs: allSelected,
+                                  newChildPanelOrders: allSelected,
+                                  announcement: allSelected,
+                                }
+                              }));
+                            }}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                          />
+                          <label htmlFor="push-admin-notifications-select-all" className="text-sm font-medium text-gray-900 dark:text-white cursor-pointer">
+                            Select All Admin Notifications
+                          </label>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-api-balance-alerts"
+                                checked={notificationSettings.pushAdminNotifications.apiBalanceAlerts}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, apiBalanceAlerts: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-api-balance-alerts" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  API Balance Alerts
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about API balance alerts
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-support-tickets"
+                                checked={notificationSettings.pushAdminNotifications.supportTickets}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, supportTickets: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-support-tickets" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Support Tickets
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about new support tickets
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-new-messages"
+                                checked={notificationSettings.pushAdminNotifications.newMessages}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, newMessages: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-new-messages" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  New Messages
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about new messages
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-new-manual-service-orders"
+                                checked={notificationSettings.pushAdminNotifications.newManualServiceOrders}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, newManualServiceOrders: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-new-manual-service-orders" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  New Manual Service Orders
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about new manual service orders
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-fail-orders"
+                                checked={notificationSettings.pushAdminNotifications.failOrders}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, failOrders: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-fail-orders" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Fail Orders
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about failed orders
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-refill-requests"
+                                checked={notificationSettings.pushAdminNotifications.refillRequests}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, refillRequests: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-refill-requests" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Refill Requests
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about refill requests and failures
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-cancel-requests"
+                                checked={notificationSettings.pushAdminNotifications.cancelRequests}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, cancelRequests: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-cancel-requests" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Cancel Requests
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about cancel requests and failures
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-new-users"
+                                checked={notificationSettings.pushAdminNotifications.newUsers}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, newUsers: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-new-users" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  New Users
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about new user registrations
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-user-activity-logs"
+                                checked={notificationSettings.pushAdminNotifications.userActivityLogs}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, userActivityLogs: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-user-activity-logs" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  User Activity Logs
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about user activity logs
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-pending-transactions"
+                                checked={notificationSettings.pushAdminNotifications.pendingTransactions}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, pendingTransactions: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-pending-transactions" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Pending Transactions
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about pending transactions
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-api-sync-logs"
+                                checked={notificationSettings.pushAdminNotifications.apiSyncLogs}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, apiSyncLogs: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-api-sync-logs" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  API Sync Logs
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about API sync logs
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-new-child-panel-orders"
+                                checked={notificationSettings.pushAdminNotifications.newChildPanelOrders}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, newChildPanelOrders: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-new-child-panel-orders" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  New Child Panel Orders
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about new child panel orders
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                id="push-admin-announcement"
+                                checked={notificationSettings.pushAdminNotifications.announcement}
+                                onChange={(e) =>
+                                  setNotificationSettings(prev => ({
+                                    ...prev,
+                                    pushAdminNotifications: { ...prev.pushAdminNotifications, announcement: e.target.checked }
+                                  }))
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <div>
+                                <label htmlFor="push-admin-announcement" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                                  Announcement
+                                </label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Get notified about new announcements
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

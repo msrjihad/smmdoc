@@ -169,3 +169,41 @@ export function detectTimezone(): string {
   
   return 'Asia/Dhaka';
 }
+
+export function validateBlogSlug(slug: string): { isValid: boolean; error?: string } {
+  if (!slug || slug.trim().length === 0) {
+    return { isValid: false, error: 'Slug is required' };
+  }
+
+  if (slug.length < 3) {
+    return { isValid: false, error: 'Slug must be at least 3 characters long' };
+  }
+
+  if (slug.length > 100) {
+    return { isValid: false, error: 'Slug must be less than 100 characters' };
+  }
+
+  const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  
+  if (!slugRegex.test(slug)) {
+    return { 
+      isValid: false, 
+      error: 'Slug can only contain lowercase letters, numbers, and hyphens. It cannot start or end with a hyphen.' 
+    };
+  }
+
+  return { isValid: true };
+}
+
+export function generateBlogSlug(title: string): string {
+  if (!title) return '';
+
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 100);
+}

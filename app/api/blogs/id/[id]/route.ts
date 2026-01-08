@@ -1,6 +1,7 @@
 ﻿import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { validateBlogSlug, generateBlogSlug } from '@/lib/utils';
 
 export async function GET(
   req: NextRequest,
@@ -139,9 +140,26 @@ export async function PUT(
       );
     }
 
+    let finalSlug = slug || existingPost.slug;
+    
     if (slug && slug !== existingPost.slug) {
-      const slugExists = await db.blogPosts.findUnique({
-        where: { slug }
+      const validation = validateBlogSlug(slug);
+      if (!validation.isValid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: validation.error || 'Invalid slug format',
+            data: null
+          },
+          { status: 400 }
+        );
+      }
+
+      const slugExists = await db.blogPosts.findFirst({
+        where: {
+          slug,
+          id: { not: blogId }
+        }
       });
 
       if (slugExists) {
@@ -153,6 +171,26 @@ export async function PUT(
           },
           { status: 400 }
         );
+      }
+
+      finalSlug = slug;
+    } else if (!slug && title && title !== existingPost.title) {
+      finalSlug = generateBlogSlug(title);
+      
+      const validation = validateBlogSlug(finalSlug);
+      if (!validation.isValid) {
+        finalSlug = existingPost.slug;
+      } else {
+        const slugExists = await db.blogPosts.findFirst({
+          where: {
+            slug: finalSlug,
+            id: { not: blogId }
+          }
+        });
+
+        if (slugExists) {
+          finalSlug = existingPost.slug;
+        }
       }
     }
 
@@ -167,8 +205,8 @@ export async function PUT(
       where: { id: blogId },
       data: {
         title: title || existingPost.title,
-        slug: slug || existingPost.slug,
-        excerpt: excerpt || existingPost.excerpt,
+        slug: finalSlug,
+        excerpt: excerpt !== undefined ? excerpt : existingPost.excerpt,
         content: content || existingPost.content,
         featuredImage: featuredImage !== undefined ? featuredImage : existingPost.featuredImage,
         status: status || existingPost.status,
