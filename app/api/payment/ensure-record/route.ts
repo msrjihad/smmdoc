@@ -334,7 +334,7 @@ export async function POST(req: NextRequest) {
 
     // Convert gateway amount (BDT) to USD if needed
     // At this point, paymentAmount is guaranteed to be a non-null string due to validation above
-    let amountUSD: string = paymentAmount;
+    let amountUSD: string = paymentAmount as string;
     if (paymentAmount && parseFloat(paymentAmount) > 100) {
       // If amount is very large, it's likely in BDT, convert to USD
       const { getPaymentGatewayExchangeRate } = await import('@/lib/payment-gateway-config');
