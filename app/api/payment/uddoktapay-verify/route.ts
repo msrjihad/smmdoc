@@ -8,7 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { invoice_id, transaction_id, phone, response_type } = body;
+    const { invoice_id, phone, response_type } = body;
+    let transaction_id = body.transaction_id;
     
     console.log("UddoktaPay verify request:", { invoice_id, transaction_id, phone, response_type });
     
@@ -45,13 +46,78 @@ export async function POST(req: NextRequest) {
     }
     
     try {
+      // Call the gateway API to verify payment status
+      const { getPaymentGatewayApiKey, getPaymentGatewayVerifyUrl } = await import('@/lib/payment-gateway-config');
+      const apiKey = await getPaymentGatewayApiKey();
+      const verifyUrl = await getPaymentGatewayVerifyUrl();
+      
       let verificationStatus = "PENDING";
       let isSuccessful = false;
+      let gatewayVerificationData: any = null;
       
-      if (response_type) {
+      // First, try to verify with the gateway API
+      if (apiKey && verifyUrl) {
+        try {
+          console.log(`Calling gateway verify API: ${verifyUrl} with invoice_id: ${invoice_id}`);
+          const verificationResponse = await fetch(verifyUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'RT-UDDOKTAPAY-API-KEY': apiKey,
+            },
+            body: JSON.stringify({ invoice_id }),
+          });
+
+          if (verificationResponse.ok) {
+            // Check if response is JSON before parsing
+            const contentType = verificationResponse.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+              const responseText = await verificationResponse.text();
+              console.error('Gateway verify API returned non-JSON:', {
+                contentType,
+                responsePreview: responseText.substring(0, 500),
+                url: verifyUrl,
+                invoice_id
+              });
+              throw new Error('NON_JSON_RESPONSE');
+            }
+
+            gatewayVerificationData = await verificationResponse.json();
+            console.log('Gateway verification response:', gatewayVerificationData);
+            
+            // Use gateway API response status
+            if (gatewayVerificationData.status === 'COMPLETED' || gatewayVerificationData.status === 'SUCCESS') {
+              isSuccessful = true;
+              verificationStatus = "COMPLETED";
+            } else if (gatewayVerificationData.status === 'PENDING') {
+              verificationStatus = "PENDING";
+            } else if (gatewayVerificationData.status === 'CANCELLED' || gatewayVerificationData.status === 'FAILED' || gatewayVerificationData.status === 'ERROR') {
+              verificationStatus = "CANCELLED";
+            } else {
+              verificationStatus = "PENDING";
+            }
+            
+            // Update transaction_id from gateway response if available
+            if (gatewayVerificationData.transaction_id && gatewayVerificationData.transaction_id !== invoice_id) {
+              transaction_id = gatewayVerificationData.transaction_id;
+            }
+          } else {
+            console.log('Gateway verification API returned error, falling back to request parameters');
+            const errorText = await verificationResponse.text();
+            console.log('Gateway error response:', errorText);
+          }
+        } catch (apiError) {
+          console.error('Error calling gateway verify API:', apiError);
+          // Fall through to use request parameters
+        }
+      }
+      
+      // Fallback to request parameters if gateway API didn't provide status
+      if (!gatewayVerificationData && response_type) {
         const responseTypeLower = response_type.toLowerCase();
         
-        if (responseTypeLower === "completed") {
+        if (responseTypeLower === "completed" || responseTypeLower === "success") {
           isSuccessful = true;
           verificationStatus = "COMPLETED";
         } else if (responseTypeLower === "pending") {
@@ -59,22 +125,26 @@ export async function POST(req: NextRequest) {
         } else {
           verificationStatus = "CANCELLED";
         }
-      } else {
-        if (transaction_id) {
-          const lowerTransactionId = transaction_id.toLowerCase();
-          
-          if (lowerTransactionId.includes("completed") || lowerTransactionId.includes("success")) {
-            isSuccessful = true;
-            verificationStatus = "COMPLETED";
-          } else if (lowerTransactionId.includes("pending")) {
-            verificationStatus = "PENDING";
-          } else {
-            verificationStatus = "CANCELLED";
-          }
+      } else if (!gatewayVerificationData && transaction_id) {
+        const lowerTransactionId = transaction_id.toLowerCase();
+        
+        if (lowerTransactionId.includes("completed") || lowerTransactionId.includes("success")) {
+          isSuccessful = true;
+          verificationStatus = "COMPLETED";
+        } else if (lowerTransactionId.includes("pending")) {
+          verificationStatus = "PENDING";
+        } else {
+          verificationStatus = "CANCELLED";
         }
       }
       
-      console.log("UddoktaPay verification result:", { isSuccessful, verificationStatus, response_type });
+      console.log("UddoktaPay verification result:", { 
+        isSuccessful, 
+        verificationStatus, 
+        response_type,
+        gatewayStatus: gatewayVerificationData?.status,
+        transaction_id 
+      });
       
       if (isSuccessful && verificationStatus === "COMPLETED" && payment.user) {
         try {
@@ -83,7 +153,12 @@ export async function POST(req: NextRequest) {
               where: { invoiceId: invoice_id },
               data: {
                 status: "Success",
-                transactionId: transaction_id,
+                transactionId: transaction_id || gatewayVerificationData?.transaction_id || null,
+                paymentMethod: gatewayVerificationData?.payment_method || payment.paymentMethod || null,
+                gatewayFee: gatewayVerificationData?.fee !== undefined ? gatewayVerificationData.fee : payment.gatewayFee,
+                // Don't update amount from gateway - gateway returns BDT, we store USD
+                // Keep the original USD amount from payment record
+                amount: payment.amount,
               }
             });
             
@@ -218,7 +293,9 @@ export async function POST(req: NextRequest) {
         await db.addFunds.update({
           where: { invoiceId: invoice_id },
           data: {
-            transactionId: transaction_id,
+            transactionId: transaction_id || gatewayVerificationData?.transaction_id || null,
+            paymentMethod: gatewayVerificationData?.payment_method || payment.paymentMethod || null,
+            gatewayFee: gatewayVerificationData?.fee !== undefined ? gatewayVerificationData.fee : payment.gatewayFee,
             status: "Processing"
           }
         });
@@ -264,7 +341,8 @@ export async function POST(req: NextRequest) {
           where: { invoiceId: invoice_id },
           data: {
             status: "Cancelled",
-            transactionId: transaction_id,
+            transactionId: transaction_id || gatewayVerificationData?.transaction_id || null,
+            paymentMethod: gatewayVerificationData?.payment_method || payment.paymentMethod || null,
           }
         });
         

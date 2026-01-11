@@ -176,17 +176,19 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
     fetchNotifications(5, 0, false);
     fetchUnreadCount();
     
+    // Poll notification count every 30 seconds (reduced from 1 second)
     const countInterval = setInterval(() => {
       if (!openRef.current) {
         fetchUnreadCount();
       }
-    }, 1000);
+    }, 30000); // 30 seconds instead of 1 second
     
+    // Poll notifications every 60 seconds (reduced from 5 seconds)
     const notificationsInterval = setInterval(() => {
       if (!openRef.current) {
         fetchNotifications(displayCountRef.current, 0, false);
       }
-    }, 5000);
+    }, 60000); // 60 seconds instead of 5 seconds
     
     return () => {
       clearInterval(countInterval);

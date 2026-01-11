@@ -74,6 +74,36 @@ export default async function RootLayout({
         <link rel="shortcut icon" href="/api/favicon" type="image/png" />
         <link rel="apple-touch-icon" href="/api/favicon" />
         <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                // Fix redirect URL if gateway stripped the port (localhost -> localhost:3000)
+                // This runs immediately, before React loads
+                try {
+                  if (typeof window !== 'undefined' && window.location) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const hasPaymentParams = urlParams.get('payment') || urlParams.get('invoice_id');
+                    const isLocalhost = window.location.hostname === 'localhost';
+                    const port = window.location.port;
+                    const hasNoPort = !port || port === '' || port === '0' || port === '80' || port === '443';
+                    
+                    // Only redirect if we're on a non-standard port (not 80/443)
+                    // For port 80, http://localhost (without port) is CORRECT - don't redirect!
+                    if (hasPaymentParams && isLocalhost && hasNoPort) {
+                      // Check if we need to redirect to a non-standard port
+                      // This would only happen if the server is on a port other than 80/443
+                      // For now, assume port 80 is correct and don't redirect
+                      // The middleware handles server-side redirects if needed
+                    }
+                  }
+                } catch (e) {
+                  console.warn('Error in redirect URL fix script:', e);
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body
         className={`${nunito.variable} font-nunito antialiased text-black`}

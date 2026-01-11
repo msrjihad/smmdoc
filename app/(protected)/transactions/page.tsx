@@ -154,7 +154,11 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     setPageTitle('Transactions', appName);
-  }, [appName]);
+  }, [appName])
+
+  // Note: For port 80, http://localhost/transactions (without port) is CORRECT
+  // No redirect needed - the middleware handles this server-side
+  // Client-side redirects are only needed for non-standard ports (like 3000)
 
   useEffect(() => {
     const loadTimeFormat = async () => {
@@ -298,7 +302,7 @@ export default function TransactionsPage() {
               }
               
               showToast(
-                `Payment submitted! Invoice ID: ${invoiceId}. Please check your transaction list..`,
+                `Payment submitted! Please check your transaction list.`,
                 'info'
               );
               fetchTransactions(true);
@@ -422,14 +426,76 @@ export default function TransactionsPage() {
       }, 500);
     } else if (paymentStatus) {
       setHasShownPaymentToast(true);
-      if (paymentStatus === 'success') {
+
+      if (paymentStatus === 'cancelled') {
+        // When payment is cancelled, verify with gateway and update status
+        setTimeout(async () => {
+          try {
+            // Get invoice_id from sessionStorage (stored when payment was created)
+            const storedInvoiceId = sessionStorage.getItem('payment_invoice_id');
+            
+            if (storedInvoiceId) {
+              console.log('Payment cancelled, verifying with gateway and updating status:', storedInvoiceId);
+              
+              // Verify payment status with gateway
+              const verifyResponse = await fetch('/api/payment/verify-payment', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                  invoice_id: storedInvoiceId,
+                  from_redirect: true,
+                  cancelled_by_user: true // Flag to indicate user cancelled
+                }),
+              });
+
+              if (verifyResponse.ok) {
+                const verifyData = await verifyResponse.json();
+                const actualStatus = verifyData.payment?.status || verifyData.status;
+                
+                console.log('Payment verification result (cancelled):', {
+                  invoice_id: storedInvoiceId,
+                  actualStatus: actualStatus,
+                  verifyData: verifyData,
+                });
+
+                // If gateway confirms cancelled or user explicitly cancelled, show message
+                if (actualStatus === 'Cancelled' || actualStatus === 'CANCELLED') {
+                  showToast('Payment was cancelled.', 'warning');
+                } else {
+                  // Gateway might still show Processing, but user cancelled - show message
+                  showToast('Payment was cancelled by user.', 'warning');
+                }
+              } else {
+                // If verification fails, still show cancelled message
+                showToast('Payment was cancelled.', 'warning');
+              }
+              
+              // Clear stored invoice_id
+              sessionStorage.removeItem('payment_invoice_id');
+            } else {
+              // No invoice_id found, just show message
+              showToast('Payment was cancelled.', 'warning');
+            }
+            
+            // Refresh transactions to show updated status
+            fetchTransactions(true);
+          } catch (error) {
+            console.error('Error verifying cancelled payment:', error);
+            showToast('Payment was cancelled.', 'warning');
+            fetchTransactions(true);
+          }
+        }, 1000);
+      } else if (paymentStatus === 'success') {
         showToast('Payment completed successfully!', 'success');
+        fetchTransactions(true);
       } else if (paymentStatus === 'pending') {
         showToast('Payment is pending verification.', 'pending');
-      } else if (paymentStatus === 'cancelled') {
-        showToast('Payment was cancelled.', 'info');
+        fetchTransactions(true);
       } else if (paymentStatus === 'failed') {
         showToast('Payment failed.', 'error');
+        fetchTransactions(true);
       }
 
       setTimeout(() => {
