@@ -9,7 +9,7 @@ import { setUserDetails } from '@/lib/slice/userDetails';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import {
     FaChevronDown,
     FaCog,
@@ -30,6 +30,7 @@ import {
     FaWallet,
 } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
+import { logger } from '@/lib/utils/logger';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -73,11 +74,18 @@ const ThemeToggle = ({
     return () => {
       if (overlayTimeoutRef.current) {
         clearTimeout(overlayTimeoutRef.current);
+        overlayTimeoutRef.current = null;
       }
-      if (overlayRef.current && overlayRef.current.parentNode) {
+      if (overlayRef.current) {
         try {
-          overlayRef.current.remove();
+          // Check if element still exists in DOM before removing
+          if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
+            overlayRef.current.remove();
+          }
         } catch (error) {
+          // Element already removed or DOM not available
+        } finally {
+          overlayRef.current = null;
         }
       }
     };
@@ -90,8 +98,14 @@ const ThemeToggle = ({
 
     if (overlayRef.current) {
       try {
-        overlayRef.current.remove();
+        // Check if element still exists in DOM before removing
+        if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
+          overlayRef.current.remove();
+        }
       } catch (error) {
+        // Element already removed or DOM not available
+      } finally {
+        overlayRef.current = null;
       }
     }
 
@@ -145,9 +159,14 @@ const ThemeToggle = ({
       overlayTimeoutRef.current = setTimeout(() => {
         if (overlayRef.current) {
           try {
-            overlayRef.current.remove();
-            overlayRef.current = null;
+            // Check if element still exists in DOM before removing
+            if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
+              overlayRef.current.remove();
+            }
           } catch (error) {
+            // Element already removed or DOM not available
+          } finally {
+            overlayRef.current = null;
           }
         }
         overlayTimeoutRef.current = null;
@@ -385,7 +404,11 @@ const Header = () => {
   const { currency, setCurrency, rate, isLoading, availableCurrencies, currentCurrencyData } = useCurrency();
   const userData = useSelector((state: any) => state.userDetails);
 
-  const user = userData?.id ? userData : currentUser;
+  // Memoize user object to prevent rerenders when reference changes
+  const user = useMemo(() => {
+    return userData?.id ? userData : currentUser;
+  }, [userData?.id, userData, currentUser]);
+  
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [contactSystemEnabled, setContactSystemEnabled] = useState(true);
@@ -400,14 +423,17 @@ const Header = () => {
     mobile: false
   });
 
-  const handleDropdownChange = (dropdownName: string, isOpen: boolean) => {
+  const handleDropdownChange = useCallback((dropdownName: string, isOpen: boolean) => {
     setOpenDropdowns(prev => ({
       ...prev,
       [dropdownName]: isOpen
     }));
-  };
+  }, []);
 
-  const isAnyDropdownOpen = Object.values(openDropdowns).some(Boolean);
+  // Memoize isAnyDropdownOpen to prevent rerenders
+  const isAnyDropdownOpen = useMemo(() => {
+    return Object.values(openDropdowns).some(Boolean);
+  }, [openDropdowns]);
 
   useEffect(() => {
     const fetchContactSettings = async () => {
@@ -418,8 +444,7 @@ const Header = () => {
           setContactSystemEnabled(data.contactSystemEnabled ?? true);
         }
       } catch (error) {
-        console.error('Error fetching contact settings:', error);
-
+        logger.error('Error fetching contact settings', error);
         setContactSystemEnabled(true);
       }
     };
@@ -436,8 +461,7 @@ const Header = () => {
           setChildPanelSellingEnabled(data.childPanelSellingEnabled ?? false);
         }
       } catch (error) {
-        console.error('Error fetching child panel settings:', error);
-
+        logger.error('Error fetching child panel settings', error);
         setChildPanelSellingEnabled(false);
       }
     };
@@ -445,39 +469,42 @@ const Header = () => {
     fetchChildPanelSettings();
   }, []);
 
-  const isAdmin =
-    user?.role?.toLowerCase() === 'admin' ||
-    user?.userType?.toLowerCase() === 'admin' ||
-    user?.isAdmin === true;
+  // Memoize isAdmin to prevent rerenders
+  const isAdmin = useMemo(() => {
+    return user?.role?.toLowerCase() === 'admin' ||
+           user?.userType?.toLowerCase() === 'admin' ||
+           user?.isAdmin === true;
+  }, [user?.role, user?.userType, user?.isAdmin]);
 
   const { data: userStatsResponse } = useGetUserStatsQuery(undefined);
-  const balance = userStatsResponse?.data?.balance || userData?.balance || 0;
-  const userStoredCurrency = userStatsResponse?.data?.currency || userData?.currency || 'USD';
+  // Memoize balance and currency to prevent rerenders
+  const balance = useMemo(() => {
+    return userStatsResponse?.data?.balance || userData?.balance || 0;
+  }, [userStatsResponse?.data?.balance, userData?.balance]);
+  
+  const userStoredCurrency = useMemo(() => {
+    return userStatsResponse?.data?.currency || userData?.currency || 'USD';
+  }, [userStatsResponse?.data?.currency, userData?.currency]);
 
-  const formatCurrency = (amount: number) => {
+  // Memoize formatCurrency to prevent rerenders
+  const formatCurrency = useCallback((amount: number) => {
     if (!currentCurrencyData || !availableCurrencies || availableCurrencies.length === 0) {
       return `$${amount.toFixed(2)}`;
     }
 
-
     let convertedAmount = amount;
 
     if (currentCurrencyData.code === userStoredCurrency) {
-
       convertedAmount = amount;
     } else {
-
       const storedCurrencyData = availableCurrencies.find(c => c.code === userStoredCurrency);
 
       if (storedCurrencyData && currentCurrencyData) {
         if (userStoredCurrency === 'USD') {
-
           convertedAmount = amount * currentCurrencyData.rate;
         } else if (currentCurrencyData.code === 'USD') {
-
           convertedAmount = amount / storedCurrencyData.rate;
         } else {
-
           const usdAmount = amount / storedCurrencyData.rate;
           convertedAmount = usdAmount * currentCurrencyData.rate;
         }
@@ -485,13 +512,18 @@ const Header = () => {
     }
 
     return `${currentCurrencyData.symbol}${convertedAmount.toFixed(2)}`;
-  };
+  }, [currentCurrencyData, availableCurrencies, userStoredCurrency]);
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  const toggleMenu = useCallback(() => {
+    setIsMenuOpen(prev => !prev);
+  }, []);
 
+  const fetchUserRef = useRef(false);
   async function fetchUser() {
+    // Prevent duplicate calls
+    if (fetchUserRef.current) return;
+    fetchUserRef.current = true;
+    
     try {
       setIsRefreshing(true);
       const userDetails = await getUserDetails();
@@ -499,18 +531,23 @@ const Header = () => {
         dispatch(setUserDetails(userDetails));
       }
     } catch (error) {
-      console.error('Error fetching user details:', error);
+      logger.error('Error fetching user details', error);
     } finally {
       setIsRefreshing(false);
+      // Reset after a delay to allow retries
+      setTimeout(() => {
+        fetchUserRef.current = false;
+      }, 2000);
     }
   }
 
   useEffect(() => {
     fetchUser();
 
+    // Increase interval to 60 seconds to reduce API calls
     const intervalId = setInterval(() => {
       fetchUser();
-    }, 30000);
+    }, 60000); // Changed from 30s to 60s
 
     const handleCurrencyUpdate = () => {
 
@@ -548,10 +585,10 @@ const Header = () => {
     }
   }, []);
 
-  const handleCurrencyChange = async (newCurrency: string) => {
+  const handleCurrencyChange = useCallback(async (newCurrency: string) => {
     await setCurrency(newCurrency);
     handleDropdownChange('currency', false);
-  };
+  }, [setCurrency, handleDropdownChange]);
 
   return (
     <nav

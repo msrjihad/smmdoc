@@ -4,6 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { checkSessionValidity, setupSessionInvalidationListener } from '@/lib/session-invalidation';
+import { logger } from '@/lib/utils/logger';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -55,16 +56,19 @@ export function AuthGuard({ children }: AuthGuardProps) {
           }
         }
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        // Only log in development
+        if (process.env.NODE_ENV === 'development') {
+          logger.error('Error fetching user data', error);
+        }
       } finally {
         setUserDataLoading(false);
       }
     };
     
-    if (status !== 'loading' && session?.user) {
+    if (status !== 'loading' && session?.user?.id) {
       fetchUserData();
     }
-  }, [status, session?.user]);
+  }, [status, session?.user?.id]); // Only depend on user ID, not entire user object
 
   useEffect(() => {
     if (status === 'loading') {
@@ -95,7 +99,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
               const data = await response.json();
               
               if (!data.valid || !data.session) {
-                console.log('Session invalid on mount, clearing and redirecting...');
+                if (process.env.NODE_ENV === 'development') {
+                  logger.warn('Session invalid on mount, clearing and redirecting');
+                }
                 const { clearAllSessionData } = await import('@/lib/logout-helper');
                 clearAllSessionData();
                 setIsValidating(false);
@@ -103,13 +109,19 @@ export function AuthGuard({ children }: AuthGuardProps) {
                 return;
               }
             } else {
-              console.warn('Session check failed with status:', response.status, '- continuing anyway');
+              if (process.env.NODE_ENV === 'development') {
+                logger.warn('Session check failed', { status: response.status });
+              }
             }
           } catch (error) {
-            console.warn('Session check network error (will continue):', error);
+            if (process.env.NODE_ENV === 'development') {
+              logger.warn('Session check network error', error);
+            }
           }
         } else if (status === 'authenticated' && !session?.user?.id) {
-          console.log('Session missing user data, clearing and redirecting...');
+          if (process.env.NODE_ENV === 'development') {
+            logger.warn('Session missing user data, clearing and redirecting');
+          }
           const { clearAllSessionData } = await import('@/lib/logout-helper');
           clearAllSessionData();
           setIsValidating(false);
@@ -117,7 +129,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
           return;
         }
       } catch (error) {
-        console.error('Error validating session on mount:', error);
+        logger.error('Error validating session on mount', error);
         const { clearAllSessionData } = await import('@/lib/logout-helper');
         clearAllSessionData();
         setIsValidating(false);
@@ -154,7 +166,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
       try {
         const isValid = await checkSessionValidity();
         if (!isValid) {
-          console.log('Session is no longer valid, logging out...');
+          if (process.env.NODE_ENV === 'development') {
+            logger.warn('Session is no longer valid, logging out');
+          }
           if (typeof window !== 'undefined') {
             localStorage.clear();
             sessionStorage.clear();
@@ -162,7 +176,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
           await signOut({ callbackUrl: '/sign-in', redirect: true });
         }
       } catch (error) {
-        console.error('Error checking session validity (will retry):', error);
+        // Only log in development to avoid console spam
+        if (process.env.NODE_ENV === 'development') {
+          logger.warn('Error checking session validity', error);
+        }
       }
     }, 30000);
 

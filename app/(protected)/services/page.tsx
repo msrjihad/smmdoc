@@ -199,7 +199,7 @@ const UserServiceTable: React.FC = () => {
             throw new Error('Failed to fetch favorites');
           }
         } catch (favError) {
-          console.error('Error fetching favorites:', favError);
+          // Silently fallback to services without favorites
           const servicesData = data?.data?.map((service: Service) => ({
             ...service,
             isFavorite: false,
@@ -210,8 +210,9 @@ const UserServiceTable: React.FC = () => {
           processServicesData(servicesData, data.allCategories || []);
         }
     } catch (error) {
-      console.error('Error fetching services:', error);
-      showToast('Error fetching services. Please try again later.', 'error');
+      const { getUserFriendlyErrorMessage } = await import('@/lib/utils/frontend-error-handler');
+      const errorMessage = getUserFriendlyErrorMessage(error);
+      showToast(errorMessage, 'error');
       setServices([]);
       setGroupedServices({});
     } finally {

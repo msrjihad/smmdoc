@@ -48,9 +48,10 @@ export function CustomCodesInjector() {
           newScript.setAttribute(attr.name, attr.value);
         });
         newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-        if (oldScript.parentNode) {
+        // Check if element still exists in DOM before replacing
+        if (oldScript.parentNode && (document.head.contains(oldScript) || document.body.contains(oldScript))) {
           oldScript.parentNode.replaceChild(newScript, oldScript);
-        } else {
+        } else if (oldScript.isConnected) {
           oldScript.replaceWith(newScript);
         }
       } catch (error) {
@@ -66,11 +67,11 @@ export function CustomCodesInjector() {
 
       try {
         const existingHeaderCodes = document.getElementById('custom-header-codes');
-        if (existingHeaderCodes && existingHeaderCodes.parentNode) {
+        if (existingHeaderCodes && existingHeaderCodes.parentNode && document.head.contains(existingHeaderCodes)) {
           existingHeaderCodes.remove();
         }
       } catch (error) {
-        console.warn('Error removing existing header codes:', error);
+        // Element already removed - ignore silently
       }
 
       const headerDiv = document.createElement('div');
@@ -85,11 +86,11 @@ export function CustomCodesInjector() {
 
       try {
         const existingFooterCodes = document.getElementById('custom-footer-codes');
-        if (existingFooterCodes && existingFooterCodes.parentNode) {
+        if (existingFooterCodes && existingFooterCodes.parentNode && document.body.contains(existingFooterCodes)) {
           existingFooterCodes.remove();
         }
       } catch (error) {
-        console.warn('Error removing existing footer codes:', error);
+        // Element already removed - ignore silently
       }
 
       const footerDiv = document.createElement('div');
@@ -102,16 +103,22 @@ export function CustomCodesInjector() {
 
     return () => {
       try {
+        // Check if document is still available
+        if (typeof document === 'undefined' || !document.body || !document.head) {
+          return;
+        }
+
         const headerCodes = document.getElementById('custom-header-codes');
         const footerCodes = document.getElementById('custom-footer-codes');
-        if (headerCodes && headerCodes.parentNode) {
+        
+        if (headerCodes && headerCodes.parentNode && document.head.contains(headerCodes)) {
           headerCodes.remove();
         }
-        if (footerCodes && footerCodes.parentNode) {
+        if (footerCodes && footerCodes.parentNode && document.body.contains(footerCodes)) {
           footerCodes.remove();
         }
       } catch (error) {
-        console.warn('Error removing custom codes:', error);
+        // DOM not available during cleanup - ignore silently
       }
     };
   }, [customCodes]);

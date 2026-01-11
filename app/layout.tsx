@@ -109,7 +109,12 @@ export default async function RootLayout({
         className={`${nunito.variable} font-nunito antialiased text-black`}
         suppressHydrationWarning
       >
-        <SessionProvider session={session}>
+        <SessionProvider 
+          session={session}
+          refetchOnWindowFocus={false}
+          refetchInterval={0}
+          refetchWhenOffline={false}
+        >
           <StoreProvider>
             <ThemeProvider
               attribute="class"

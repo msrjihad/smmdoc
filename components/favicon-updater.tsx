@@ -8,8 +8,22 @@ export default function FaviconUpdater() {
       const timestamp = Date.now();
       const faviconHref = `/api/favicon?t=${timestamp}`;
       
+      // Check if document is available
+      if (typeof document === 'undefined' || !document.head) {
+        return;
+      }
+
       const existingLinks = document.querySelectorAll("link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']");
-      existingLinks.forEach(link => link.remove());
+      existingLinks.forEach(link => {
+        try {
+          // Verify element still exists in DOM before removing
+          if (link.parentNode && document.head.contains(link)) {
+            link.remove();
+          }
+        } catch (error) {
+          // Element already removed - ignore silently
+        }
+      });
       
       const faviconLink = document.createElement('link');
       faviconLink.rel = 'icon';

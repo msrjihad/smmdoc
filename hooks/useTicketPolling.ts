@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { logger } from '@/lib/utils/logger';
 
 interface TicketMessage {
   id: string;
@@ -48,22 +49,26 @@ export const useTicketPolling = <T extends TicketDetails>(
       }
 
       const result = await response.json();
-      const updatedTicket: T = apiEndpoint === 'admin' ? result.ticket : result;
+      const updatedTicket: T = apiEndpoint === 'admin' ? result.ticket : result;
+
       const currentMessageCount = updatedTicket.messages?.length || 0;
       const currentStatus = updatedTicket.status;
       const hasUpdates = updatedTicket.lastUpdated !== lastUpdateRef.current;
 
-      if (hasUpdates) {
+      if (hasUpdates) {
+
         if (currentMessageCount > lastMessageCount) {
           setHasNewMessages(true);
-        }
+        }
+
         if (currentStatus !== lastStatusRef.current && lastStatusRef.current !== '') {
           setHasStatusChange(true);
         }
 
         setLastMessageCount(currentMessageCount);
         lastUpdateRef.current = updatedTicket.lastUpdated;
-        lastStatusRef.current = currentStatus;
+        lastStatusRef.current = currentStatus;
+
         if (apiEndpoint === 'admin') {
           const enhancedData = {
             ...updatedTicket,
@@ -83,35 +88,42 @@ export const useTicketPolling = <T extends TicketDetails>(
         }
       }
     } catch (error) {
-      console.error('Error polling ticket updates:', error);
+      logger.error('Error polling ticket updates', error);
     } finally {
       setIsPolling(false);
     }
-  };
+  };
+
   const startPolling = () => {
     if (intervalRef.current) return;
 
     intervalRef.current = setInterval(pollTicketUpdates, interval);
-  };
+  };
+
   const stopPolling = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-  };
+  };
+
   const markMessagesAsRead = () => {
     setHasNewMessages(false);
-  };
+  };
+
   const markStatusChangeAsRead = () => {
     setHasStatusChange(false);
-  };
+  };
+
+  // Initialize refs only once when ticketDetails first loads
   useEffect(() => {
-    if (ticketDetails) {
+    if (ticketDetails && !lastUpdateRef.current) {
       setLastMessageCount(ticketDetails.messages?.length || 0);
       lastUpdateRef.current = ticketDetails.lastUpdated;
       lastStatusRef.current = ticketDetails.status || '';
     }
-  }, [ticketDetails]);
+  }, [ticketDetails?.id]); // Only depend on ticket ID, not the entire object
+
   useEffect(() => {
     if (ticketId) {
       startPolling();
@@ -122,7 +134,8 @@ export const useTicketPolling = <T extends TicketDetails>(
     return () => {
       stopPolling();
     };
-  }, [ticketId, interval]);
+  }, [ticketId, interval]);
+
   useEffect(() => {
     return () => {
       stopPolling();

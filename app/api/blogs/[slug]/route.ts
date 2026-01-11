@@ -1,6 +1,8 @@
 ﻿import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { handleApiError, createSuccessResponse } from '@/lib/utils/error-handler';
+import { logger } from '@/lib/utils/logger';
 
 export async function GET(
   req: NextRequest,
@@ -28,7 +30,8 @@ export async function GET(
         {
           success: false,
           error: 'Blog post not found',
-          data: null
+          code: 'NOT_FOUND',
+          statusCode: 404,
         },
         { status: 404 }
       );
@@ -56,19 +59,12 @@ export async function GET(
       post.views += 1;
     }
 
-    return NextResponse.json({
-      success: true,
-      data: post
-    });
+    return NextResponse.json(createSuccessResponse(post));
   } catch (error) {
-    console.error('Error fetching blog post:', error);
+    const errorResponse = handleApiError(error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch blog post',
-        data: null
-      },
-      { status: 500 }
+      errorResponse,
+      { status: errorResponse.statusCode }
     );
   }
 }
@@ -186,24 +182,18 @@ export async function PUT(
         const { sendBlogPostNotification } = await import('@/lib/notifications/user-notifications');
         await sendBlogPostNotification(updatedPost.title, updatedPost.slug);
       } catch (error) {
-        console.error('Error sending blog post notification:', error);
+        logger.error('Error sending blog post notification', error);
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Blog post updated successfully',
-      data: updatedPost
-    });
-  } catch (error) {
-    console.error('Error updating blog post:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to update blog post',
-        data: null
-      },
-      { status: 500 }
+      createSuccessResponse(updatedPost, 'Blog post updated successfully')
+    );
+  } catch (error) {
+    const errorResponse = handleApiError(error);
+    return NextResponse.json(
+      errorResponse,
+      { status: errorResponse.statusCode }
     );
   }
 }
@@ -247,20 +237,14 @@ export async function DELETE(
       where: { slug }
     });
 
-    return NextResponse.json({
-      success: true,
-      message: 'Blog post deleted successfully',
-      data: null
-    });
-  } catch (error) {
-    console.error('Error deleting blog post:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to delete blog post',
-        data: null
-      },
-      { status: 500 }
+      createSuccessResponse(null, 'Blog post deleted successfully')
+    );
+  } catch (error) {
+    const errorResponse = handleApiError(error);
+    return NextResponse.json(
+      errorResponse,
+      { status: errorResponse.statusCode }
     );
   }
 }

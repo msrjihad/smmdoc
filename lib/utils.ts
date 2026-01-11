@@ -164,7 +164,7 @@ export function detectTimezone(): string {
       }
     }
   } catch (error) {
-    console.error('Error detecting timezone:', error);
+    // Silently fallback to default timezone
   }
   
   return 'Asia/Dhaka';

@@ -1,6 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react';
 import { FaShoppingCart, FaServer, FaUsers, FaShareAlt } from 'react-icons/fa';
+import { logger } from '@/lib/utils/logger';
 
 interface CounterItem {
   iconName: string;
@@ -34,7 +35,6 @@ export default function Statistics() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        console.log('Statistics: Fetching homepage stats...');
         const res = await fetch('/api/homepage/stats', {
           method: 'GET',
           headers: {
@@ -42,28 +42,17 @@ export default function Statistics() {
           },
           cache: 'no-store',
         });
-        console.log('Statistics: Response status:', res.status, res.ok);
         
         const json = await res.json();
-        console.log('Statistics: Full API response:', json);
         
         if (!res.ok || !json.success) {
-          console.error('Statistics: API error response:', json);
+          logger.error('Statistics: API error response', { response: json });
           throw new Error(json.error || 'Failed to load homepage stats');
         }
         
-        console.log('Statistics: Received data:', json.data);
-        console.log('Statistics: Data types:', {
-          completedOrders: typeof json.data?.completedOrders,
-          activeServices: typeof json.data?.activeServices,
-          activeUsers: typeof json.data?.activeUsers,
-          totalOrders: typeof json.data?.totalOrders,
-          totalUsers: typeof json.data?.totalUsers,
-        });
-        
         setCounts(json.data);
       } catch (err: any) {
-        console.error('Statistics: Error fetching stats:', err);
+        logger.error('Statistics: Error fetching stats', err);
         setError(err.message || 'Failed to load stats');
       }
     };

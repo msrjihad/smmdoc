@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
+import { logger } from '@/lib/utils/logger';
 import { FaArrowRight } from 'react-icons/fa';
 import { GradientSpinner } from '@/components/ui/gradient-spinner';
 
@@ -81,16 +82,13 @@ const BlogPage: React.FC = () => {
 
       if (data.success && data.data && data.data.posts) {
         setAllBlogPosts(data.data.posts);
-        console.log('Frontend: Fetched blog posts from API:', data.data.posts.length);
       } else {
         throw new Error('Invalid API response format');
       }
     } catch (error) {
-      console.error('Frontend: Error fetching blog posts:', error);
+      logger.error('Frontend: Error fetching blog posts', error);
       setError('Failed to load blog posts');
-
       setAllBlogPosts([]);
-      console.log('Frontend: No blog posts available');
     } finally {
       setIsLoading(false);
     }

@@ -230,12 +230,14 @@ const ReCAPTCHA: React.FC<ReCAPTCHAProps> = ({
             }
           }
 
-          if (recaptchaRef.current && recaptchaRef.current.parentNode) {
+          if (recaptchaRef.current) {
             try {
-
-              recaptchaRef.current.innerHTML = '';
+              // Check if element still exists in DOM before manipulating
+              if (recaptchaRef.current.parentNode && document.body.contains(recaptchaRef.current)) {
+                recaptchaRef.current.innerHTML = '';
+              }
             } catch (domError) {
-              console.log('Container already cleaned up:', domError);
+              // Container already cleaned up or DOM not available - ignore silently
             }
           }
 

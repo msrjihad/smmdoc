@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
+import { logger } from '@/lib/utils/logger';
 import { FaChartLine, FaEye } from 'react-icons/fa';
 
 interface TrendingPost {
@@ -40,7 +41,7 @@ const TrendingWidget: React.FC = () => {
           throw new Error('Invalid API response format');
         }
       } catch (error) {
-        console.error('Error fetching trending posts:', error);
+        logger.error('Error fetching trending posts', error);
         setError('Failed to load trending posts');
         setTrendingPosts([]);
       } finally {

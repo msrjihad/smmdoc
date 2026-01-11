@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Fragment, useEffect, useState } from 'react';
+import React, { Fragment, useEffect, useState, useRef } from 'react';
 import {
   FaCheckCircle,
   FaClipboardList,
@@ -13,6 +13,7 @@ import {
 
 import { PriceDisplay } from '@/components/price-display';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { logger } from '@/lib/utils/logger';
 import ServiceViewModal from '@/app/(protected)/services/serviceViewModal';
 
 const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
@@ -122,8 +123,16 @@ const ServicesTable: React.FC = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
+  const fetchServicesRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const fetchServices = async () => {
+      // Prevent duplicate calls with same parameters
+      const requestKey = `${page}-${limit}-${debouncedSearch}`;
+      if (fetchServicesRef.current.has(requestKey)) {
+        return;
+      }
+      fetchServicesRef.current.add(requestKey);
+      
       setLoading(true);
       try {
 
@@ -145,7 +154,6 @@ const ServicesTable: React.FC = () => {
         const data = await response.json();
 
         if (!data || !data.data) {
-          console.error('Invalid response data:', data);
           throw new Error('Invalid response format');
         }
 
@@ -217,8 +225,7 @@ const ServicesTable: React.FC = () => {
           );
           setGroupedServices(ensureGroupedServicesIsValid(grouped));
         } catch (favError) {
-          console.error('Error fetching favorites:', favError);
-
+          // Silently fallback to services without favorites
           const servicesData =
             data?.data?.map((service: Service) => ({
               ...service,
@@ -268,7 +275,7 @@ const ServicesTable: React.FC = () => {
           setGroupedServices(ensureGroupedServicesIsValid(grouped));
         }
       } catch (error) {
-        console.error('Error fetching services:', error);
+        logger.error('Error fetching services', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         showToast(`Error fetching services: ${errorMessage}`, 'error');
         setServices([]);
@@ -276,6 +283,10 @@ const ServicesTable: React.FC = () => {
         setTotalPages(1);
       } finally {
         setLoading(false);
+        // Remove from active requests after a delay
+        setTimeout(() => {
+          fetchServicesRef.current.delete(requestKey);
+        }, 1000);
       }
     };
 

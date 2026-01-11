@@ -39,7 +39,10 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
         }
       }
     } catch (error) {
-      console.error('Error fetching meta keywords:', error);
+      // Silently handle meta keywords error - not critical
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Error fetching meta keywords:', error);
+      }
     }
 
     const response = await fetch(`${baseUrl}/api/blogs/${slug}`, {
@@ -97,7 +100,10 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
       }
     };
   } catch (error) {
-    console.error('Error generating metadata:', error);
+    // Log in development only
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error generating metadata:', error);
+    }
 
     const [appName, siteDescription] = await Promise.all([
       getAppName().catch(() => ''),
@@ -135,7 +141,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
     return <BlogPostDetailClient post={data.data} />;
   } catch (error) {
-    console.error('Error fetching blog post:', error);
+    // Log error in development only
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error fetching blog post:', error);
+    }
     notFound();
   }
 }
