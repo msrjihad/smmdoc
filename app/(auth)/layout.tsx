@@ -24,7 +24,10 @@ export default function AuthLayout({
           }
         }
       } catch (error) {
-        console.error('Error fetching maintenance mode:', error);
+        // Silently handle error - maintenance mode check failure shouldn't block page
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Error fetching maintenance mode:', error);
+        }
       } finally {
         setIsLoading(false);
       }

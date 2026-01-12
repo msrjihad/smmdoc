@@ -6,6 +6,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useGetUserStatsQuery } from '@/lib/services/dashboard-api';
+import { logger } from '@/lib/utils/logger';
 import { formatID, formatNumber, formatPrice } from '@/lib/utils';
 import { PriceDisplay } from '@/components/price-display';
 import moment from 'moment';
@@ -107,25 +108,12 @@ const DashboardPage = () => {
   }, [userDetails]);
 
   useEffect(() => {
-    const loadUserInfo = async () => {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setUserInfoLoading(false);
-    };
-
-    const loadFinanceData = async () => {
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      setFinanceLoading(false);
-    };
-
-    const loadStatistics = async () => {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setStatisticsLoading(false);
-    };
-
-    const loadOrders = async () => {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setOrdersLoading(false);
-    };
+    // Remove unnecessary setTimeout delays - set loading to false immediately
+    // The actual data loading is handled by SWR/API calls
+    setUserInfoLoading(false);
+    setFinanceLoading(false);
+    setStatisticsLoading(false);
+    setOrdersLoading(false);
 
     const loadTickets = async () => {
       try {
@@ -137,17 +125,12 @@ const DashboardPage = () => {
           }
         }
       } catch (error) {
-        console.error('Error fetching tickets:', error);
+        logger.error('Error fetching tickets', error);
       } finally {
-        await new Promise(resolve => setTimeout(resolve, 500));
         setTicketsLoading(false);
       }
     };
 
-    loadUserInfo();
-    loadFinanceData();
-    loadStatistics();
-    loadOrders();
     loadTickets();
   }, []);
 
@@ -157,17 +140,8 @@ const DashboardPage = () => {
   const totalSpend = userStats?.totalSpent != null ? Number(userStats.totalSpent) : 0;
   const totalOrders = userStats?.totalOrders || 0;
 
-  useEffect(() => {
-    if (userStats && process.env.NODE_ENV === 'development') {
-      console.log('Dashboard Stats Debug:', {
-        rawBalance: userStats.balance,
-        rawTotalSpent: userStats.totalSpent,
-        convertedBalance: balance,
-        convertedTotalSpend: totalSpend,
-        fullUserStats: userStats
-      });
-    }
-  }, [userStats, balance, totalSpend]);
+  // Removed debug console.log - use logger.debug if needed in development
+  // useEffect removed to prevent unnecessary rerenders
   const pendingOrders = userStats?.ordersByStatus?.pending || 0;
   const completedOrders = userStats?.ordersByStatus?.completed || 0;
   const processingOrders = userStats?.ordersByStatus?.processing || 0;

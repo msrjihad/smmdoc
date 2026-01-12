@@ -41,16 +41,11 @@ export async function POST(req: NextRequest) {
 
     const gatewayName = await getPaymentGatewayName();
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;
+    // Get app URL and ensure it includes port for localhost
+    const { getAppUrlWithPort } = await import('@/lib/utils/redirect-url');
+    const appUrl = getAppUrlWithPort();
     
-    if (!appUrl) {
-      return NextResponse.json(
-        { error: 'NEXT_PUBLIC_APP_URL or NEXTAUTH_URL environment variable is required' },
-        { status: 500 }
-      );
-    }
-    
-    console.log('App URL determined:', appUrl);
+    console.log('App URL determined (with port fix):', appUrl);
 
     const { getPaymentGatewayApiKey, getPaymentGatewayCheckoutUrl } = await import('@/lib/payment-gateway-config');
     const apiKey = await getPaymentGatewayApiKey();

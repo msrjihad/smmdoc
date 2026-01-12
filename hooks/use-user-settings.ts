@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { logger } from '@/lib/utils/logger';
 
 interface UserSettings {
   resetPasswordEnabled: boolean;
@@ -48,7 +49,7 @@ export function useUserSettings(): UseUserSettingsReturn {
         throw new Error(data.error || 'Failed to load user settings');
       }
     } catch (err) {
-      console.error('Error fetching user settings:', err);
+      logger.error('Error fetching user settings', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
 
       setSettings({
@@ -70,14 +71,27 @@ export function useUserSettings(): UseUserSettingsReturn {
     }
   };
 
+  const fetchSettingsRef = useRef(false);
   useEffect(() => {
-    fetchSettings();
+    // Prevent duplicate calls
+    if (fetchSettingsRef.current) return;
+    fetchSettingsRef.current = true;
+    
+    fetchSettings().finally(() => {
+      // Reset after a delay to allow retries
+      setTimeout(() => {
+        fetchSettingsRef.current = false;
+      }, 1000);
+    });
   }, []);
 
-  return {
+  // Memoize return value to prevent rerenders
+  const memoizedRefetch = useMemo(() => fetchSettings, []);
+  
+  return useMemo(() => ({
     settings,
     loading,
     error,
-    refetch: fetchSettings,
-  };
+    refetch: memoizedRefetch,
+  }), [settings, loading, error, memoizedRefetch]);
 }

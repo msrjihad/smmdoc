@@ -85,7 +85,9 @@ export async function POST(req: NextRequest) {
             paymentMethod: payment_method || payment.paymentMethod || null,
             gatewayFee: fee !== undefined ? fee : payment.gatewayFee,
             name: full_name || payment.name,
-            amount: charged_amount !== undefined ? charged_amount : payment.amount,
+            // Don't update amount from webhook - webhook returns BDT, we store USD
+            // Keep the original USD amount from payment record
+            amount: payment.amount,
           }
         });
         
@@ -94,11 +96,20 @@ export async function POST(req: NextRequest) {
         if (paymentStatus === "Success" && payment.user) {
           const originalAmount = Number(payment.amount) || 0;
 
+          const userSettings = await prisma.userSettings.findFirst();
+          let bonusAmount = 0;
+
+          if (userSettings && userSettings.bonusPercentage > 0) {
+            bonusAmount = (originalAmount * userSettings.bonusPercentage) / 100;
+          }
+
+          const totalAmountToAdd = originalAmount + bonusAmount;
+
           const user = await prisma.users.update({
             where: { id: payment.userId },
             data: {
               balance: {
-                increment: originalAmount
+                increment: totalAmountToAdd
               },
               balanceUSD: {
                 increment: originalAmount
@@ -109,7 +120,7 @@ export async function POST(req: NextRequest) {
             }
           });
           
-          console.log(`User ${payment.userId} balance updated after successful payment. New balance: ${user.balance}`);
+          console.log(`User ${payment.userId} balance updated after successful payment. New balance: ${user.balance}. Original amount: ${originalAmount}, Bonus: ${bonusAmount}, Total added: ${totalAmountToAdd}`);
 
           try {
             await sendTransactionSuccessNotification(

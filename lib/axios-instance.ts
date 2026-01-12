@@ -1,9 +1,8 @@
 import axios from "axios";
+import { logger } from "./utils/logger";
 
 const getBaseUrl = () => {
-
   if (typeof window !== 'undefined') {
-
     return window.location.origin;
   }
 
@@ -25,43 +24,54 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    logger.apiRequest(
+      config.method?.toUpperCase() || 'GET',
+      config.url || '',
+      { baseURL: config.baseURL }
+    );
 
     config.withCredentials = false;
 
     if (config.url && config.url.startsWith('/api/')) {
       config.baseURL = getBaseUrl();
-      console.log(`Using base URL: ${config.baseURL} for API request`);
     }
 
     return config;
   },
   (error) => {
-    console.error("Request error:", error);
+    logger.apiError('REQUEST', error.config?.url || 'unknown', error);
     return Promise.reject(error);
   }
 );
 
 axiosInstance.interceptors.response.use(
   (response) => {
-    console.log(`API Response: ${response.status} ${response.config.url}`);
+    logger.apiResponse(
+      response.status,
+      response.config.url || '',
+      { method: response.config.method }
+    );
     return response;
   },
   (error) => {
-    console.error("Response error:", error);
+    const url = error.config?.url || 'unknown';
+    const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
+    
     if (error.response) {
-
-
-      console.error("Error data:", error.response.data);
-      console.error("Error status:", error.response.status);
-      console.error("Error headers:", error.response.headers);
+      logger.apiError(method, url, error, {
+        status: error.response.status,
+        data: error.response.data,
+      });
     } else if (error.request) {
-
-      console.error("Error request:", error.request);
+      logger.apiError(method, url, new Error('Network error - no response received'), {
+        request: error.request,
+      });
     } else {
-
-      console.error("Error message:", error.message);
+      logger.apiError(method, url, error, {
+        message: error.message,
+      });
     }
+    
     return Promise.reject(error);
   }
 );

@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth-helpers';
 import { NextResponse } from 'next/server';
 import { serializeServices, serializeService } from '@/lib/utils';
 import { sendNewServiceNotification } from '@/lib/notifications/user-notifications';
+import { handleApiError, createSuccessResponse } from '@/lib/utils/error-handler';
 
 export async function GET(request: Request) {
   try {
@@ -477,72 +478,14 @@ export async function POST(request: Request) {
     const serializedService = serializeService(newService);
 
     return NextResponse.json(
-      {
-        error: null,
-        message: 'Service created successfully',
-        data: serializedService,
-        success: true,
-      },
+      createSuccessResponse(serializedService, 'Service created successfully'),
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("Error creating service:", error);
-    console.error("Error details:", {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined,
-      code: error?.code,
-      meta: error?.meta,
-      cause: error?.cause
-    });
-    
-    let errorMessage = 'Failed to create service';
-    let statusCode = 500;
-    
-    if (error instanceof Error) {
-      errorMessage += ': ' + error.message;
-      const prismaError = error as any;
-      
-      if (error.message.includes('Foreign key constraint') || prismaError?.code === 'P2003') {
-        errorMessage = 'Foreign key constraint failed. Please check that the category, service type, or provider exists.';
-        statusCode = 400;
-      } else if (error.message.includes('Unique constraint') || prismaError?.code === 'P2002') {
-        errorMessage = 'A service with this name or identifier already exists.';
-        statusCode = 400;
-      } else if (error.message.includes('Required') || prismaError?.code === 'P2011') {
-        errorMessage = 'Required field is missing. Please check that all required fields are filled.';
-        statusCode = 400;
-      } else if (prismaError?.code === 'P2001') {
-        errorMessage = 'The record you are trying to reference does not exist.';
-        statusCode = 404;
-      } else if (prismaError?.code === 'P2012') {
-        errorMessage = 'A required value is missing.';
-        statusCode = 400;
-      }
-    }
-    
-    try {
-      return NextResponse.json(
-        {
-          error: errorMessage,
-          data: null,
-          success: false,
-        },
-        { status: statusCode }
-      );
-    } catch (jsonError) {
-      console.error("Failed to send error response:", jsonError);
-      return new NextResponse(
-        JSON.stringify({
-          error: errorMessage,
-          data: null,
-          success: false,
-        }),
-        {
-          status: statusCode,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
+    const errorResponse = handleApiError(error);
+    return NextResponse.json(
+      errorResponse,
+      { status: errorResponse.statusCode }
+    );
   }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { logger } from '@/lib/utils/logger';
 import {
   FaBell,
   FaShoppingCart,
@@ -81,7 +82,12 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
   const openRef = useRef(open);
   const displayCountRef = useRef(displayCount);
 
+  const fetchUnreadCountRef = useRef(false);
   const fetchUnreadCount = async () => {
+    // Prevent duplicate calls
+    if (fetchUnreadCountRef.current) return;
+    fetchUnreadCountRef.current = true;
+    
     try {
       const response = await fetch('/api/notifications/count');
       if (response.ok) {
@@ -89,11 +95,24 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
         setUnreadCount(data.unreadCount || 0);
       }
     } catch (error) {
-      console.error('Error fetching unread count:', error);
+      logger.error('Error fetching unread count', error);
+    } finally {
+      // Reset after a short delay to allow retries
+      setTimeout(() => {
+        fetchUnreadCountRef.current = false;
+      }, 1000);
     }
   };
 
+  const fetchNotificationsRef = useRef<Set<string>>(new Set());
   const fetchNotifications = async (limit: number = 5, offset: number = 0, append: boolean = false) => {
+    // Prevent duplicate calls with same parameters
+    const requestKey = `${limit}-${offset}-${append}`;
+    if (fetchNotificationsRef.current.has(requestKey)) {
+      return;
+    }
+    fetchNotificationsRef.current.add(requestKey);
+    
     try {
       if (!append) {
         setNotificationsLoading(true);
@@ -124,7 +143,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
         }
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      logger.error('Error fetching notifications', error);
       setNotificationsError('Error loading notifications');
       if (!append) {
         setNotifications([]);
@@ -133,6 +152,10 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
       if (!append) {
         setNotificationsLoading(false);
       }
+      // Remove from active requests after a delay
+      setTimeout(() => {
+        fetchNotificationsRef.current.delete(requestKey);
+      }, 500);
     }
   };
 
@@ -158,7 +181,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
         setUnreadCount(data.unreadCount || 0);
       }
     } catch (error) {
-      console.error('Error loading more notifications:', error);
+      logger.error('Error loading more notifications', error);
     } finally {
       setLoadingMore(false);
     }
@@ -176,17 +199,19 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
     fetchNotifications(5, 0, false);
     fetchUnreadCount();
     
+    // Poll notification count every 30 seconds (reduced from 1 second)
     const countInterval = setInterval(() => {
       if (!openRef.current) {
         fetchUnreadCount();
       }
-    }, 1000);
+    }, 30000); // 30 seconds instead of 1 second
     
+    // Poll notifications every 60 seconds (reduced from 5 seconds)
     const notificationsInterval = setInterval(() => {
       if (!openRef.current) {
         fetchNotifications(displayCountRef.current, 0, false);
       }
-    }, 5000);
+    }, 60000); // 60 seconds instead of 5 seconds
     
     return () => {
       clearInterval(countInterval);
@@ -197,7 +222,10 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
   useEffect(() => {
     if (open) {
       setDisplayCount(5);
-      fetchNotifications(5, 0, false);
+      // Only fetch if not already loading to prevent duplicate calls
+      if (!notificationsLoading) {
+        fetchNotifications(5, 0, false);
+      }
     }
   }, [open]);
 

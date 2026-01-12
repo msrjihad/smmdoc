@@ -7,6 +7,7 @@ import { setPageTitle } from '@/lib/utils/set-page-title';
 import { formatID, formatNumber, formatPrice } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { logger } from '@/lib/utils/logger';
 import { RequestWithdrawalModal } from '@/components/dashboard/affiliate/request-withdrawal';
 import {
   FaChartLine,
@@ -196,7 +197,7 @@ function AffiliateStatsCards() {
           }
         }
       } catch (error) {
-        console.error('Error fetching affiliate stats:', error);
+        logger.error('Error fetching affiliate stats', error);
         showToast('Error loading affiliate stats', 'error');
       } finally {
         setLoading(false);
@@ -204,13 +205,19 @@ function AffiliateStatsCards() {
       }
     };
 
-    const loadUserInfo = async () => {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setUserInfoLoading(false);
+    // Remove unnecessary setTimeout delay
+    setUserInfoLoading(false);
+    
+    // Prevent duplicate calls
+    let isFetching = false;
+    const fetchStatsOnce = async () => {
+      if (isFetching) return;
+      isFetching = true;
+      await fetchStats();
+      isFetching = false;
     };
-
-    fetchStats();
-    loadUserInfo();
+    
+    fetchStatsOnce();
 
     const handleStatsRefresh = () => {
       fetchStats();

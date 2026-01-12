@@ -90,6 +90,11 @@ export async function getPaymentGatewayVerifyUrl(): Promise<string> {
   
   const cleanUrl = baseUrl.replace(/\/$/, '');
   
+  // Check if URL already contains verify endpoint
+  if (cleanUrl.includes('/checkout/verify-payment-data') || cleanUrl.includes('/verify-payment-data')) {
+    return cleanUrl;
+  }
+  
   if (cleanUrl.includes('/api/verify-payment')) {
     return cleanUrl;
   }
@@ -98,10 +103,61 @@ export async function getPaymentGatewayVerifyUrl(): Promise<string> {
     return cleanUrl;
   }
   
+  // Handle sandbox URL structure
+  // Base URL might be: https://sandbox.uddoktapay.com/api/checkout-v2
+  // Server-side verify URL should be: https://sandbox.uddoktapay.com/api/verify-payment
+  // (NOT /checkout/verify-payment-data which is browser-only and requires cookies)
+  if (cleanUrl.includes('sandbox.uddoktapay.com')) {
+    try {
+      // Extract base domain (remove /api/checkout-v2 or any path)
+      const urlObj = new URL(cleanUrl);
+      const baseDomain = `${urlObj.protocol}//${urlObj.host}`;
+      const verifyUrl = `${baseDomain}/api/verify-payment`;
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[Payment Gateway Config] Sandbox verify URL constructed: ${verifyUrl} from base: ${cleanUrl}`);
+      }
+      return verifyUrl;
+    } catch (urlError) {
+      console.error('[Payment Gateway Config] Error parsing sandbox URL:', urlError, 'cleanUrl:', cleanUrl);
+      // Fallback: try to extract domain manually
+      const match = cleanUrl.match(/^(https?:\/\/[^\/]+)/);
+      if (match) {
+        const verifyUrl = `${match[1]}/api/verify-payment`;
+        console.log(`[Payment Gateway Config] Using fallback sandbox verify URL: ${verifyUrl}`);
+        return verifyUrl;
+      }
+    }
+  }
+  
+  // Handle live/production URL structure
+  // Base URL might be: https://pay.uddoktapay.com/api/checkout-v2
+  // But verify URL should be: https://pay.uddoktapay.com/api/verify-payment
+  if (cleanUrl.includes('uddoktapay.com') && !cleanUrl.includes('sandbox')) {
+    try {
+      // Extract base domain
+      const urlObj = new URL(cleanUrl);
+      const baseDomain = `${urlObj.protocol}//${urlObj.host}`;
+      return `${baseDomain}/api/verify-payment`;
+    } catch (urlError) {
+      console.error('[Payment Gateway Config] Error parsing live URL:', urlError, 'cleanUrl:', cleanUrl);
+      // Fallback
+      const match = cleanUrl.match(/^(https?:\/\/[^\/]+)/);
+      if (match) {
+        return `${match[1]}/api/verify-payment`;
+      }
+    }
+  }
+  
+  // Handle live/production URL structure
   if (cleanUrl.includes('/api')) {
+    // If base URL has /api/checkout-v2, replace with /api/verify-payment
+    if (cleanUrl.includes('/checkout-v2')) {
+      return cleanUrl.replace('/checkout-v2', '/verify-payment');
+    }
     return `${cleanUrl}/verify-payment`;
   }
   
+  // Default: try /api/verify-payment
   return `${cleanUrl}/api/verify-payment`;
 }
 

@@ -1,5 +1,6 @@
 ﻿import { db } from '@/lib/db';
 import { sendTransactionSuccessNotification } from '@/lib/notifications/user-notifications';
+import { auth } from '@/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
@@ -819,8 +820,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const invoice_id = body.invoice_id;
     const from_redirect = body.from_redirect === true || body.from_redirect === "true";
+    const cancelled_by_user = body.cancelled_by_user === true || body.cancelled_by_user === "true";
     
-    console.log("Verifying payment for invoice_id (POST method):", invoice_id, "from_redirect:", from_redirect);
+    console.log("Verifying payment for invoice_id (POST method):", invoice_id, "from_redirect:", from_redirect, "cancelled_by_user:", cancelled_by_user);
     console.log("Note: invoice_id is extracted from request body. All payment data (transaction_id, payment_method, etc.) will be fetched from Verify Payment API using invoice_id only");
 
     if (!invoice_id) {
@@ -887,13 +889,55 @@ export async function POST(req: NextRequest) {
     }
 
     if (!payment) {
-      console.error("Payment record not found for invoice_id:", invoice_id);
-      return NextResponse.json({ 
-        error: "Payment record not found", 
-        status: "FAILED",
-        message: `No payment record found with invoice ID: ${invoice_id}`,
-        invoice_id: invoice_id
-      }, { status: 404 });
+      console.error("Payment record not found for invoice_id (POST):", invoice_id);
+      
+      // Final fallback: Try to find by user and recent timestamp (within last 10 minutes)
+      // This prevents creating duplicates when invoice_id lookup fails
+      if (from_redirect) {
+        const session = await auth();
+        if (session?.user?.id) {
+          console.log("Trying to find payment by user and recent timestamp as fallback (POST)...");
+          const tenMinutesAgo = new Date(Date.now() - 600000);
+          const fallbackPayment = await db.addFunds.findFirst({
+            where: {
+              userId: session.user.id,
+              createdAt: { gte: tenMinutesAgo },
+              status: { in: ['Processing', 'Pending'] },
+            },
+            orderBy: { createdAt: 'desc' },
+            include: { user: true },
+          });
+          
+          if (fallbackPayment) {
+            console.log("Found fallback payment record (POST), updating invoice_id:", fallbackPayment.id, {
+              existingInvoiceId: fallbackPayment.invoiceId,
+              newInvoiceId: invoice_id
+            });
+            try {
+              await db.addFunds.update({
+                where: { id: fallbackPayment.id },
+                data: { invoiceId: invoice_id }
+              });
+              payment = await db.addFunds.findUnique({
+                where: { invoiceId: invoice_id },
+                include: { user: true },
+              });
+              console.log("Fallback payment record updated successfully");
+            } catch (updateError) {
+              console.error("Error updating fallback payment invoice_id (POST):", updateError);
+            }
+          }
+        }
+      }
+      
+      if (!payment) {
+        return NextResponse.json({ 
+          error: "Payment record not found", 
+          status: "FAILED",
+          message: `No payment record found with invoice ID: ${invoice_id}`,
+          invoice_id: invoice_id
+        }, { status: 404 });
+      }
     }
 
     if (payment.status === "Success") {
@@ -1034,7 +1078,12 @@ export async function POST(req: NextRequest) {
         
       }
 
-      if (verificationResponse && verificationResponse.ok && verificationData) {
+      // CRITICAL: If user explicitly cancelled, set status to Cancelled regardless of gateway response
+      if (cancelled_by_user) {
+        console.log('User cancelled payment, setting status to Cancelled');
+        paymentStatus = "Cancelled";
+        isSuccessful = false;
+      } else if (verificationResponse && verificationResponse.ok && verificationData) {
         if (verificationData.status === 'ERROR') {
           console.log('Payment verification returned ERROR status:', verificationData.message || 'Unknown error');
           paymentStatus = "Cancelled";
@@ -1053,8 +1102,15 @@ export async function POST(req: NextRequest) {
         paymentStatus = payment.status || "Processing";
       }
       
-      if (from_redirect && payment.user) {
-        console.log('Payment redirected - updating with fetched transaction details from Verify Payment API (POST)');
+      // CRITICAL: Always update payment record when from_redirect is true (user returned from gateway)
+      // Also update if status changed, even if not from redirect
+      if (payment && (from_redirect || paymentStatus !== payment.status)) {
+        console.log('Updating payment record with gateway verification data (POST):', {
+          from_redirect,
+          currentStatus: payment.status,
+          newStatus: paymentStatus,
+          statusChanged: paymentStatus !== payment.status
+        });
         
         let transactionIdToSave = apiTransactionId || 
                                  verificationData?.transaction_id || 
@@ -1084,6 +1140,7 @@ export async function POST(req: NextRequest) {
                 where: { invoiceId: invoice_id },
                 data: {
                   status: paymentStatus,
+                  adminStatus: paymentStatus === 'Success' ? 'Success' : paymentStatus === 'Cancelled' ? 'Cancelled' : payment.adminStatus || 'Pending',
                   transactionId: transactionIdToSave,
                   paymentMethod: paymentMethodToSave,
                   gatewayFee: gatewayFeeToSave,
@@ -1112,6 +1169,7 @@ export async function POST(req: NextRequest) {
               where: { invoiceId: invoice_id },
               data: {
                 status: paymentStatus,
+                adminStatus: paymentStatus === 'Success' ? 'Success' : paymentStatus === 'Cancelled' ? 'Cancelled' : payment.adminStatus || 'Pending',
                 transactionId: transactionIdToSave,
                 paymentMethod: paymentMethodToSave,
                 gatewayFee: gatewayFeeToSave,

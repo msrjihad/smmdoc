@@ -177,7 +177,6 @@ const FavoriteServicesTable: React.FC = () => {
 
       processServicesData(favoriteServicesData, data.allCategories || []);
     } catch (error) {
-      console.error('Error fetching favorite services:', error);
       showToast('Error fetching favorite services. Please try again later.', 'error');
       setServices([]);
       setGroupedServices({});

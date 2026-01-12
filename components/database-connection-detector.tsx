@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { FaExclamationTriangle, FaTimes } from 'react-icons/fa';
+import { logger } from '@/lib/utils/logger';
 
 export default function DatabaseConnectionDetector({ children }: { children: React.ReactNode }) {
   const [isDatabaseConnected, setIsDatabaseConnected] = useState<boolean | null>(null);
@@ -19,36 +20,52 @@ export default function DatabaseConnectionDetector({ children }: { children: Rea
       const data = await response.json();
       return data.success === true;
     } catch (error) {
-      console.log('Database connection check failed:', error);
+      // Use logger for proper error handling
+      logger.warn('Database connection check failed', error);
       return false;
     }
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    let intervalId: NodeJS.Timeout | null = null;
+
     const performCheck = async () => {
       const connected = await checkDatabaseConnection();
+      
+      if (!isMounted) return;
+      
       const wasConnected = isDatabaseConnected;
-      setIsDatabaseConnected(connected);
-
-      if (!connected && (wasConnected === true || (wasConnected === null && !toastShownRef.current))) {
-        setShowToast(true);
-        toastShownRef.current = true;
-      } else if (connected && wasConnected === false) {
-        setShowToast(false);
-        toastShownRef.current = false;
-      }
+      setIsDatabaseConnected((prev) => {
+        // Only update if state actually changed
+        if (prev === connected) return prev;
+        
+        // Handle toast display logic
+        if (!connected && (prev === true || (prev === null && !toastShownRef.current))) {
+          setShowToast(true);
+          toastShownRef.current = true;
+        } else if (connected && prev === false) {
+          setShowToast(false);
+          toastShownRef.current = false;
+        }
+        
+        return connected;
+      });
     };
 
     performCheck();
 
-    const interval = setInterval(() => {
+    intervalId = setInterval(() => {
       performCheck();
     }, 30000);
 
     return () => {
-      clearInterval(interval);
+      isMounted = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
-  }, [isDatabaseConnected, checkDatabaseConnection]);
+  }, []); // Remove dependencies to prevent rerender loops
 
   return (
     <>

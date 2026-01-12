@@ -136,11 +136,12 @@ const AnalyticsInjector = () => {
       const existingGAScripts = document.querySelectorAll('script[src*="googletagmanager.com/gtag"], script[data-analytics="ga"]');
       existingGAScripts.forEach(script => {
         try {
-          if (script.parentNode) {
+          // Verify element still exists in DOM before removing
+          if (script.parentNode && (document.head.contains(script) || document.body.contains(script))) {
             script.remove();
           }
         } catch (error) {
-          console.warn('Error removing GA script:', error);
+          // Element already removed - ignore silently
         }
       });
 
@@ -204,11 +205,12 @@ const AnalyticsInjector = () => {
       const existingFBScripts = document.querySelectorAll('script[data-analytics="fb"], noscript[data-analytics="fb"]');
       existingFBScripts.forEach(script => {
         try {
-          if (script.parentNode) {
+          // Verify element still exists in DOM before removing
+          if (script.parentNode && (document.head.contains(script) || document.body.contains(script))) {
             script.remove();
           }
         } catch (error) {
-          console.warn('Error removing FB script:', error);
+          // Element already removed - ignore silently
         }
       });
 
@@ -285,11 +287,12 @@ const AnalyticsInjector = () => {
       const existingGTMScripts = document.querySelectorAll('script[data-analytics="gtm"], noscript[data-analytics="gtm"]');
       existingGTMScripts.forEach(script => {
         try {
-          if (script.parentNode) {
+          // Verify element still exists in DOM before removing
+          if (script.parentNode && (document.head.contains(script) || document.body.contains(script))) {
             script.remove();
           }
         } catch (error) {
-          console.warn('Error removing GTM script:', error);
+          // Element already removed - ignore silently
         }
       });
 
@@ -354,29 +357,36 @@ const AnalyticsInjector = () => {
 
     return () => {
       try {
+        // Check if document is still available
+        if (typeof document === 'undefined' || !document.body || !document.head) {
+          return;
+        }
+
         const analyticsScripts = document.querySelectorAll('script[data-analytics]');
         analyticsScripts.forEach(script => {
           try {
-            if (script.parentNode) {
+            // Verify element still exists in DOM before removing
+            if (script.parentNode && (document.head.contains(script) || document.body.contains(script))) {
               script.remove();
             }
           } catch (error) {
-            console.warn('Error removing analytics script:', error);
+            // Element already removed or DOM not available - ignore silently
           }
         });
 
         const analyticsNoscripts = document.querySelectorAll('noscript[data-analytics]');
         analyticsNoscripts.forEach(noscript => {
           try {
-            if (noscript.parentNode) {
+            // Verify element still exists in DOM before removing
+            if (noscript.parentNode && document.body.contains(noscript)) {
               noscript.remove();
             }
           } catch (error) {
-            console.warn('Error removing analytics noscript:', error);
+            // Element already removed or DOM not available - ignore silently
           }
         });
       } catch (error) {
-        console.warn('Error in analytics cleanup:', error);
+        // DOM not available during cleanup - ignore silently
       }
     };
   }, [analyticsSettings, isAuthenticated, pathname]);

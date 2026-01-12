@@ -2,36 +2,59 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo, memo } from 'react';
+import { useSession } from 'next-auth/react';
 import { FaChevronDown, FaDesktop, FaHome, FaMoon, FaSignOutAlt, FaSun, FaTachometerAlt, FaUserCog, FaWallet } from 'react-icons/fa';
 import { useUserSettings } from '@/hooks/use-user-settings';
+import { logger } from '@/lib/utils/logger';
+import { cachedFetch } from '@/lib/utils/api-cache';
 
 const useSafeSession = () => {
   const [sessionData, setSessionData] = useState({
     data: null,
     status: 'loading'
   });
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
     try {
-
       import('next-auth/react').then(({ useSession }) => {
-
-
-        setTimeout(() => {
-          setSessionData({
-            data: null,
-            status: 'unauthenticated'
-          });
+        if (!isMounted) return;
+        
+        // Clear any existing timeout
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        
+        timeoutRef.current = setTimeout(() => {
+          if (isMounted) {
+            setSessionData({
+              data: null,
+              status: 'unauthenticated'
+            });
+          }
         }, 1000);
       });
     } catch (error) {
-      console.warn('NextAuth not available, continuing without authentication');
-      setSessionData({
-        data: null,
-        status: 'unauthenticated'
-      });
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn('NextAuth not available, continuing without authentication');
+      }
+      if (isMounted) {
+        setSessionData({
+          data: null,
+          status: 'unauthenticated'
+        });
+      }
     }
+    
+    return () => {
+      isMounted = false;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
 
   return sessionData;
@@ -52,37 +75,73 @@ const Header: React.FC<HeaderProps> = ({
   const [mounted, setMounted] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [mobileImageError, setMobileImageError] = useState(false);
-  const { settings: userSettings, loading: settingsLoading } = useUserSettings();
+  // Memoize userSettings to prevent rerenders when hook returns new object
+  const userSettingsHook = useUserSettings();
+  const userSettings = useMemo(() => userSettingsHook.settings, [userSettingsHook.settings]);
+  const settingsLoading = useMemo(() => userSettingsHook.loading, [userSettingsHook.loading]);
   const [siteLogo, setSiteLogo] = useState<string | null>(null);
   const [siteDarkLogo, setSiteDarkLogo] = useState<string | null>(null);
   const [logoLoaded, setLogoLoaded] = useState(false);
 
-  let session = propSession;
-  let status = propStatus;
-
-  if (enableAuth && !propSession) {
-    try {
-      const { useSession } = require('next-auth/react');
-      const sessionData = useSession();
-      session = sessionData.data;
-      status = sessionData.status;
-    } catch (error) {
-      console.warn('NextAuth not available, using fallback');
-      status = 'unauthenticated';
+  // Use session hook - always call it to follow rules of hooks
+  // But only use it if propSession is not provided
+  // Note: refetchOnWindowFocus is controlled by SessionProvider in app/layout.tsx
+  const sessionHook = enableAuth ? useSession() : { data: null, status: 'unauthenticated' as const };
+  
+  // Use prop session if available, otherwise use hook session
+  const rawSession = propSession || sessionHook?.data || null;
+  const rawStatus = propStatus !== 'unauthenticated' ? propStatus : (sessionHook?.status || 'unauthenticated');
+  
+  // Create stable session reference - only update when actual data changes
+  const sessionKeyRef = useRef<string>('');
+  const prevSessionRef = useRef<any>(null);
+  
+  const memoizedSession = useMemo(() => {
+    if (!rawSession) {
+      sessionKeyRef.current = '';
+      prevSessionRef.current = null;
+      return null;
     }
-  }
+    
+    // Create stable key from session data
+    const currentKey = `${rawSession?.user?.id || ''}-${rawSession?.user?.email || ''}-${rawSession?.user?.role || ''}-${rawSession?.user?.photo || ''}-${rawSession?.user?.image || ''}`;
+    
+    // Only return new object if key actually changed
+    if (currentKey !== sessionKeyRef.current) {
+      sessionKeyRef.current = currentKey;
+      prevSessionRef.current = rawSession;
+      return rawSession;
+    }
+    
+    // Return previous stable reference
+    return prevSessionRef.current || rawSession;
+  }, [rawSession?.user?.id, rawSession?.user?.email, rawSession?.user?.role, rawSession?.user?.photo, rawSession?.user?.image]);
+  
+  const memoizedStatus = useMemo(() => rawStatus, [rawStatus]);
 
-  const isAuthenticated = status === 'authenticated' && session?.user;
-  const isLoading = status === 'loading';
+  // Memoize computed values to prevent rerenders
+  const isAuthenticated = useMemo(() => 
+    memoizedStatus === 'authenticated' && memoizedSession?.user,
+    [memoizedStatus, memoizedSession?.user]
+  );
+  
+  const isLoading = useMemo(() => memoizedStatus === 'loading', [memoizedStatus]);
 
-  const userRole = session?.user?.role?.toUpperCase() || '';
-  const isAdmin = userRole === 'ADMIN';
-  const isModerator = userRole === 'MODERATOR';
-  const dashboardRoute = (isAdmin || isModerator) ? '/admin' : '/dashboard';
+  const userRole = useMemo(() => 
+    memoizedSession?.user?.role?.toUpperCase() || '',
+    [memoizedSession?.user?.role]
+  );
+  
+  const isAdmin = useMemo(() => userRole === 'ADMIN', [userRole]);
+  const isModerator = useMemo(() => userRole === 'MODERATOR', [userRole]);
+  const dashboardRoute = useMemo(() => 
+    (isAdmin || isModerator) ? '/admin' : '/dashboard',
+    [isAdmin, isModerator]
+  );
 
-  const closeMenu = () => setIsMenuOpen(false);
+  const closeMenu = useCallback(() => setIsMenuOpen(false), []);
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       setIsLoggingOut(true);
       closeMenu();
@@ -91,17 +150,16 @@ const Header: React.FC<HeaderProps> = ({
         const { signOut } = await import('next-auth/react');
         await signOut({ callbackUrl: '/', redirect: true });
       } else {
-
         window.location.href = '/';
       }
     } catch (error) {
-      console.error('Logout failed:', error);
+      logger.error('Logout failed', error);
       setIsLoggingOut(false);
       window.location.href = '/';
     }
-  };
+  }, [enableAuth, closeMenu]);
 
-  const Avatar = ({
+  const Avatar = memo(({
     className,
     children,
   }: {
@@ -111,10 +169,14 @@ const Header: React.FC<HeaderProps> = ({
     <div className={`relative rounded-full overflow-hidden flex-shrink-0 ${className}`}>
       {children}
     </div>
-  );
+  ));
+  Avatar.displayName = 'Avatar';
 
-  const AvatarImage = ({ src, alt }: { src: string; alt: string }) => {
+  const AvatarImage = memo(({ src, alt }: { src: string; alt: string }) => {
     const [hasError, setHasError] = useState(false);
+    const handleError = useCallback(() => {
+      setHasError(true);
+    }, []);
 
     if (!src || hasError) {
       return null;
@@ -125,24 +187,28 @@ const Header: React.FC<HeaderProps> = ({
         src={src}
         alt={alt}
         className="w-full h-full object-cover"
-        onError={() => {
-          setHasError(true);
-        }}
+        onError={handleError}
       />
     );
-  };
+  });
+  AvatarImage.displayName = 'AvatarImage';
 
-  const AvatarFallback = ({ children }: { children: React.ReactNode }) => (
+  const AvatarFallback = memo(({ children }: { children: React.ReactNode }) => (
     <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)] flex items-center justify-center text-white font-semibold text-lg">
       {children}
     </div>
-  );
+  ));
+  AvatarFallback.displayName = 'AvatarFallback';
 
-  const ThemeToggle = ({ inMenu = false }: { inMenu?: boolean }) => {
+  const ThemeToggle = memo(({ inMenu = false }: { inMenu?: boolean }) => {
     const [theme, setTheme] = useState('system');
     const [mounted, setMounted] = useState(false);
+    const themeInitialized = useRef(false);
 
     useEffect(() => {
+      if (themeInitialized.current) return;
+      themeInitialized.current = true;
+      
       setMounted(true);
       const savedTheme = localStorage.getItem('theme') || 'system';
       setTheme(savedTheme);
@@ -170,11 +236,18 @@ const Header: React.FC<HeaderProps> = ({
       return () => {
         if (overlayTimeoutRef.current) {
           clearTimeout(overlayTimeoutRef.current);
+          overlayTimeoutRef.current = null;
         }
-        if (overlayRef.current && overlayRef.current.parentNode) {
+        if (overlayRef.current) {
           try {
-            overlayRef.current.remove();
+            // Check if element still exists in DOM before removing
+            if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
+              overlayRef.current.remove();
+            }
           } catch (error) {
+            // Element already removed or DOM not available
+          } finally {
+            overlayRef.current = null;
           }
         }
       };
@@ -187,8 +260,14 @@ const Header: React.FC<HeaderProps> = ({
 
       if (overlayRef.current) {
         try {
-          overlayRef.current.remove();
+          // Check if element still exists in DOM before removing
+          if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
+            overlayRef.current.remove();
+          }
         } catch (error) {
+          // Element already removed or DOM not available
+        } finally {
+          overlayRef.current = null;
         }
       }
 
@@ -242,9 +321,14 @@ const Header: React.FC<HeaderProps> = ({
       overlayTimeoutRef.current = setTimeout(() => {
         if (overlayRef.current) {
           try {
-            overlayRef.current.remove();
-            overlayRef.current = null;
+            // Check if element still exists in DOM before removing
+            if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
+              overlayRef.current.remove();
+            }
           } catch (error) {
+            // Element already removed or DOM not available
+          } finally {
+            overlayRef.current = null;
           }
         }
         overlayTimeoutRef.current = null;
@@ -322,59 +406,94 @@ const Header: React.FC<HeaderProps> = ({
         </button>
       </div>
     );
-  };
+  });
+  ThemeToggle.displayName = 'ThemeToggle';
 
-  const UserMenu = ({ user }: { user: any }) => {
+  const UserMenu = memo(({ user }: { user: any }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [loading, setLoading] = useState(true);
     const [imageError, setImageError] = useState(false);
     const [dropdownImageError, setDropdownImageError] = useState(false);
+    const imageUrlRef = useRef<string | null>(null);
+    const prevImageUrlRef = useRef<string | null>(null);
 
-    const username = user?.username || user?.email?.split('@')[0] || user?.name || 'User';
+    const username = useMemo(() => 
+      user?.username || user?.email?.split('@')[0] || user?.name || 'User',
+      [user?.username, user?.email, user?.name]
+    );
     const balance = 0;
 
-    useEffect(() => {
-      const timer = setTimeout(() => setLoading(false), 1000);
-      return () => clearTimeout(timer);
-    }, []);
+    // Get stable image URL without timestamp - prevent reload on every render
+    const avatarImageUrl = useMemo(() => {
+      const url = user?.photo || user?.image || '';
+      if (!url) {
+        imageUrlRef.current = null;
+        return null;
+      }
+      
+      // Only update if URL actually changed
+      if (imageUrlRef.current !== url) {
+        imageUrlRef.current = url;
+      }
+      
+      // Always return the stored URL to maintain stable reference
+      return imageUrlRef.current;
+    }, [user?.photo, user?.image]);
 
+    // Only reset errors when image URL actually changes (not on every render)
     useEffect(() => {
-      if (user?.photo || user?.image) {
-        setImageError(false);
-        setDropdownImageError(false);
-      } else {
+      if (avatarImageUrl && avatarImageUrl !== prevImageUrlRef.current) {
+        prevImageUrlRef.current = avatarImageUrl;
         setImageError(false);
         setDropdownImageError(false);
       }
-    }, [user?.photo, user?.image]);
+    }, [avatarImageUrl]);
 
-    const handleLogoutClick = () => {
+    const handleLogoutClick = useCallback(() => {
       setIsOpen(false);
       handleLogout();
-    };
+    }, [handleLogout]);
+
+    const handleImageError = useCallback(() => {
+      setImageError(true);
+    }, []);
+
+    const handleImageLoad = useCallback(() => {
+      setImageError(false);
+    }, []);
+
+    const handleDropdownImageError = useCallback(() => {
+      setDropdownImageError(true);
+    }, []);
+
+    const handleDropdownImageLoad = useCallback(() => {
+      setDropdownImageError(false);
+    }, []);
+
+    const toggleMenu = useCallback(() => {
+      setIsOpen(prev => !prev);
+    }, []);
 
     return (
       <div className="relative flex items-center justify-center">
         <button
           type="button"
           className="pl-4 relative focus:outline-none flex items-center justify-center !bg-transparent hover:!bg-transparent active:!bg-transparent border-0 shadow-none p-0 m-0"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggleMenu}
           aria-label="User menu"
           disabled={isLoggingOut}
           style={{ background: 'transparent', backgroundColor: 'transparent' }}
         >
           <Avatar className="h-12 w-12">
-            {(user?.photo || user?.image) && !imageError ? (
+            {avatarImageUrl && !imageError ? (
               <img
-                src={`${user?.photo || user?.image || ''}${(user?.photo || user?.image) ? ((user.photo || user.image)?.includes('?') ? '&' : '?') + '_t=' + Date.now() : ''}`}
+                key={avatarImageUrl}
+                src={avatarImageUrl}
                 alt={user?.name || 'User'}
                 className="w-full h-full object-cover relative z-10"
-                onError={() => {
-                  setImageError(true);
-                }}
-                onLoad={() => {
-                  setImageError(false);
-                }}
+                onError={handleImageError}
+                onLoad={handleImageLoad}
+                loading="lazy"
+                decoding="async"
               />
             ) : null}
             <AvatarFallback>{username?.charAt(0)?.toUpperCase()}</AvatarFallback>
@@ -383,22 +502,21 @@ const Header: React.FC<HeaderProps> = ({
 
         {isOpen && (
           <>
-            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+            <div className="fixed inset-0 z-40" onClick={toggleMenu} />
             <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-1rem)] z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 transition-colors duration-200">
               <div className="p-3 sm:p-6 bg-gray-50 dark:bg-gray-700/50 rounded-t-lg">
                 <div className="flex items-center space-x-2 sm:space-x-4 mb-3 sm:mb-4">
                   <Avatar className="h-10 w-10 sm:h-14 sm:w-14 ring-2 sm:ring-3 ring-[var(--primary)]/20">
-                    {(user?.photo || user?.image) && !dropdownImageError ? (
+                    {avatarImageUrl && !dropdownImageError ? (
                       <img
-                        src={`${user?.photo || user?.image || ''}${(user?.photo || user?.image) ? ((user.photo || user.image)?.includes('?') ? '&' : '?') + '_t=' + Date.now() : ''}`}
+                        key={`dropdown-${avatarImageUrl}`}
+                        src={avatarImageUrl}
                         alt={user?.name || 'User'}
                         className="w-full h-full object-cover relative z-10"
-                        onError={() => {
-                          setDropdownImageError(true);
-                        }}
-                        onLoad={() => {
-                          setDropdownImageError(false);
-                        }}
+                        onError={handleDropdownImageError}
+                        onLoad={handleDropdownImageLoad}
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : null}
                     <AvatarFallback>{username?.charAt(0)?.toUpperCase()}</AvatarFallback>
@@ -428,18 +546,14 @@ const Header: React.FC<HeaderProps> = ({
                       <FaChevronDown className="h-2.5 w-2.5 sm:h-4 sm:w-4 opacity-70" />
                     </div>
                     <div className="mt-1.5 sm:mt-2">
-                      {loading ? (
-                        <div className="h-4 sm:h-6 w-16 sm:w-24 bg-white/20 rounded animate-pulse"></div>
-                      ) : (
-                        <p className="text-lg sm:text-2xl font-bold">${balance.toFixed(2)}</p>
-                      )}
+                      <p className="text-lg sm:text-2xl font-bold">${balance.toFixed(2)}</p>
                     </div>
                   </div>
                 )}
               </div>
 
               <div className="py-1 sm:py-2">
-                <Link href={dashboardRoute} onClick={() => setIsOpen(false)} className="w-full px-3 sm:px-6 py-2 sm:py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 flex items-center space-x-2 sm:space-x-3 group block">
+                <Link href={dashboardRoute} onClick={toggleMenu} className="w-full px-3 sm:px-6 py-2 sm:py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 flex items-center space-x-2 sm:space-x-3 group block">
                   <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)]">
                     {isAdmin ? <FaHome className="h-3 w-3 sm:h-4 sm:w-4 text-white" /> : <FaTachometerAlt className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
                   </div>
@@ -447,7 +561,7 @@ const Header: React.FC<HeaderProps> = ({
                     {isAdmin ? 'Admin Panel' : 'Dashboard'}
                   </span>
                 </Link>
-                <Link href={'/account-settings'} onClick={() => setIsOpen(false)} className="w-full px-3 sm:px-6 py-2 sm:py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 flex items-center space-x-2 sm:space-x-3 group block">
+                <Link href={'/account-settings'} onClick={toggleMenu} className="w-full px-3 sm:px-6 py-2 sm:py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200 flex items-center space-x-2 sm:space-x-3 group block">
                   <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)]">
                     <FaUserCog className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                   </div>
@@ -477,54 +591,100 @@ const Header: React.FC<HeaderProps> = ({
         )}
       </div>
     );
-  };
+  });
+  UserMenu.displayName = 'UserMenu';
 
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const toggleMenu = useCallback(() => setIsMenuOpen(prev => !prev), []);
 
+  // Fetch logo with caching to prevent flicker - only once, not on visibility change
+  const logoFetchedRef = useRef(false);
   useEffect(() => {
-    setMounted(true);
+    // Only fetch once, even if component remounts
+    if (logoFetchedRef.current) {
+      setMounted(true);
+      setLogoLoaded(true);
+      return;
+    }
+    
+    let isMounted = true;
+    let abortController: AbortController | null = null;
     
     const fetchSiteLogo = async () => {
       try {
-        const response = await fetch('/api/public/general-settings');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.generalSettings) {
-            if (data.generalSettings.siteLogo && data.generalSettings.siteLogo.trim() !== '') {
-              setSiteLogo(data.generalSettings.siteLogo);
-            } else {
-              setSiteLogo('/logo.png');
-            }
-            if (data.generalSettings.siteDarkLogo && data.generalSettings.siteDarkLogo.trim() !== '') {
-              setSiteDarkLogo(data.generalSettings.siteDarkLogo);
-            }
-          } else {
-            setSiteLogo('/logo.png');
+        // Use cached fetch to prevent duplicate calls and flicker
+        abortController = new AbortController();
+        const data = await cachedFetch<{
+          success: boolean;
+          generalSettings?: {
+            siteLogo?: string;
+            siteDarkLogo?: string;
+          };
+        }>(
+          '/api/public/general-settings',
+          {
+            method: 'GET',
+            signal: abortController.signal,
+          },
+          300000 // Cache for 5 minutes
+        );
+
+        if (!isMounted) return;
+
+        if (data.success && data.generalSettings) {
+          const logo = data.generalSettings.siteLogo?.trim() || '/logo.png';
+          const darkLogo = data.generalSettings.siteDarkLogo?.trim();
+          
+          setSiteLogo(logo);
+          if (darkLogo) {
+            setSiteDarkLogo(darkLogo);
           }
         } else {
           setSiteLogo('/logo.png');
         }
       } catch (error) {
-        console.error('Error fetching site logo:', error);
-        setSiteLogo('/logo.png');
+        if (!isMounted || (error as any)?.name === 'AbortError') return;
+        logger.error('Error fetching site logo', error);
+        if (isMounted) {
+          setSiteLogo('/logo.png');
+        }
       } finally {
-        setLogoLoaded(true);
+        if (isMounted) {
+          logoFetchedRef.current = true;
+          setLogoLoaded(true);
+          setMounted(true);
+        }
       }
     };
     
+    // Set mounted immediately to prevent layout shift
+    setMounted(true);
     fetchSiteLogo();
+    
+    return () => {
+      isMounted = false;
+      if (abortController) {
+        abortController.abort();
+      }
+    };
   }, []);
 
+  // Memoize mobile avatar image URL to prevent rerenders
+  const mobileAvatarUrl = useMemo(() => {
+    return memoizedSession?.user?.photo || memoizedSession?.user?.image || null;
+  }, [memoizedSession?.user?.photo, memoizedSession?.user?.image]);
+
+  // Only reset error when URL actually changes
+  const prevMobileAvatarUrl = useRef<string | null>(null);
   useEffect(() => {
-    const imageUrl = propSession?.user?.photo || propSession?.user?.image;
-    if (imageUrl) {
-      setMobileImageError(false);
-    } else {
+    if (mobileAvatarUrl && mobileAvatarUrl !== prevMobileAvatarUrl.current) {
+      prevMobileAvatarUrl.current = mobileAvatarUrl;
       setMobileImageError(false);
     }
-  }, [propSession?.user?.photo, propSession?.user?.image]);
+  }, [mobileAvatarUrl]);
 
-  if (!mounted) return null;
+  // Memoize logo URLs to prevent rerenders
+  const displayLogo = useMemo(() => siteLogo || '/logo.png', [siteLogo]);
+  const displayDarkLogo = useMemo(() => siteDarkLogo || displayLogo, [siteDarkLogo, displayLogo]);
 
   return (
     <header className="sticky top-0 z-40 bg-white dark:bg-[var(--header-bg)] shadow-sm dark:shadow-lg dark:shadow-black/20 transition-colors duration-200">
@@ -532,35 +692,36 @@ const Header: React.FC<HeaderProps> = ({
         <div className="container mx-auto px-4 max-w-[1200px]">
           <div className="flex items-center justify-between py-3">
             <Link href="/" className="flex items-center">
-              {!logoLoaded ? (
-                <div className="h-14 lg:h-16 w-32 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
-              ) : siteDarkLogo && siteDarkLogo.trim() !== '' ? (
+              {siteDarkLogo && siteDarkLogo !== displayLogo ? (
                 <>
                   <Image 
-                    src={siteLogo || '/logo.png'} 
+                    src={displayLogo} 
                     alt="SMMDOC" 
                     width={400} 
                     height={50} 
                     className="h-14 lg:h-16 w-auto max-w-[400px] dark:hidden" 
                     priority 
+                    unoptimized={displayLogo.startsWith('http')}
                   />
                   <Image 
-                    src={siteDarkLogo} 
+                    src={displayDarkLogo} 
                     alt="SMMDOC" 
                     width={400} 
                     height={50} 
                     className="h-14 lg:h-16 w-auto max-w-[400px] hidden dark:block" 
                     priority 
+                    unoptimized={displayDarkLogo.startsWith('http')}
                   />
                 </>
               ) : (
                 <Image 
-                  src={siteLogo || '/logo.png'} 
+                  src={displayLogo} 
                   alt="SMMDOC" 
                   width={400} 
                   height={50} 
                   className="h-14 lg:h-16 w-auto max-w-[400px]" 
                   priority 
+                  unoptimized={displayLogo.startsWith('http')}
                 />
               )}
             </Link>
@@ -587,7 +748,7 @@ const Header: React.FC<HeaderProps> = ({
                   <Link href={dashboardRoute} className="inline-flex items-center bg-gradient-to-r from-[var(--primary)] to-[var(--secondary)] text-white font-semibold px-8 py-4 rounded-lg hover:shadow-lg transition-all duration-300 hover:-translate-y-1 hover:from-[#4F0FD8] hover:to-[#A121E8]">
                     <span>{isAdmin ? 'Admin Panel' : 'Dashboard'}</span>
                   </Link>
-                  <UserMenu user={session.user} />
+                  <UserMenu user={memoizedSession?.user} />
                 </>
               )}
 
@@ -618,32 +779,33 @@ const Header: React.FC<HeaderProps> = ({
         <div className={`relative w-[80%] h-full bg-white dark:bg-[var(--header-bg)] shadow-lg transition-transform duration-300 ease-in-out ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <Link href="/" className="flex items-center">
-                {!logoLoaded ? (
-                  <div className="h-12 w-24 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
-                ) : siteDarkLogo && siteDarkLogo.trim() !== '' ? (
+                {siteDarkLogo && siteDarkLogo !== displayLogo ? (
                   <>
                     <Image 
-                      src={siteLogo || '/logo.png'} 
+                      src={displayLogo} 
                       alt="SMMDOC" 
                       width={200} 
                       height={25} 
                       className="h-12 w-auto dark:hidden" 
+                      unoptimized={displayLogo.startsWith('http')}
                     />
                     <Image 
-                      src={siteDarkLogo} 
+                      src={displayDarkLogo} 
                       alt="SMMDOC" 
                       width={200} 
                       height={25} 
                       className="h-12 w-auto hidden dark:block" 
+                      unoptimized={displayDarkLogo.startsWith('http')}
                     />
                   </>
                 ) : (
                   <Image 
-                    src={siteLogo || '/logo.png'} 
+                    src={displayLogo} 
                     alt="SMMDOC" 
                     width={200} 
                     height={25} 
                     className="h-12 w-auto" 
+                    unoptimized={displayLogo.startsWith('http')}
                   />
                 )}
               </Link>
@@ -664,11 +826,11 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="px-4 py-3">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-10 w-10">
-                      {(session.user?.photo || session.user?.image) && !mobileImageError ? (
+                      {mobileAvatarUrl && !mobileImageError ? (
                         <img
-                          key={`mobile-avatar-${session.user?.photo || session.user?.image || ''}-${Date.now()}`}
-                          src={`${session.user?.photo || session.user?.image || ''}${(session.user?.photo || session.user?.image) ? ((session.user.photo || session.user.image)?.includes('?') ? '&' : '?') + '_t=' + Date.now() : ''}`}
-                          alt={session.user?.name || 'User'}
+                          key={`mobile-${mobileAvatarUrl}`}
+                          src={mobileAvatarUrl}
+                          alt={memoizedSession?.user?.name || 'User'}
                           className="w-full h-full object-cover relative z-10"
                           onError={() => {
                             setMobileImageError(true);
@@ -676,13 +838,15 @@ const Header: React.FC<HeaderProps> = ({
                           onLoad={() => {
                             setMobileImageError(false);
                           }}
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : null}
-                      <AvatarFallback>{(session.user?.username || session.user?.email?.split('@')[0] || 'U').charAt(0).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback>{(memoizedSession?.user?.username || memoizedSession?.user?.email?.split('@')[0] || 'U').charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">{session.user?.username || session.user?.name}</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{session.user?.email}</p>
+                      <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">{memoizedSession?.user?.username || memoizedSession?.user?.name}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 truncate">{memoizedSession?.user?.email}</p>
                     </div>
                   </div>
                 </div>

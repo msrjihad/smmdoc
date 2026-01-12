@@ -84,6 +84,15 @@ export async function POST(req: NextRequest) {
 
     const amountUSD = convertToUSD(amount, currency, currencies);
     
+    // Ensure amountUSD is valid and greater than 0
+    if (isNaN(amountUSD) || amountUSD <= 0) {
+      console.error('Invalid converted USD amount:', amountUSD);
+      return NextResponse.json(
+        { error: 'Invalid amount conversion' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+    
     const exchangeRate = await getPaymentGatewayExchangeRate();
     const gatewayAmount = amountUSD * exchangeRate;
 
@@ -117,16 +126,11 @@ export async function POST(req: NextRequest) {
       const apiKey = await getPaymentGatewayApiKey();
       const checkoutUrl = await getPaymentGatewayCheckoutUrl();
       
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;
+      // Get app URL and ensure it includes port for localhost
+      const { getAppUrlWithPort } = await import('@/lib/utils/redirect-url');
+      const appUrl = getAppUrlWithPort();
       
-      if (!appUrl) {
-        return NextResponse.json(
-          { error: 'NEXT_PUBLIC_APP_URL or NEXTAUTH_URL environment variable is required' },
-          { status: 500, headers: corsHeaders }
-        );
-      }
-      
-      console.log('App URL determined:', appUrl);
+      console.log('App URL determined (with port fix):', appUrl);
 
       const paymentAmount = amountUSD * exchangeRate;
       
@@ -158,34 +162,52 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Enhanced duplicate prevention using requestId and transaction locking
       try {
-        const thirtySecondsAgo = new Date(Date.now() - 30000);
+        const requestId = body.requestId;
+        const oneMinuteAgo = new Date(Date.now() - 60000); // Extended to 60 seconds
+        
+        // Check for duplicate by exact amount match (more reliable than range)
+        const amountStr = amountUSD.toFixed(2); // Format to 2 decimal places for exact match
+        
+        // First check: Same invoice_id (should never happen, but check anyway)
+        const existingByInvoice = await db.addFunds.findFirst({
+          where: {
+            invoiceId: { contains: requestId || '' }, // Check if requestId is in any invoice_id
+          },
+        });
+        
+        // Second check: Same user, same amount, recent (within 60 seconds)
         const recentPayment = await db.addFunds.findFirst({
           where: {
             userId: session.user.id,
-            amount: amountUSD.toString(),
+            amount: amountStr,
             createdAt: {
-              gte: thirtySecondsAgo,
+              gte: oneMinuteAgo,
             },
-            status: 'Processing',
+            status: {
+              in: ['Processing', 'Success'], // Check both Processing and Success to prevent duplicates
+            },
           },
           orderBy: {
             createdAt: 'desc',
           },
         });
 
-        if (recentPayment) {
+        if (existingByInvoice || recentPayment) {
+          const existing = existingByInvoice || recentPayment;
           console.log('Duplicate payment attempt detected (BEFORE gateway call):', {
             userId: session.user.id,
             amount: amountUSD,
-            existingInvoiceId: recentPayment.invoiceId,
-            timeDiff: Date.now() - recentPayment.createdAt.getTime(),
-            requestId: body.requestId,
+            existingInvoiceId: existing?.invoiceId,
+            existingId: existing?.id,
+            timeDiff: existing ? Date.now() - existing.createdAt.getTime() : 0,
+            requestId: requestId,
           });
           return NextResponse.json(
             { 
               error: 'Duplicate payment request detected. Please wait a moment and try again.',
-              existingInvoiceId: recentPayment.invoiceId,
+              existingInvoiceId: existing?.invoiceId,
             },
             { status: 429, headers: corsHeaders }
           );
@@ -240,6 +262,8 @@ export async function POST(req: NextRequest) {
         hasStatus: !!data.status,
         statusValue: data.status,
         hasPaymentUrl: !!data.payment_url,
+        hasInvoiceId: !!data.invoice_id,
+        invoiceIdFromResponse: data.invoice_id,
         allKeys: Object.keys(data),
         note: 'invoice_id will be in payment_url path and added to redirect URL by gateway when user returns'
       });
@@ -247,7 +271,14 @@ export async function POST(req: NextRequest) {
         if (data.status || data.payment_url) {
           let gatewayInvoiceId: string | null = null;
           
-          if (data.payment_url) {
+          // Try to get invoice_id from response first
+          if (data.invoice_id) {
+            gatewayInvoiceId = data.invoice_id;
+            console.log(`✓ Got invoice_id directly from gateway response: ${gatewayInvoiceId}`);
+          }
+          
+          // If not in response, extract from payment_url
+          if (!gatewayInvoiceId && data.payment_url) {
             console.log('=== Extracting invoice_id from payment_url (for payment record creation) ===');
             console.log('Payment URL from gateway:', data.payment_url);
             console.log('Note: invoice_id is embedded in payment_url path. Gateway will add it to redirect URL when user returns.');
@@ -255,20 +286,45 @@ export async function POST(req: NextRequest) {
             try {
               const url = new URL(data.payment_url);
               const pathParts = url.pathname.split('/').filter(part => part.length > 0);
-              const paymentIndex = pathParts.findIndex(part => part === 'payment');
               
-              if (paymentIndex >= 0 && paymentIndex < pathParts.length - 1) {
-                gatewayInvoiceId = pathParts[paymentIndex + 1];
-                console.log(`✓ Extracted invoice_id from payment_url path: ${gatewayInvoiceId}`);
-              } else if (pathParts.length > 0) {
-                gatewayInvoiceId = pathParts[pathParts.length - 1];
-                console.log(`✓ Extracted invoice_id from payment_url (last segment): ${gatewayInvoiceId}`);
+              // Try multiple extraction patterns for UddoktaPay
+              // Pattern 1: /checkout/payment/{invoice_id}
+              const checkoutIndex = pathParts.findIndex(part => part === 'checkout');
+              if (checkoutIndex >= 0 && checkoutIndex < pathParts.length - 1) {
+                const nextPart = pathParts[checkoutIndex + 1];
+                if (nextPart === 'payment' && checkoutIndex + 2 < pathParts.length) {
+                  gatewayInvoiceId = pathParts[checkoutIndex + 2];
+                  console.log(`✓ Extracted invoice_id from /checkout/payment/ path: ${gatewayInvoiceId}`);
+                }
               }
               
+              // Pattern 2: /payment/{invoice_id}
+              if (!gatewayInvoiceId) {
+                const paymentIndex = pathParts.findIndex(part => part === 'payment');
+                if (paymentIndex >= 0 && paymentIndex < pathParts.length - 1) {
+                  gatewayInvoiceId = pathParts[paymentIndex + 1];
+                  console.log(`✓ Extracted invoice_id from /payment/ path: ${gatewayInvoiceId}`);
+                }
+              }
+              
+              // Pattern 3: Last segment if it looks like an invoice ID
+              if (!gatewayInvoiceId && pathParts.length > 0) {
+                const lastSegment = pathParts[pathParts.length - 1];
+                // Invoice IDs are typically alphanumeric strings
+                if (lastSegment && lastSegment.length > 10 && /^[a-zA-Z0-9]+$/.test(lastSegment)) {
+                  gatewayInvoiceId = lastSegment;
+                  console.log(`✓ Extracted invoice_id from last path segment: ${gatewayInvoiceId}`);
+                }
+              }
+              
+              // Pattern 4: Query parameters
               if (!gatewayInvoiceId) {
                 gatewayInvoiceId = url.searchParams.get('invoice_id') || 
                                    url.searchParams.get('invoiceId') ||
                                    url.searchParams.get('invoice');
+                if (gatewayInvoiceId) {
+                  console.log(`✓ Extracted invoice_id from query params: ${gatewayInvoiceId}`);
+                }
               }
             } catch (urlError) {
               console.error('Error parsing payment_url:', urlError);
@@ -290,50 +346,19 @@ export async function POST(req: NextRequest) {
             );
           }
 
+          // Use transaction to prevent race conditions and duplicate creation
           try {
-            const thirtySecondsAgo = new Date(Date.now() - 30000);
-            const recentPayment = await db.addFunds.findFirst({
-              where: {
-                userId: session.user.id,
-                amount: amountUSD.toString(),
-                createdAt: {
-                  gte: thirtySecondsAgo,
-                },
-                status: 'Processing',
-              },
-              orderBy: {
-                createdAt: 'desc',
-              },
-            });
-
-            if (recentPayment && recentPayment.invoiceId !== gatewayInvoiceId) {
-              console.log('Duplicate payment attempt detected (AFTER gateway call - race condition):', {
-                userId: session.user.id,
-                amount: amountUSD,
-                existingInvoiceId: recentPayment.invoiceId,
-                newInvoiceId: gatewayInvoiceId,
-                timeDiff: Date.now() - recentPayment.createdAt.getTime(),
-                requestId: body.requestId,
-              });
-              return NextResponse.json(
-                { 
-                  error: 'Duplicate payment request detected. Please wait a moment and try again.',
-                  existingInvoiceId: recentPayment.invoiceId,
-                },
-                { status: 429, headers: corsHeaders }
-              );
-            }
-
-            const existingPayment = await db.addFunds.findUnique({
+            // First check if payment with this invoiceId already exists (outside transaction for early return)
+            const existingPaymentCheck = await db.addFunds.findUnique({
               where: {
                 invoiceId: gatewayInvoiceId,
               },
             });
 
-            if (existingPayment) {
-              console.log('Invoice ID already exists in database (race condition):', {
+            if (existingPaymentCheck) {
+              console.log('Invoice ID already exists in database:', {
                 invoiceId: gatewayInvoiceId,
-                existingPaymentId: existingPayment.id,
+                existingPaymentId: existingPaymentCheck.id,
                 requestId: body.requestId,
               });
               return NextResponse.json(
@@ -346,24 +371,173 @@ export async function POST(req: NextRequest) {
               );
             }
 
-            const payment = await db.addFunds.create({
-              data: {
+            // Create payment record atomically within transaction
+            const payment = await db.$transaction(async (prisma) => {
+              // Double-check for existing payment within transaction (atomic)
+              const existingInTransaction = await prisma.addFunds.findUnique({
+                where: {
+                  invoiceId: gatewayInvoiceId,
+                },
+              });
+
+              if (existingInTransaction) {
+                // Another request created it between our check and transaction start
+                throw new Error('PAYMENT_EXISTS');
+              }
+
+              // Check for recent duplicate payment by same user and exact amount
+              const thirtySecondsAgo = new Date(Date.now() - 30000);
+              const amountStr = amountUSD.toFixed(2); // Format to 2 decimal places for exact match
+              const recentPayment = await prisma.addFunds.findFirst({
+                where: {
+                  userId: session.user.id,
+                  amount: amountStr,
+                  createdAt: {
+                    gte: thirtySecondsAgo,
+                  },
+                  status: {
+                    in: ['Processing', 'Success'], // Check both Processing and Success
+                  },
+                  invoiceId: {
+                    not: gatewayInvoiceId, // Exclude current invoiceId
+                  },
+                },
+                orderBy: {
+                  createdAt: 'desc',
+                },
+              });
+
+              if (recentPayment) {
+                console.log('Duplicate payment attempt detected (AFTER gateway call - race condition):', {
+                  userId: session.user.id,
+                  amount: amountUSD,
+                  existingInvoiceId: recentPayment.invoiceId,
+                  newInvoiceId: gatewayInvoiceId,
+                  timeDiff: Date.now() - recentPayment.createdAt.getTime(),
+                  requestId: body.requestId,
+                });
+                throw new Error('DUPLICATE_PAYMENT');
+              }
+
+              // Ensure amount is valid before creating (format to 2 decimal places)
+              if (amountUSD <= 0 || isNaN(amountUSD)) {
+                console.error('Attempted to create payment with invalid amount:', {
+                  amountUSD,
+                  originalAmount: amount,
+                  currency,
+                  gatewayInvoiceId
+                });
+                throw new Error('INVALID_AMOUNT');
+              }
+
+              const finalAmount = amountUSD.toFixed(2); // Format to 2 decimal places
+
+              // Create payment record atomically with status explicitly set to 'Processing'
+              // This ensures the record is created as Processing, not Cancelled
+              console.log('Creating payment record with status: Processing', {
                 invoiceId: gatewayInvoiceId,
-                amount: amountUSD.toString(),
-                gatewayAmount: gatewayAmount,
-                email: session.user.email || '',
-                name: session.user.name || '',
-                status: 'Processing',
-                paymentGateway: gatewayName,
+                amount: finalAmount,
                 userId: session.user.id,
-                currency: 'USD',
-              },
+              });
+
+              // Create the payment record
+              const paymentRecord = await prisma.addFunds.create({
+                data: {
+                  invoiceId: gatewayInvoiceId,
+                  amount: finalAmount,
+                  gatewayAmount: gatewayAmount,
+                  email: session.user.email || '',
+                  name: session.user.name || '',
+                  status: 'Processing', // CRITICAL: Explicitly set to Processing (not Cancelled)
+                  paymentGateway: gatewayName,
+                  userId: session.user.id,
+                  currency: 'USD',
+                },
+              });
+
+              console.log('Payment record created (inside transaction):', {
+                id: paymentRecord.id,
+                invoiceId: paymentRecord.invoiceId,
+                status: paymentRecord.status,
+                expectedStatus: 'Processing',
+              });
+
+              // Return the record - we'll fix status AFTER transaction commits
+              return paymentRecord;
+            }, {
+              timeout: 10000, // 10 second timeout
             });
 
             console.log(`✓ Payment record created with gateway invoice_id: ${gatewayInvoiceId}`);
 
+            // CRITICAL: Force update status to 'Processing' AFTER transaction commits
+            // This ensures the status is correct even if database defaults or triggers set it to 'Cancelled'
+            // We do this outside the transaction to ensure it runs after any database triggers
+            let finalPayment = payment;
             try {
-              await sendTransactionPendingNotification(session.user.id, payment.id);
+              console.log('Forcing status to Processing after transaction commit:', {
+                id: payment.id,
+                invoiceId: payment.invoiceId,
+                currentStatus: payment.status,
+              });
+
+              // Use raw SQL UPDATE to bypass any database defaults or triggers
+              await db.$executeRaw`
+                UPDATE add_funds 
+                SET status = 'Processing' 
+                WHERE id = ${payment.id}
+              `;
+
+              // Fetch and verify the updated record
+              const updatedPayment = await db.addFunds.findUnique({
+                where: { id: payment.id },
+              });
+
+              if (updatedPayment) {
+                console.log('Status update result:', {
+                  id: updatedPayment.id,
+                  invoiceId: updatedPayment.invoiceId,
+                  status: updatedPayment.status,
+                  expectedStatus: 'Processing',
+                });
+
+                // If still not Processing, try one more time with different approach
+                if (updatedPayment.status !== 'Processing') {
+                  console.error('CRITICAL: Status still not Processing after update!', {
+                    id: updatedPayment.id,
+                    actualStatus: updatedPayment.status,
+                  });
+                  
+                  // Try with $executeRawUnsafe as fallback
+                  await db.$executeRawUnsafe(
+                    `UPDATE add_funds SET status = 'Processing' WHERE id = ${updatedPayment.id}`
+                  );
+                  
+                  const retryPayment = await db.addFunds.findUnique({
+                    where: { id: updatedPayment.id },
+                  });
+                  
+                  if (retryPayment && retryPayment.status === 'Processing') {
+                    console.log('Status fixed on retry');
+                    finalPayment = retryPayment;
+                  } else {
+                    console.error('FATAL: Unable to set status to Processing after multiple attempts');
+                    finalPayment = updatedPayment;
+                  }
+                } else {
+                  finalPayment = updatedPayment;
+                }
+              }
+            } catch (statusUpdateError) {
+              console.error('Error forcing status to Processing:', statusUpdateError);
+              // Continue even if status update fails - the record was created
+            }
+
+            // Use finalPayment for rest of function
+            const paymentToUse = finalPayment || payment;
+
+            try {
+              await sendTransactionPendingNotification(session.user.id, paymentToUse.id);
             } catch (notifError) {
               console.error('Error sending transaction pending notification:', notifError);
             }
@@ -371,7 +545,7 @@ export async function POST(req: NextRequest) {
             try {
               const { sendAdminPendingTransactionNotification } = await import('@/lib/notifications/admin-notifications');
               await sendAdminPendingTransactionNotification(
-                payment.id,
+                paymentToUse.id,
                 amountUSD,
                 session.user.name || session.user.email || 'User'
               );
@@ -397,7 +571,66 @@ export async function POST(req: NextRequest) {
           } catch (createError: any) {
             console.error('Error creating payment record:', createError);
             
+            // Handle payment already exists error
+            if (createError.message === 'PAYMENT_EXISTS') {
+              const existingPayment = await db.addFunds.findUnique({
+                where: {
+                  invoiceId: gatewayInvoiceId,
+                },
+              });
+              
+              if (existingPayment) {
+                return NextResponse.json(
+                  {
+                    payment_url: data.payment_url,
+                    invoice_id: gatewayInvoiceId,
+                    note: 'Payment record already exists',
+                  },
+                  { status: 200, headers: corsHeaders }
+                );
+              }
+            }
+            
+            // Handle invalid amount error
+            if (createError.message === 'INVALID_AMOUNT') {
+              return NextResponse.json(
+                { 
+                  error: 'Invalid payment amount. Amount must be greater than 0.',
+                },
+                { status: 400, headers: corsHeaders }
+              );
+            }
+            
+            // Handle duplicate payment error
+            if (createError.message === 'DUPLICATE_PAYMENT') {
+              return NextResponse.json(
+                { 
+                  error: 'Duplicate payment request detected. Please wait a moment and try again.',
+                },
+                { status: 429, headers: corsHeaders }
+              );
+            }
+            
+            // Handle Prisma unique constraint violation
             if (createError.code === 'P2002') {
+              // Payment with this invoiceId already exists, return existing payment URL
+              const existingPayment = await db.addFunds.findUnique({
+                where: {
+                  invoiceId: gatewayInvoiceId,
+                },
+              });
+              
+              if (existingPayment) {
+                return NextResponse.json(
+                  {
+                    payment_url: data.payment_url,
+                    invoice_id: gatewayInvoiceId,
+                    note: 'Payment record already exists',
+                  },
+                  { status: 200, headers: corsHeaders }
+                );
+              }
+              
               return NextResponse.json(
                 { error: 'Invoice ID already exists. Please try again.' },
                 { status: 409, headers: corsHeaders }

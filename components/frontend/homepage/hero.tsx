@@ -82,81 +82,69 @@ const Hero: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchHomepageStats = async () => {
       try {
-        console.log('Hero: Fetching homepage stats...');
         const res = await fetch('/api/homepage/stats', {
           cache: 'no-store',
         });
-        console.log('Hero: Response status:', res.status, res.ok);
 
         const json = await res.json();
-        console.log('Hero: Full API response:', json);
 
         if (!res.ok || !json.success) {
-          console.error('Hero: API error response:', json);
           throw new Error(json.error || json.message || 'Failed to fetch homepage stats');
         }
 
-        const { totalUsers, completedOrders, activeUsers, totalOrders } = json?.data || {};
-
-        console.log('Hero: Extracted data:', { totalUsers, completedOrders, activeUsers, totalOrders });
-        console.log('Hero: Data types:', {
-          totalUsers: typeof totalUsers,
-          completedOrders: typeof completedOrders,
-          activeUsers: typeof activeUsers,
-          totalOrders: typeof totalOrders,
-        });
-
-        if (!isMountedRef.current) {
-          console.log('Hero: Component unmounted, skipping state update');
+        if (!isMounted || !isMountedRef.current) {
           return;
         }
+
+        const { totalUsers, completedOrders, activeUsers, totalOrders } = json?.data || {};
 
         const finalUsersCount = typeof totalUsers === 'number' ? totalUsers : (totalUsers === null || totalUsers === undefined ? 0 : Number(totalUsers) || 0);
         const finalCompletedOrders = typeof completedOrders === 'number' ? completedOrders : (completedOrders === null || completedOrders === undefined ? 0 : Number(completedOrders) || 0);
         const finalTotalOrders = typeof totalOrders === 'number' ? totalOrders : (totalOrders === null || totalOrders === undefined ? 0 : Number(totalOrders) || 0);
         const finalActiveUsers = typeof activeUsers === 'number' ? activeUsers : (activeUsers === null || activeUsers === undefined ? 0 : Number(activeUsers) || 0);
 
-        console.log('Hero: Setting state with values:', {
-          finalUsersCount,
-          finalCompletedOrders,
-          finalTotalOrders,
-          finalActiveUsers,
-          'raw values': { totalUsers, completedOrders, totalOrders, activeUsers },
+        // Batch state updates using startTransition for better performance
+        startTransition(() => {
+          setUsersCount(finalUsersCount);
+          setCompletedOrdersCount(finalCompletedOrders);
+          setTotalOrdersCount(finalTotalOrders);
+          setActiveUsersCount(finalActiveUsers);
         });
 
-        setUsersCount(finalUsersCount);
-        setCompletedOrdersCount(finalCompletedOrders);
-        setTotalOrdersCount(finalTotalOrders);
-        setActiveUsersCount(finalActiveUsers);
-
-        console.log('Hero: State updated. Current values will be:', {
-          usersCount: finalUsersCount,
-          totalOrdersCount: finalTotalOrders,
-          activeUsersCount: finalActiveUsers,
-        });
-
-        setDebugInfo({
-          apiResponse: json,
-          extracted: { totalUsers, completedOrders, activeUsers, totalOrders },
-          final: {
-            finalUsersCount,
-            finalTotalOrders,
-            finalActiveUsers,
-          },
-        });
+        // Only set debug info in development
+        if (process.env.NODE_ENV === 'development') {
+          setDebugInfo({
+            apiResponse: json,
+            extracted: { totalUsers, completedOrders, activeUsers, totalOrders },
+            final: {
+              finalUsersCount,
+              finalTotalOrders,
+              finalActiveUsers,
+            },
+          });
+        }
       } catch (err: any) {
-        console.error('Hero: Error fetching homepage stats:', err);
-        if (!isMountedRef.current) return;
+        if (!isMounted || !isMountedRef.current) return;
         setStatsError(err.message || 'Failed to fetch homepage stats');
-        setUsersCount(0);
-        setCompletedOrdersCount(0);
-        setTotalOrdersCount(0);
-        setActiveUsersCount(0);
+        // Batch state updates
+        startTransition(() => {
+          setUsersCount(0);
+          setCompletedOrdersCount(0);
+          setTotalOrdersCount(0);
+          setActiveUsersCount(0);
+        });
       }
     };
+    
     fetchHomepageStats();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
