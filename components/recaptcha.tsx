@@ -232,12 +232,12 @@ const ReCAPTCHA: React.FC<ReCAPTCHAProps> = ({
 
           if (recaptchaRef.current) {
             try {
-              // Check if element still exists in DOM before manipulating
+
               if (recaptchaRef.current.parentNode && document.body.contains(recaptchaRef.current)) {
                 recaptchaRef.current.innerHTML = '';
               }
             } catch (domError) {
-              // Container already cleaned up or DOM not available - ignore silently
+
             }
           }
 
@@ -263,10 +263,10 @@ const ReCAPTCHA: React.FC<ReCAPTCHAProps> = ({
       <div className={`flex justify-center mb-4 ${className || ''}`}>
         <div className="w-full">
           {isTestKey && (
-            <div style={{ 
-              padding: '10px', 
-              backgroundColor: '#fff3cd', 
-              border: '1px solid #ffeaa7', 
+            <div style={{
+              padding: '10px',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffeaa7',
               borderRadius: '4px',
               marginBottom: '10px',
               fontSize: '12px',
@@ -285,7 +285,7 @@ const ReCAPTCHA: React.FC<ReCAPTCHAProps> = ({
                 {!isLoaded && <span className="text-gray-500 text-sm">Loading ReCAPTCHA script...</span>}
                 {isLoaded && !isTestKey && <span className="text-gray-500 text-sm">Rendering widget...</span>}
                 {isLoaded && isTestKey && (
-                  <div 
+                  <div
                     className="flex items-center justify-center h-16 bg-white border border-gray-300 rounded cursor-pointer hover:bg-gray-50"
                     onClick={() => {
                       console.log('Test reCAPTCHA clicked - simulating verification');

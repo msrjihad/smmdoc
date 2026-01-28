@@ -5,10 +5,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   let invoice_id: string | undefined;
-  
+
   try {
     const session = await auth();
-    
+
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -55,9 +55,9 @@ export async function POST(req: NextRequest) {
       try {
         const apiKey = await getPaymentGatewayApiKey();
         const verifyUrl = await getPaymentGatewayVerifyUrl();
-        
+
         let updateData: any = { invoiceId: invoice_id };
-        
+
         if (apiKey && verifyUrl) {
           try {
             const verificationResponse = await fetch(verifyUrl, {
@@ -72,28 +72,28 @@ export async function POST(req: NextRequest) {
 
             if (verificationResponse.ok) {
               const verificationData: any = await verificationResponse.json();
-              
+
               if (verificationData.transaction_id && verificationData.transaction_id !== invoice_id) {
                 updateData.transactionId = verificationData.transaction_id;
               }
-              
-              
+
+
               if (verificationData.payment_method) {
                 updateData.paymentMethod = verificationData.payment_method;
               }
-              
+
               if (!existingPayment.paymentGateway) {
                 const gatewayName = await getPaymentGatewayName();
                 updateData.paymentGateway = gatewayName || 'unknown';
               }
-              
+
               console.log('Updating existing payment with gateway data:', updateData);
             }
           } catch (gatewayError) {
             console.error('Error fetching gateway data for existing payment:', gatewayError);
           }
         }
-        
+
         existingPayment = await db.addFunds.update({
           where: { id: existingPayment.id },
           data: updateData,
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
 
     if (recentPayment) {
       console.log(`Found recent payment for user ${session.user.id}, might be duplicate. Recent payment invoice_id: ${recentPayment.invoiceId}`);
-      
+
       if (recentPayment.invoiceId === invoice_id) {
         return NextResponse.json({
           success: true,
@@ -146,17 +146,17 @@ export async function POST(req: NextRequest) {
           payment: recentPayment,
         });
       }
-      
-      if (!recentPayment.invoiceId || 
-          recentPayment.invoiceId.startsWith('ADMIN-') || 
-          recentPayment.invoiceId === '0' || 
+
+      if (!recentPayment.invoiceId ||
+          recentPayment.invoiceId.startsWith('ADMIN-') ||
+          recentPayment.invoiceId === '0' ||
           recentPayment.invoiceId === '') {
         try {
           const apiKey = await getPaymentGatewayApiKey();
           const verifyUrl = await getPaymentGatewayVerifyUrl();
-          
+
           let updateData: any = { invoiceId: invoice_id };
-          
+
           if (apiKey && verifyUrl) {
             try {
               const verificationResponse = await fetch(verifyUrl, {
@@ -171,28 +171,28 @@ export async function POST(req: NextRequest) {
 
               if (verificationResponse.ok) {
                 const verificationData: any = await verificationResponse.json();
-                
+
                 if (verificationData.transaction_id && verificationData.transaction_id !== invoice_id) {
                   updateData.transactionId = verificationData.transaction_id;
                 }
-                
-                
+
+
                 if (verificationData.payment_method) {
                   updateData.paymentMethod = verificationData.payment_method;
                 }
-                
+
                 if (!recentPayment.paymentGateway) {
                   const gatewayName = await getPaymentGatewayName();
                   updateData.paymentGateway = gatewayName || 'unknown';
                 }
-                
+
                 console.log('Updating recent payment with gateway data:', updateData);
               }
             } catch (gatewayError) {
               console.error('Error fetching gateway data for recent payment:', gatewayError);
             }
           }
-          
+
           const updatedPayment = await db.addFunds.update({
             where: { id: recentPayment.id },
             data: updateData,
@@ -240,7 +240,7 @@ export async function POST(req: NextRequest) {
 
     let transactionId: string | null = null;
     let paymentMethod: string | null = null;
-    let paymentAmount: string | null = null; // Don't default to 0, require valid amount
+    let paymentAmount: string | null = null;
     let paymentStatus: string = 'Processing';
 
     if (apiKey && verifyUrl) {
@@ -303,12 +303,12 @@ export async function POST(req: NextRequest) {
       console.warn('Gateway API key or verify URL not configured, creating record without gateway data');
     }
 
-    // Check again for existing payment before creating (race condition protection)
-    // Check by invoiceId first
+
+
     let finalCheck = await db.addFunds.findUnique({
       where: { invoiceId: invoice_id },
     });
-    
+
     if (finalCheck) {
       console.log(`Payment record already exists (final check by invoiceId) with invoice_id: ${invoice_id}`);
       return NextResponse.json({
@@ -318,7 +318,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Validate amount before creating - don't create records with 0 amount
+
     if (!paymentAmount || paymentAmount === '0' || paymentAmount === '0.00' || parseFloat(paymentAmount) <= 0) {
       console.error('Cannot create payment record with invalid amount:', {
         paymentAmount,
@@ -332,40 +332,40 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Convert gateway amount (BDT) to USD if needed
-    // At this point, paymentAmount is guaranteed to be a non-null string due to validation above
+
+
     let amountUSD: string = paymentAmount as string;
     if (paymentAmount && parseFloat(paymentAmount) > 100) {
-      // If amount is very large, it's likely in BDT, convert to USD
+
       const { getPaymentGatewayExchangeRate } = await import('@/lib/payment-gateway-config');
       const exchangeRate = await getPaymentGatewayExchangeRate();
       const gatewayAmount = parseFloat(paymentAmount);
       const convertedUSD = gatewayAmount / exchangeRate;
-      
-      // Only convert if the converted amount makes sense (between $1 and $10000)
+
+
       if (convertedUSD >= 1 && convertedUSD <= 10000) {
         amountUSD = convertedUSD.toFixed(2);
         console.log(`Converted gateway amount ${gatewayAmount} BDT to ${amountUSD} USD`);
       }
     }
 
-    // CRITICAL: Also check by amount + user + recent timestamp to prevent duplicates
-    // This catches cases where invoice_id differs but it's the same payment
+
+
     if (amountUSD && session.user.id) {
       const tenMinutesAgo = new Date(Date.now() - 600000);
       const amountToCheck = amountUSD;
-      
+
       const duplicateCheck = await db.addFunds.findFirst({
         where: {
           userId: session.user.id,
           amount: amountToCheck,
           createdAt: { gte: tenMinutesAgo },
-          // Exclude records that already have this exact invoice_id
+
           invoiceId: { not: invoice_id },
         },
         orderBy: { createdAt: 'desc' },
       });
-      
+
       if (duplicateCheck) {
         console.log(`Duplicate payment detected by amount/user (ensure-record), updating existing record:`, {
           existingId: duplicateCheck.id,
@@ -374,10 +374,10 @@ export async function POST(req: NextRequest) {
           newInvoiceId: invoice_id,
           newStatus: paymentStatus
         });
-        
-        // Update existing record instead of creating new one
-        // If existing is Processing and new is Success, update to Success
-        // If existing is Success and new is Processing, keep Success (don't downgrade)
+
+
+
+
         let finalStatus = paymentStatus;
         if (duplicateCheck.status === 'Success' && paymentStatus !== 'Success') {
           finalStatus = 'Success';
@@ -385,19 +385,19 @@ export async function POST(req: NextRequest) {
         } else if (duplicateCheck.status === 'Processing' && paymentStatus === 'Success') {
           finalStatus = 'Success';
         }
-        
+
         try {
           const updatedPayment = await db.addFunds.update({
             where: { id: duplicateCheck.id },
             data: {
-              invoiceId: invoice_id, // Update invoice_id
+              invoiceId: invoice_id,
               status: finalStatus,
               transactionId: transactionId || duplicateCheck.transactionId,
               paymentMethod: paymentMethod || duplicateCheck.paymentMethod,
               adminStatus: finalStatus === 'Success' ? 'Success' : finalStatus === 'Cancelled' ? 'Cancelled' : duplicateCheck.adminStatus || 'Pending',
             },
           });
-          
+
           console.log(`Updated existing payment record instead of creating duplicate:`, updatedPayment.id);
           return NextResponse.json({
             success: true,
@@ -406,12 +406,12 @@ export async function POST(req: NextRequest) {
           });
         } catch (updateError) {
           console.error('Error updating duplicate payment record:', updateError);
-          // If update fails, continue to create new record (fallback)
+
         }
       }
     }
 
-    // STRICT RULE: Don't create successful payments without transaction ID
+
     if (paymentStatus === 'Success' && !transactionId) {
       console.error('Cannot create successful payment without transaction ID:', {
         invoice_id,
@@ -425,8 +425,8 @@ export async function POST(req: NextRequest) {
         invoice_id
       }, { status: 400 });
     }
-    
-    // Don't create Cancelled records without transaction ID
+
+
     if (paymentStatus === 'Cancelled' && !transactionId) {
       console.warn('Skipping creation of Cancelled payment without transaction ID:', invoice_id);
       return NextResponse.json({
@@ -435,7 +435,7 @@ export async function POST(req: NextRequest) {
         invoice_id
       }, { status: 400 });
     }
-    
+
     try {
       const payment = await db.addFunds.create({
         data: {
@@ -452,7 +452,7 @@ export async function POST(req: NextRequest) {
           currency: 'USD',
         },
       });
-      
+
       console.log(`✓ Payment record created with invoice_id: ${invoice_id} for user ${session.user.id}`, {
         transaction_id: transactionId,
         payment_method: paymentMethod,
@@ -467,7 +467,7 @@ export async function POST(req: NextRequest) {
         payment: payment,
       });
     } catch (createError: any) {
-      // Handle duplicate key error (P2002)
+
       if (createError.code === 'P2002') {
         console.log(`Payment record already exists (caught in create) with invoice_id: ${invoice_id}`);
         const existingPayment = await db.addFunds.findUnique({
@@ -481,12 +481,12 @@ export async function POST(req: NextRequest) {
           });
         }
       }
-      throw createError; // Re-throw if not a duplicate error
+      throw createError;
     }
 
   } catch (error: any) {
     console.error('Error ensuring payment record:', error);
-    
+
     if (error.code === 'P2002' && invoice_id) {
       try {
         const existingPayment = await db.addFunds.findUnique({
@@ -494,7 +494,7 @@ export async function POST(req: NextRequest) {
             invoiceId: invoice_id,
           },
         });
-        
+
         if (existingPayment) {
           return NextResponse.json({
             success: true,
@@ -506,7 +506,7 @@ export async function POST(req: NextRequest) {
         console.error('Error looking up existing payment:', lookupError);
       }
     }
-    
+
     return NextResponse.json(
       { error: 'Failed to ensure payment record', details: String(error) },
       { status: 500 }

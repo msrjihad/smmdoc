@@ -110,6 +110,17 @@ export default function SignInForm() {
             return;
           }
 
+          if (data?.requiresEmailVerification && data?.email) {
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('pendingVerificationEmail', data.email);
+            }
+            setSuccess(data.message || 'Please verify your email to continue.');
+            setTimeout(() => {
+              router.push('/verify-email');
+            }, 1000);
+            return;
+          }
+
           if (data?.success) {
 
             const redirectUrl = data.redirectTo || '/dashboard';

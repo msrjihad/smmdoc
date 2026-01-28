@@ -73,21 +73,21 @@ export function useUserSettings(): UseUserSettingsReturn {
 
   const fetchSettingsRef = useRef(false);
   useEffect(() => {
-    // Prevent duplicate calls
+
     if (fetchSettingsRef.current) return;
     fetchSettingsRef.current = true;
-    
+
     fetchSettings().finally(() => {
-      // Reset after a delay to allow retries
+
       setTimeout(() => {
         fetchSettingsRef.current = false;
       }, 1000);
     });
   }, []);
 
-  // Memoize return value to prevent rerenders
+
   const memoizedRefetch = useMemo(() => fetchSettings, []);
-  
+
   return useMemo(() => ({
     settings,
     loading,

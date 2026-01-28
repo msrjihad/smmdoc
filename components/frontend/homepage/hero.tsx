@@ -83,7 +83,7 @@ const Hero: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const fetchHomepageStats = async () => {
       try {
         const res = await fetch('/api/homepage/stats', {
@@ -107,7 +107,7 @@ const Hero: React.FC = () => {
         const finalTotalOrders = typeof totalOrders === 'number' ? totalOrders : (totalOrders === null || totalOrders === undefined ? 0 : Number(totalOrders) || 0);
         const finalActiveUsers = typeof activeUsers === 'number' ? activeUsers : (activeUsers === null || activeUsers === undefined ? 0 : Number(activeUsers) || 0);
 
-        // Batch state updates using startTransition for better performance
+
         startTransition(() => {
           setUsersCount(finalUsersCount);
           setCompletedOrdersCount(finalCompletedOrders);
@@ -115,7 +115,7 @@ const Hero: React.FC = () => {
           setActiveUsersCount(finalActiveUsers);
         });
 
-        // Only set debug info in development
+
         if (process.env.NODE_ENV === 'development') {
           setDebugInfo({
             apiResponse: json,
@@ -130,7 +130,7 @@ const Hero: React.FC = () => {
       } catch (err: any) {
         if (!isMounted || !isMountedRef.current) return;
         setStatsError(err.message || 'Failed to fetch homepage stats');
-        // Batch state updates
+
         startTransition(() => {
           setUsersCount(0);
           setCompletedOrdersCount(0);
@@ -139,9 +139,9 @@ const Hero: React.FC = () => {
         });
       }
     };
-    
+
     fetchHomepageStats();
-    
+
     return () => {
       isMounted = false;
     };
@@ -216,6 +216,17 @@ const Hero: React.FC = () => {
 
           if (data?.twoFactor) {
             setShowTwoFactor(true);
+            return;
+          }
+
+          if (data?.requiresEmailVerification && data?.email) {
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('pendingVerificationEmail', data.email);
+            }
+            setSuccess(data.message || 'Please verify your email to continue.');
+            setTimeout(() => {
+              router.push('/verify-email');
+            }, 1000);
             return;
           }
 

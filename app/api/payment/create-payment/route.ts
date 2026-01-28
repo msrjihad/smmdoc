@@ -35,16 +35,16 @@ export async function POST(req: NextRequest) {
     const { fetchCurrencyData } = await import('@/lib/currency-utils');
     const { currencies } = await fetchCurrencyData();
     const amountUSDConverted = convertToUSD(amountUSD, currency, currencies);
-    
+
     const exchangeRate = await getPaymentGatewayExchangeRate();
     const gatewayAmount = amountUSDConverted * exchangeRate;
 
     const gatewayName = await getPaymentGatewayName();
 
-    // Get app URL and ensure it includes port for localhost
+
     const { getAppUrlWithPort } = await import('@/lib/utils/redirect-url');
     const appUrl = getAppUrlWithPort();
-    
+
     console.log('App URL determined (with port fix):', appUrl);
 
     const { getPaymentGatewayApiKey, getPaymentGatewayCheckoutUrl } = await import('@/lib/payment-gateway-config');
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     }
 
     const paymentAmount = amountUSDConverted * exchangeRate;
-    
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -110,21 +110,21 @@ export async function POST(req: NextRequest) {
 
       if (data.status || data.payment_url) {
         let gatewayInvoiceId: string | null = null;
-        
+
         if (data.payment_url) {
           try {
             const url = new URL(data.payment_url);
             const pathParts = url.pathname.split('/').filter(part => part.length > 0);
             const paymentIndex = pathParts.findIndex(part => part === 'payment');
-            
+
             if (paymentIndex >= 0 && paymentIndex < pathParts.length - 1) {
               gatewayInvoiceId = pathParts[paymentIndex + 1];
             } else if (pathParts.length > 0) {
               gatewayInvoiceId = pathParts[pathParts.length - 1];
             }
-            
+
             if (!gatewayInvoiceId) {
-              gatewayInvoiceId = url.searchParams.get('invoice_id') || 
+              gatewayInvoiceId = url.searchParams.get('invoice_id') ||
                                  url.searchParams.get('invoiceId') ||
                                  url.searchParams.get('invoice');
             }
@@ -132,15 +132,15 @@ export async function POST(req: NextRequest) {
             console.error('Error parsing payment_url:', urlError);
           }
         }
-        
+
         if (!gatewayInvoiceId) {
-          gatewayInvoiceId = data.invoice_id || data.invoiceId || data.invoice || 
+          gatewayInvoiceId = data.invoice_id || data.invoiceId || data.invoice ||
                             data.id || data.payment_id || data.order_id || null;
         }
-        
+
         if (!gatewayInvoiceId) {
           return NextResponse.json(
-            { 
+            {
               error: 'Gateway did not return invoice_id in payment_url',
               details: 'Unable to extract invoice_id from payment gateway response.',
               gatewayResponse: data
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
 
           if (recentPayment) {
             return NextResponse.json(
-              { 
+              {
                 error: 'Duplicate payment request detected. Please wait a moment and try again.',
               },
               { status: 429 }
@@ -208,20 +208,20 @@ export async function POST(req: NextRequest) {
           }
         } catch (createError: any) {
           console.error('Error creating payment record:', createError);
-          
+
           if (createError.code === 'P2002') {
             return NextResponse.json(
               { error: 'Invoice ID already exists. Please try again.' },
               { status: 409 }
             );
           }
-          
+
           return NextResponse.json(
             { error: 'Failed to create payment record', details: String(createError) },
             { status: 500 }
           );
         }
-        
+
         return NextResponse.json({
           invoice_id: gatewayInvoiceId,
           payment_url: data.payment_url,

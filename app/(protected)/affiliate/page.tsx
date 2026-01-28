@@ -205,10 +205,8 @@ function AffiliateStatsCards() {
       }
     };
 
-    // Remove unnecessary setTimeout delay
     setUserInfoLoading(false);
     
-    // Prevent duplicate calls
     let isFetching = false;
     const fetchStatsOnce = async () => {
       if (isFetching) return;

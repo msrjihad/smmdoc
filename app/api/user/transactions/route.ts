@@ -74,41 +74,41 @@ export async function GET(request: NextRequest) {
       }),
       db.addFunds.count({ where })
     ]);
-    
-    // Only log in development mode (removed verbose logging)
+
+
     if (process.env.NODE_ENV === 'development' && transactions.length > 0) {
       console.log(`Fetched ${transactions.length} transactions from database`);
     }
 
-    // Only refresh transactions created in the last 5 minutes (reduced from 10 minutes)
-    // and only if they're still Processing or missing transaction data
+
+
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    
+
     const transactionsToRefresh = transactions.filter(tx => {
       const isRecent = tx.createdAt >= fiveMinutesAgo;
-      const needsRefresh = (!tx.transactionId || 
-                          !tx.paymentMethod || 
+      const needsRefresh = (!tx.transactionId ||
+                          !tx.paymentMethod ||
                           tx.status === 'Processing') &&
-                          tx.transactionId !== tx.invoiceId; // Don't refresh if transactionId equals invoiceId (corrupted)
+                          tx.transactionId !== tx.invoiceId;
       return isRecent && needsRefresh && tx.paymentGateway === 'UddoktaPay';
     });
 
-    // Only auto-refresh if there are transactions to refresh and limit to 3 most recent
+
     if (transactionsToRefresh.length > 0) {
-      // Limit to 3 most recent transactions to avoid too many API calls
+
       const transactionsToRefreshLimited = transactionsToRefresh.slice(0, 3);
-      
-      // Only log in development mode
+
+
       if (process.env.NODE_ENV === 'development') {
         console.log(`Auto-refreshing ${transactionsToRefreshLimited.length} recent transactions from payment gateway...`);
       }
-      
+
       const refreshPromises = transactionsToRefreshLimited.map(async (transaction) => {
         try {
           const { getPaymentGatewayApiKey, getPaymentGatewayVerifyUrl } = await import('@/lib/payment-gateway-config');
           const apiKey = await getPaymentGatewayApiKey();
           const verifyUrl = await getPaymentGatewayVerifyUrl();
-          
+
           if (!apiKey || !verifyUrl) {
             return null;
           }
@@ -125,8 +125,8 @@ export async function GET(request: NextRequest) {
 
           if (!verificationResponse.ok) {
             const errorText = await verificationResponse.text();
-            // Don't log 403 errors as they're expected if using wrong endpoint
-            // (403 means endpoint doesn't allow server-side access)
+
+
             if (verificationResponse.status !== 403) {
               console.error(`Gateway verify API error for ${transaction.invoiceId}:`, {
                 status: verificationResponse.status,
@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
             return null;
           }
 
-          // Check if response is JSON before parsing
+
           const contentType = verificationResponse.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
             const responseText = await verificationResponse.text();
@@ -153,10 +153,10 @@ export async function GET(request: NextRequest) {
           }
 
           const verificationData = await verificationResponse.json();
-          
-          const extractedTransactionId = verificationData.transaction_id || 
-                                       verificationData.transactionId || 
-                                       verificationData.trx_id || 
+
+          const extractedTransactionId = verificationData.transaction_id ||
+                                       verificationData.transactionId ||
+                                       verificationData.trx_id ||
                                        verificationData.trxId ||
                                        verificationData.transactionID ||
                                        verificationData.data?.transaction_id ||
@@ -164,17 +164,17 @@ export async function GET(request: NextRequest) {
                                        verificationData.payment?.transaction_id ||
                                        null;
 
-          const extractedPaymentMethod = verificationData.payment_method || 
-                                       verificationData.paymentMethod || 
+          const extractedPaymentMethod = verificationData.payment_method ||
+                                       verificationData.paymentMethod ||
                                        verificationData.payment_method_name ||
                                        verificationData.method ||
                                        null;
 
 
-          // Extract transaction ID first
-          const validTransactionId = extractedTransactionId && 
+
+          const validTransactionId = extractedTransactionId &&
                                    extractedTransactionId !== transaction.invoiceId
-                                   ? extractedTransactionId 
+                                   ? extractedTransactionId
                                    : null;
 
           let newStatus = transaction.status;
@@ -183,43 +183,43 @@ export async function GET(request: NextRequest) {
           } else if (verificationData.status === 'PENDING') {
             newStatus = 'Processing';
           } else if (verificationData.status === 'ERROR' || verificationData.status === 'CANCELLED' || verificationData.status === 'FAILED') {
-            // CRITICAL: Only update to 'Cancelled' if:
-            // 1. There's a valid transaction_id (payment was actually processed), OR
-            // 2. Current status is already 'Cancelled' or 'Success' (don't change Processing to Cancelled for new payments)
-            // This prevents newly created 'Processing' payments from being incorrectly marked as 'Cancelled'
-            
-            // Only set to Cancelled if there's a transaction_id (payment was processed) 
-            // OR if current status is already Cancelled/Success
+
+
+
+
+
+
+
             if (validTransactionId || transaction.status === 'Cancelled' || transaction.status === 'Success') {
               newStatus = 'Cancelled';
             } else {
-              // Keep as Processing if no transaction_id (payment hasn't been processed yet)
-              // This prevents new payments from being marked as Cancelled before user completes payment
+
+
               newStatus = 'Processing';
             }
           }
 
           const updateData: any = {};
-          
+
           if (validTransactionId && validTransactionId !== transaction.transactionId) {
             updateData.transactionId = validTransactionId;
           }
-          
+
           if (extractedPaymentMethod && extractedPaymentMethod !== transaction.paymentMethod) {
             updateData.paymentMethod = extractedPaymentMethod;
           }
-          
+
 
           if (newStatus !== transaction.status) {
             updateData.status = newStatus;
           }
 
           if (Object.keys(updateData).length > 0) {
-            // If status is changing to Success, update user balance in transaction
+
             if (updateData.status === 'Success' && transaction.status !== 'Success') {
               await db.$transaction(async (prisma) => {
                 const paymentRecord = await prisma.addFunds.findUnique({
-                  where: transaction.invoiceId 
+                  where: transaction.invoiceId
                     ? { invoiceId: transaction.invoiceId }
                     : { id: transaction.id },
                   include: { user: true }
@@ -227,7 +227,7 @@ export async function GET(request: NextRequest) {
 
                 if (paymentRecord && paymentRecord.user) {
                   const originalAmount = Number(paymentRecord.amount) || 0;
-                  
+
                   const userSettings = await prisma.userSettings.findFirst();
                   let bonusAmount = 0;
 
@@ -246,24 +246,24 @@ export async function GET(request: NextRequest) {
                     }
                   });
 
-                  // Only log in development mode
+
                   if (process.env.NODE_ENV === 'development') {
                     console.log(`User ${paymentRecord.userId} balance updated. Original: ${originalAmount}, Bonus: ${bonusAmount}, Total: ${totalAmountToAdd}`);
                   }
                 }
 
-                // Update payment status
+
                 await prisma.addFunds.update({
-                  where: transaction.invoiceId 
+                  where: transaction.invoiceId
                     ? { invoiceId: transaction.invoiceId }
                     : { id: transaction.id },
                   data: updateData,
                 });
               });
             } else {
-              // Just update payment data without balance update
+
               await db.addFunds.update({
-                where: transaction.invoiceId 
+                where: transaction.invoiceId
                   ? { invoiceId: transaction.invoiceId }
                   : { id: transaction.id },
                 data: updateData,
@@ -280,7 +280,7 @@ export async function GET(request: NextRequest) {
               transaction.status = updateData.status;
             }
 
-            // Only log in development mode
+
             if (process.env.NODE_ENV === 'development') {
               console.log(`Updated transaction ${transaction.invoiceId} with gateway data:`, updateData);
             }
@@ -293,9 +293,9 @@ export async function GET(request: NextRequest) {
       await Promise.all(refreshPromises).catch(err => {
         console.error('Error in batch transaction refresh:', err);
       });
-      
+
       if (transactionsToRefresh.length > 0) {
-        // Only log in development mode
+
         if (process.env.NODE_ENV === 'development') {
           console.log('Re-fetching transactions after auto-refresh...');
         }
@@ -328,12 +328,12 @@ export async function GET(request: NextRequest) {
             },
           },
         });
-        
+
         transactions.length = 0;
         transactions.push(...refreshedTransactions);
-        // Only log in development mode
+
         if (process.env.NODE_ENV === 'development') {
-          console.log('Transactions refreshed, updated transactionId and paymentMethod values:', 
+          console.log('Transactions refreshed, updated transactionId and paymentMethod values:',
             transactions.map(tx => ({
               invoiceId: tx.invoiceId,
               transactionId: tx.transactionId,
@@ -347,17 +347,17 @@ export async function GET(request: NextRequest) {
 
     const totalPages = Math.ceil(total / limit);
 
-    const transferTransactions = transactions.filter(tx => 
+    const transferTransactions = transactions.filter(tx =>
       tx.transactionType === 'transfer' || tx.transactionType === 'received'
     );
-    
+
     const relatedUserInfo = new Map<number, { username?: string | null; name?: string | null }>();
-    
+
     if (transferTransactions.length > 0) {
       const transactionIds = transferTransactions
         .map(tx => tx.transactionId)
         .filter((id): id is string => id !== null && id !== undefined);
-      
+
       if (transactionIds.length > 0) {
         const relatedTransactions = await db.addFunds.findMany({
           where: {
@@ -375,7 +375,7 @@ export async function GET(request: NextRequest) {
             },
           },
         });
-        
+
         transactions.forEach(tx => {
           if (tx.transactionId && (tx.transactionType === 'transfer' || tx.transactionType === 'received')) {
             const relatedTx = relatedTransactions.find(
@@ -395,27 +395,27 @@ export async function GET(request: NextRequest) {
     const transformedTransactions = transactions.map((transaction) => {
       const dbStatus = transaction.status || 'Processing';
       const mappedStatus = mapStatus(dbStatus);
-      
+
       let finalTransactionId = transaction.transactionId || null;
       if (finalTransactionId && finalTransactionId === transaction.invoiceId) {
-        // Only log warnings in development mode
+
         if (process.env.NODE_ENV === 'development') {
           console.warn(`Transaction ${transaction.invoiceId} has transactionId matching invoiceId - setting to null`);
         }
         finalTransactionId = null;
       }
-      
-      // Removed verbose transaction mapping logs - only log errors in production
-      
-      const amount = transaction.amount 
+
+
+
+      const amount = transaction.amount
         ? (typeof transaction.amount === 'object' && transaction.amount !== null
             ? Number(transaction.amount)
             : Number(transaction.amount))
         : 0;
-      
+
       const relatedUser = relatedUserInfo.get(transaction.id);
       const relatedUsername = relatedUser?.username || relatedUser?.name || null;
-      
+
       return {
         id: transaction.id,
         invoice_id: transaction.invoiceId || transaction.id,
@@ -459,9 +459,9 @@ function mapStatus(dbStatus: string | null | undefined): 'Success' | 'Processing
     console.warn('mapStatus: dbStatus is null/undefined, defaulting to Processing');
     return 'Processing';
   }
-  
+
   const normalizedStatus = String(dbStatus).trim();
-  
+
   switch (normalizedStatus) {
     case 'Success':
     case 'success':

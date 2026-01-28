@@ -51,22 +51,22 @@ const AnalyticsInjector = () => {
       return;
     }
 
-    const isFrontend = pathname === '/' || 
-                      pathname.startsWith('/about') || 
-                      pathname.startsWith('/blogs') || 
-                      pathname.startsWith('/contact') || 
+    const isFrontend = pathname === '/' ||
+                      pathname.startsWith('/about') ||
+                      pathname.startsWith('/blogs') ||
+                      pathname.startsWith('/contact') ||
                       pathname.startsWith('/our-services');
 
     const isDashboard = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
 
     const shouldShow = (visibility: string) => {
-      console.log('🔍 Analytics shouldShow check:', { 
-        visibility, 
-        isAuthenticated, 
-        status, 
+      console.log('🔍 Analytics shouldShow check:', {
+        visibility,
+        isAuthenticated,
+        status,
         pathname,
         isFrontend,
-        isDashboard 
+        isDashboard
       });
 
       if (visibility === 'all') {
@@ -127,8 +127,8 @@ const AnalyticsInjector = () => {
       }
     });
 
-    if (analyticsSettings.googleAnalytics.enabled && 
-        analyticsSettings.googleAnalytics.code && 
+    if (analyticsSettings.googleAnalytics.enabled &&
+        analyticsSettings.googleAnalytics.code &&
         shouldShow(analyticsSettings.googleAnalytics.visibility)) {
 
       const gaCode = analyticsSettings.googleAnalytics.code.trim();
@@ -136,12 +136,12 @@ const AnalyticsInjector = () => {
       const existingGAScripts = document.querySelectorAll('script[src*="googletagmanager.com/gtag"], script[data-analytics="ga"]');
       existingGAScripts.forEach(script => {
         try {
-          // Verify element still exists in DOM before removing
+
           if (script.parentNode && (document.head.contains(script) || document.body.contains(script))) {
             script.remove();
           }
         } catch (error) {
-          // Element already removed - ignore silently
+
         }
       });
 
@@ -196,8 +196,8 @@ const AnalyticsInjector = () => {
       }
     }
 
-    if (analyticsSettings.facebookPixel.enabled && 
-        analyticsSettings.facebookPixel.code && 
+    if (analyticsSettings.facebookPixel.enabled &&
+        analyticsSettings.facebookPixel.code &&
         shouldShow(analyticsSettings.facebookPixel.visibility)) {
 
       const fbCode = analyticsSettings.facebookPixel.code.trim();
@@ -205,12 +205,12 @@ const AnalyticsInjector = () => {
       const existingFBScripts = document.querySelectorAll('script[data-analytics="fb"], noscript[data-analytics="fb"]');
       existingFBScripts.forEach(script => {
         try {
-          // Verify element still exists in DOM before removing
+
           if (script.parentNode && (document.head.contains(script) || document.body.contains(script))) {
             script.remove();
           }
         } catch (error) {
-          // Element already removed - ignore silently
+
         }
       });
 
@@ -278,8 +278,8 @@ const AnalyticsInjector = () => {
       }
     }
 
-    if (analyticsSettings.gtm.enabled && 
-        analyticsSettings.gtm.code && 
+    if (analyticsSettings.gtm.enabled &&
+        analyticsSettings.gtm.code &&
         shouldShow(analyticsSettings.gtm.visibility)) {
 
       const gtmCode = analyticsSettings.gtm.code.trim();
@@ -287,12 +287,12 @@ const AnalyticsInjector = () => {
       const existingGTMScripts = document.querySelectorAll('script[data-analytics="gtm"], noscript[data-analytics="gtm"]');
       existingGTMScripts.forEach(script => {
         try {
-          // Verify element still exists in DOM before removing
+
           if (script.parentNode && (document.head.contains(script) || document.body.contains(script))) {
             script.remove();
           }
         } catch (error) {
-          // Element already removed - ignore silently
+
         }
       });
 
@@ -357,7 +357,7 @@ const AnalyticsInjector = () => {
 
     return () => {
       try {
-        // Check if document is still available
+
         if (typeof document === 'undefined' || !document.body || !document.head) {
           return;
         }
@@ -365,28 +365,28 @@ const AnalyticsInjector = () => {
         const analyticsScripts = document.querySelectorAll('script[data-analytics]');
         analyticsScripts.forEach(script => {
           try {
-            // Verify element still exists in DOM before removing
+
             if (script.parentNode && (document.head.contains(script) || document.body.contains(script))) {
               script.remove();
             }
           } catch (error) {
-            // Element already removed or DOM not available - ignore silently
+
           }
         });
 
         const analyticsNoscripts = document.querySelectorAll('noscript[data-analytics]');
         analyticsNoscripts.forEach(noscript => {
           try {
-            // Verify element still exists in DOM before removing
+
             if (noscript.parentNode && document.body.contains(noscript)) {
               noscript.remove();
             }
           } catch (error) {
-            // Element already removed or DOM not available - ignore silently
+
           }
         });
       } catch (error) {
-        // DOM not available during cleanup - ignore silently
+
       }
     };
   }, [analyticsSettings, isAuthenticated, pathname]);

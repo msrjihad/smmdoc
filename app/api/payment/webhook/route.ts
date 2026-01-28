@@ -6,26 +6,26 @@ export async function POST(req: NextRequest) {
   try {
     const webhookData = await req.json();
     console.log("Webhook data received:", webhookData);
-    
+
     const apiKey = req.headers.get('rt-uddoktapay-api-key');
-    
+
     const { getPaymentGatewayApiKey } = await import('@/lib/payment-gateway-config');
     const expectedApiKey = await getPaymentGatewayApiKey();
-    
+
     if (!expectedApiKey) {
       console.error("Payment gateway API key not configured");
       return NextResponse.json({ error: "Payment gateway not configured" }, { status: 500 });
     }
-    
+
     if (apiKey !== expectedApiKey) {
       console.error("Invalid API key in webhook request");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
-    const { 
+
+    const {
       invoice_id,
       transaction_id,
-      amount, 
+      amount,
       status,
       metadata,
       payment_method,
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       full_name,
       charged_amount
     } = webhookData;
-    
+
     console.log('Webhook payload extracted (same pattern for all fields):', {
       invoice_id,
       transaction_id,
@@ -42,29 +42,29 @@ export async function POST(req: NextRequest) {
       amount,
       charged_amount
     });
-    
+
     if (!invoice_id) {
       console.error("Missing invoice_id in webhook data");
       return NextResponse.json({ error: "Missing invoice_id" }, { status: 400 });
     }
-    
+
     const payment = await db.addFunds.findUnique({
       where: { invoiceId: invoice_id },
       include: { user: true }
     });
-    
+
     if (!payment) {
       console.error(`Payment record not found for invoice_id: ${invoice_id}`);
       return NextResponse.json({ error: "Payment record not found" }, { status: 404 });
     }
-    
+
     if (payment.status === "Success") {
       console.log(`Payment ${invoice_id} is already marked as successful`);
       return NextResponse.json({ message: "Payment already processed" });
     }
-    
+
     let paymentStatus = "Processing";
-    
+
     if (status === "COMPLETED") {
       paymentStatus = "Success";
     } else if (status === "PENDING") {
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     } else {
       paymentStatus = "Failed";
     }
-    
+
     try {
       const result = await db.$transaction(async (prisma) => {
         const updatedPayment = await prisma.addFunds.update({
@@ -85,14 +85,14 @@ export async function POST(req: NextRequest) {
             paymentMethod: payment_method || payment.paymentMethod || null,
             gatewayFee: fee !== undefined ? fee : payment.gatewayFee,
             name: full_name || payment.name,
-            // Don't update amount from webhook - webhook returns BDT, we store USD
-            // Keep the original USD amount from payment record
+
+
             amount: payment.amount,
           }
         });
-        
+
         console.log(`Payment ${invoice_id} status updated to ${paymentStatus}`);
-        
+
         if (paymentStatus === "Success" && payment.user) {
           const originalAmount = Number(payment.amount) || 0;
 
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
               }
             }
           });
-          
+
           console.log(`User ${payment.userId} balance updated after successful payment. New balance: ${user.balance}. Original amount: ${originalAmount}, Bonus: ${bonusAmount}, Total added: ${totalAmountToAdd}`);
 
           try {
@@ -132,10 +132,10 @@ export async function POST(req: NextRequest) {
             console.error('Error sending transaction success notification:', notifError);
           }
         }
-        
+
         return { updatedPayment };
       });
-      
+
       return NextResponse.json({
         success: true,
         message: `Payment ${paymentStatus.toLowerCase()}`,
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (dbError) {
       console.error("Database error updating payment:", dbError);
-      
+
       return NextResponse.json({
         error: "Database error",
         message: "Failed to update payment record",

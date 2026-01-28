@@ -68,34 +68,34 @@ const ServicesTable: React.FC<ServicesTableProps> = ({
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[var(--card-bg)] rounded-t-lg">
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100 first:rounded-tl-lg">
+              <th className="text-left py-3 px-4 font-medium text-sm text-gray-900 dark:text-gray-100 first:rounded-tl-lg">
                 Fav
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              <th className="text-left py-3 px-4 font-medium text-sm text-gray-900 dark:text-gray-100">
                 ID
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              <th className="text-left py-3 px-4 font-medium text-sm text-gray-900 dark:text-gray-100">
                 Service
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              <th className="text-left py-3 px-4 font-medium text-sm text-gray-900 dark:text-gray-100">
                 Rate per 1000
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              <th className="text-left py-3 px-4 font-medium text-sm text-gray-900 dark:text-gray-100">
                 Min order
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              <th className="text-left py-3 px-4 font-medium text-sm text-gray-900 dark:text-gray-100">
                 Max order
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              <th className="text-left py-3 px-4 font-medium text-sm text-gray-900 dark:text-gray-100">
                 Average time
               </th>
-              <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              <th className="text-center py-3 px-4 font-medium text-sm text-gray-900 dark:text-gray-100">
                 Refill
               </th>
-              <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+              <th className="text-center py-3 px-4 font-medium text-sm text-gray-900 dark:text-gray-100">
                 Cancel
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100 last:rounded-tr-lg">
+              <th className="text-left py-3 px-4 font-medium text-sm text-gray-900 dark:text-gray-100 last:rounded-tr-lg">
                 Action
               </th>
             </tr>

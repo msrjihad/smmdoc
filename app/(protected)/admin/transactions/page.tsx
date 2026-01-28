@@ -749,7 +749,6 @@ const AdminAllTransactionsPage = () => {
     const paymentMethod = transaction.payment_method || (transaction as any).paymentMethod || null;
     const gateway = transaction.gateway || (transaction as any).paymentGateway || (transaction as any).method || null;
     
-    // Use payment_method first, fallback to gateway if payment_method is null
     if (paymentMethod) {
       return paymentMethod;
     }

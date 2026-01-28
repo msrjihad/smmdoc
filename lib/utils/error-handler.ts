@@ -68,10 +68,10 @@ export class ForbiddenError extends AppError {
  * Handle errors and return standardized API response
  */
 export function handleApiError(error: unknown): ApiErrorResponse {
-  // Log the error
+
   logger.error('API Error occurred', error);
 
-  // Handle known error types
+
   if (error instanceof AppError) {
     return {
       success: false,
@@ -82,10 +82,10 @@ export function handleApiError(error: unknown): ApiErrorResponse {
     };
   }
 
-  // Handle Prisma errors
+
   if (error && typeof error === 'object' && 'code' in error) {
     const prismaError = error as any;
-    
+
     if (prismaError.code === 'P2002') {
       return {
         success: false,
@@ -94,7 +94,7 @@ export function handleApiError(error: unknown): ApiErrorResponse {
         statusCode: 409,
       };
     }
-    
+
     if (prismaError.code === 'P2025') {
       return {
         success: false,
@@ -105,7 +105,7 @@ export function handleApiError(error: unknown): ApiErrorResponse {
     }
   }
 
-  // Handle Zod validation errors
+
   if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
     const zodError = error as any;
     const messages = zodError.errors?.map((e: any) => e.message).join(', ') || 'Validation failed';
@@ -117,9 +117,9 @@ export function handleApiError(error: unknown): ApiErrorResponse {
     };
   }
 
-  // Generic error handling
+
   const errorMessage = formatError(error);
-  
+
   return {
     success: false,
     error: errorMessage,

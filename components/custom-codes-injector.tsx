@@ -48,7 +48,7 @@ export function CustomCodesInjector() {
           newScript.setAttribute(attr.name, attr.value);
         });
         newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-        // Check if element still exists in DOM before replacing
+
         if (oldScript.parentNode && (document.head.contains(oldScript) || document.body.contains(oldScript))) {
           oldScript.parentNode.replaceChild(newScript, oldScript);
         } else if (oldScript.isConnected) {
@@ -71,7 +71,7 @@ export function CustomCodesInjector() {
           existingHeaderCodes.remove();
         }
       } catch (error) {
-        // Element already removed - ignore silently
+
       }
 
       const headerDiv = document.createElement('div');
@@ -90,7 +90,7 @@ export function CustomCodesInjector() {
           existingFooterCodes.remove();
         }
       } catch (error) {
-        // Element already removed - ignore silently
+
       }
 
       const footerDiv = document.createElement('div');
@@ -103,14 +103,14 @@ export function CustomCodesInjector() {
 
     return () => {
       try {
-        // Check if document is still available
+
         if (typeof document === 'undefined' || !document.body || !document.head) {
           return;
         }
 
         const headerCodes = document.getElementById('custom-header-codes');
         const footerCodes = document.getElementById('custom-footer-codes');
-        
+
         if (headerCodes && headerCodes.parentNode && document.head.contains(headerCodes)) {
           headerCodes.remove();
         }
@@ -118,7 +118,7 @@ export function CustomCodesInjector() {
           footerCodes.remove();
         }
       } catch (error) {
-        // DOM not available during cleanup - ignore silently
+
       }
     };
   }, [customCodes]);

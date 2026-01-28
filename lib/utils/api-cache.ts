@@ -17,7 +17,7 @@ interface PendingRequest<T> {
 class ApiCache {
   private cache = new Map<string, CacheEntry<any>>();
   private pendingRequests = new Map<string, PendingRequest<any>>();
-  private defaultTTL = 60000; // 1 minute default
+  private defaultTTL = 60000;
 
   /**
    * Get cached data if available and not expired
@@ -53,7 +53,7 @@ class ApiCache {
     const pending = this.pendingRequests.get(key);
     if (!pending) return null;
 
-    // Clean up stale pending requests (older than 30 seconds)
+
     if (Date.now() - pending.timestamp > 30000) {
       this.pendingRequests.delete(key);
       return null;
@@ -71,10 +71,10 @@ class ApiCache {
       timestamp: Date.now(),
     });
 
-    // Clean up after promise resolves/rejects
+
     promise
       .finally(() => {
-        // Keep it for a short time in case of rapid duplicate requests
+
         setTimeout(() => {
           this.pendingRequests.delete(key);
         }, 1000);
@@ -116,19 +116,19 @@ class ApiCache {
   ): Promise<T> {
     const key = this.generateKey(url, options);
 
-    // Check cache first
+
     const cached = this.get<T>(key);
     if (cached !== null) {
       return cached;
     }
 
-    // Check if request is already pending
+
     const pending = this.getPendingRequest<T>(key);
     if (pending) {
       return pending;
     }
 
-    // Create new request
+
     const promise = fetch(url, {
       ...options,
       credentials: 'include',
@@ -145,12 +145,12 @@ class ApiCache {
         return response.json() as Promise<T>;
       })
       .then((data) => {
-        // Cache successful responses
+
         this.set(key, data, ttl);
         return data;
       })
       .catch((error) => {
-        // Don't cache errors
+
         this.delete(key);
         throw error;
       });
@@ -160,7 +160,7 @@ class ApiCache {
   }
 }
 
-// Export singleton instance
+
 export const apiCache = new ApiCache();
 
 /**
@@ -179,7 +179,7 @@ export async function cachedFetch<T>(
  */
 export function clearCachePattern(pattern: string | RegExp): void {
   const regex = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
-  
+
   for (const key of apiCache['cache'].keys()) {
     if (regex.test(key)) {
       apiCache.delete(key);

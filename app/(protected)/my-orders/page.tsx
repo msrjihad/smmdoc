@@ -125,6 +125,7 @@ export default function OrdersList() {
 
   const [localPendingCancelRequests, setLocalPendingCancelRequests] = useState<Set<number>>(new Set());
   const hasSyncedRef = useRef(false);
+  const queryInitiatedRef = useRef(false);
 
   const { currency, availableCurrencies, currentCurrencyData } = useCurrency();
 
@@ -135,6 +136,13 @@ export default function OrdersList() {
     search: debouncedSearch,
   });
 
+
+  useEffect(() => {
+    if (!isLoading && (data !== undefined || error !== undefined)) {
+      queryInitiatedRef.current = true;
+    }
+  }, [isLoading, data, error]);
+
   useEffect(() => {
     setPageTitle('My Orders', appName);
   }, [appName]);
@@ -143,11 +151,11 @@ export default function OrdersList() {
     const loadTimeFormat = async () => {
       const storedTimeFormat = (userDetails as any)?.timeFormat;
       const storedTimezone = (userDetails as any)?.timezone;
-      
+
       if (storedTimeFormat === '12' || storedTimeFormat === '24') {
         setTimeFormat(storedTimeFormat);
       }
-      
+
       if (storedTimezone) {
         setUserTimezone(storedTimezone);
       }
@@ -174,7 +182,7 @@ export default function OrdersList() {
 
   const formatTime = (dateString: string | Date): string => {
     if (!dateString) return 'null';
-    
+
     let date: Date;
     if (typeof dateString === 'string') {
       date = new Date(dateString);
@@ -183,7 +191,7 @@ export default function OrdersList() {
     } else {
       return 'null';
     }
-    
+
     if (isNaN(date.getTime())) return 'null';
 
     if (timeFormat === '12') {
@@ -205,7 +213,7 @@ export default function OrdersList() {
 
   const formatDate = (dateString: string | Date): string => {
     if (!dateString) return 'null';
-    
+
     let date: Date;
     if (typeof dateString === 'string') {
       date = new Date(dateString);
@@ -214,7 +222,7 @@ export default function OrdersList() {
     } else {
       return 'null';
     }
-    
+
     if (isNaN(date.getTime())) return 'null';
 
     return date.toLocaleDateString('en-GB', {
@@ -242,7 +250,10 @@ export default function OrdersList() {
 
             if (data.type === 'order_updated') {
               console.log('Order updated via real-time on my-orders:', data.orderId);
-              refetch();
+
+              if (queryInitiatedRef.current) {
+                refetch();
+              }
             } else if (data.type === 'ping') {
               console.log('Real-time ping received');
             }
@@ -280,6 +291,10 @@ export default function OrdersList() {
   useEffect(() => {
     if (hasSyncedRef.current) return;
 
+    if (!queryInitiatedRef.current) {
+      return;
+    }
+
     const syncProviderOrders = async () => {
       hasSyncedRef.current = true;
       try {
@@ -316,15 +331,27 @@ export default function OrdersList() {
           console.warn('Provider sync had issues:', syncResult.error);
         }
 
-        refetch();
+        try {
+          refetch();
+        } catch (refetchError: any) {
+          if (!refetchError?.message?.includes('has not been started')) {
+            console.error('Error refetching orders:', refetchError);
+          }
+        }
       } catch (error) {
         console.error('Error syncing provider orders on page reload:', error);
-        refetch();
+        try {
+          refetch();
+        } catch (refetchError: any) {
+          if (!refetchError?.message?.includes('has not been started')) {
+            console.error('Error refetching orders:', refetchError);
+          }
+        }
       }
     };
 
     syncProviderOrders();
-  }, [refetch]);
+  }, [refetch, data, error]);
 
   useEffect(() => {
     const urlStatus = searchParams?.get('status');

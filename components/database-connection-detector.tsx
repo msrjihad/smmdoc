@@ -20,7 +20,7 @@ export default function DatabaseConnectionDetector({ children }: { children: Rea
       const data = await response.json();
       return data.success === true;
     } catch (error) {
-      // Use logger for proper error handling
+
       logger.warn('Database connection check failed', error);
       return false;
     }
@@ -32,15 +32,15 @@ export default function DatabaseConnectionDetector({ children }: { children: Rea
 
     const performCheck = async () => {
       const connected = await checkDatabaseConnection();
-      
+
       if (!isMounted) return;
-      
+
       const wasConnected = isDatabaseConnected;
       setIsDatabaseConnected((prev) => {
-        // Only update if state actually changed
+
         if (prev === connected) return prev;
-        
-        // Handle toast display logic
+
+
         if (!connected && (prev === true || (prev === null && !toastShownRef.current))) {
           setShowToast(true);
           toastShownRef.current = true;
@@ -48,7 +48,7 @@ export default function DatabaseConnectionDetector({ children }: { children: Rea
           setShowToast(false);
           toastShownRef.current = false;
         }
-        
+
         return connected;
       });
     };
@@ -65,7 +65,7 @@ export default function DatabaseConnectionDetector({ children }: { children: Rea
         clearInterval(intervalId);
       }
     };
-  }, []); // Remove dependencies to prevent rerender loops
+  }, []);
 
   return (
     <>
@@ -74,11 +74,11 @@ export default function DatabaseConnectionDetector({ children }: { children: Rea
           <div className="flex items-center space-x-2">
             <FaExclamationTriangle className="w-4 h-4" />
             <span className="font-medium">Internal Server Error!</span>
-            <button 
+            <button
               onClick={() => {
                 setShowToast(false);
                 toastShownRef.current = false;
-              }} 
+              }}
               className="ml-2 p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded"
             >
               <FaTimes className="w-3 h-3" />

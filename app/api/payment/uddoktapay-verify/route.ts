@@ -10,28 +10,28 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { invoice_id, phone, response_type } = body;
     let transaction_id = body.transaction_id;
-    
+
     console.log("UddoktaPay verify request:", { invoice_id, transaction_id, phone, response_type });
-    
+
     if (!invoice_id) {
       return NextResponse.json(
         { error: "Invoice ID is required" },
         { status: 400 }
       );
     }
-    
+
     const payment = await db.addFunds.findUnique({
       where: { invoiceId: invoice_id },
       include: { user: true }
     });
-    
+
     if (!payment) {
       return NextResponse.json(
         { error: "Payment record not found" },
         { status: 404 }
       );
     }
-    
+
     if (payment.status === "Success") {
       return NextResponse.json({
         status: "COMPLETED",
@@ -44,18 +44,18 @@ export async function POST(req: NextRequest) {
         }
       });
     }
-    
+
     try {
-      // Call the gateway API to verify payment status
+
       const { getPaymentGatewayApiKey, getPaymentGatewayVerifyUrl } = await import('@/lib/payment-gateway-config');
       const apiKey = await getPaymentGatewayApiKey();
       const verifyUrl = await getPaymentGatewayVerifyUrl();
-      
+
       let verificationStatus = "PENDING";
       let isSuccessful = false;
       let gatewayVerificationData: any = null;
-      
-      // First, try to verify with the gateway API
+
+
       if (apiKey && verifyUrl) {
         try {
           console.log(`Calling gateway verify API: ${verifyUrl} with invoice_id: ${invoice_id}`);
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
           });
 
           if (verificationResponse.ok) {
-            // Check if response is JSON before parsing
+
             const contentType = verificationResponse.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
               const responseText = await verificationResponse.text();
@@ -85,8 +85,8 @@ export async function POST(req: NextRequest) {
 
             gatewayVerificationData = await verificationResponse.json();
             console.log('Gateway verification response:', gatewayVerificationData);
-            
-            // Use gateway API response status
+
+
             if (gatewayVerificationData.status === 'COMPLETED' || gatewayVerificationData.status === 'SUCCESS') {
               isSuccessful = true;
               verificationStatus = "COMPLETED";
@@ -97,8 +97,8 @@ export async function POST(req: NextRequest) {
             } else {
               verificationStatus = "PENDING";
             }
-            
-            // Update transaction_id from gateway response if available
+
+
             if (gatewayVerificationData.transaction_id && gatewayVerificationData.transaction_id !== invoice_id) {
               transaction_id = gatewayVerificationData.transaction_id;
             }
@@ -109,14 +109,14 @@ export async function POST(req: NextRequest) {
           }
         } catch (apiError) {
           console.error('Error calling gateway verify API:', apiError);
-          // Fall through to use request parameters
+
         }
       }
-      
-      // Fallback to request parameters if gateway API didn't provide status
+
+
       if (!gatewayVerificationData && response_type) {
         const responseTypeLower = response_type.toLowerCase();
-        
+
         if (responseTypeLower === "completed" || responseTypeLower === "success") {
           isSuccessful = true;
           verificationStatus = "COMPLETED";
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
         }
       } else if (!gatewayVerificationData && transaction_id) {
         const lowerTransactionId = transaction_id.toLowerCase();
-        
+
         if (lowerTransactionId.includes("completed") || lowerTransactionId.includes("success")) {
           isSuccessful = true;
           verificationStatus = "COMPLETED";
@@ -137,15 +137,15 @@ export async function POST(req: NextRequest) {
           verificationStatus = "CANCELLED";
         }
       }
-      
-      console.log("UddoktaPay verification result:", { 
-        isSuccessful, 
-        verificationStatus, 
+
+      console.log("UddoktaPay verification result:", {
+        isSuccessful,
+        verificationStatus,
         response_type,
         gatewayStatus: gatewayVerificationData?.status,
-        transaction_id 
+        transaction_id
       });
-      
+
       if (isSuccessful && verificationStatus === "COMPLETED" && payment.user) {
         try {
           await db.$transaction(async (prisma) => {
@@ -156,12 +156,12 @@ export async function POST(req: NextRequest) {
                 transactionId: transaction_id || gatewayVerificationData?.transaction_id || null,
                 paymentMethod: gatewayVerificationData?.payment_method || payment.paymentMethod || null,
                 gatewayFee: gatewayVerificationData?.fee !== undefined ? gatewayVerificationData.fee : payment.gatewayFee,
-                // Don't update amount from gateway - gateway returns BDT, we store USD
-                // Keep the original USD amount from payment record
+
+
                 amount: payment.amount,
               }
             });
-            
+
             const originalAmount = Number(payment.amount) || 0;
 
             const userSettings = await prisma.userSettings.findFirst();
@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
                 total_deposit: { increment: originalAmount }
               }
             });
-            
+
             console.log(`User ${payment.userId} balance updated. New balance: ${user.balance}`);
 
             const updatedPayment = await prisma.addFunds.findUnique({
@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
             const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
             const supportEmail = await getSupportEmail();
             const whatsappNumber = await getWhatsAppNumber();
-            
+
             const emailData = emailTemplates.paymentSuccess({
               userName: payment.user.name || 'Customer',
               userEmail: payment.user.email,
@@ -217,7 +217,7 @@ export async function POST(req: NextRequest) {
               supportEmail: supportEmail,
               whatsappNumber: whatsappNumber,
             });
-            
+
             await sendMail({
               sendTo: payment.user.email,
               subject: emailData.subject,
@@ -229,7 +229,7 @@ export async function POST(req: NextRequest) {
           const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
           const supportEmail = await getSupportEmail();
           const whatsappNumber = await getWhatsAppNumber();
-          
+
           const adminEmailData = transactionEmailTemplates.adminAutoApproved({
             userName: payment.user.name || 'Unknown User',
             userEmail: payment.user.email || '',
@@ -241,7 +241,7 @@ export async function POST(req: NextRequest) {
             supportEmail: supportEmail,
             whatsappNumber: whatsappNumber,
           });
-          
+
           await sendMail({
             sendTo: adminEmail,
             subject: adminEmailData.subject,
@@ -287,8 +287,8 @@ export async function POST(req: NextRequest) {
             { status: 500 }
           );
         }
-      } 
-      
+      }
+
       else if (verificationStatus === "PENDING") {
         await db.addFunds.update({
           where: { invoiceId: invoice_id },
@@ -304,7 +304,7 @@ export async function POST(req: NextRequest) {
         const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
         const supportEmail = await getSupportEmail();
         const whatsappNumber = await getWhatsAppNumber();
-        
+
         const adminEmailData = emailTemplates.adminPendingReview({
           userName: payment.user?.name || 'Unknown User',
           userEmail: payment.user?.email || '',
@@ -317,13 +317,13 @@ export async function POST(req: NextRequest) {
           supportEmail: supportEmail,
           whatsappNumber: whatsappNumber,
         });
-        
+
         await sendMail({
           sendTo: adminEmail,
           subject: adminEmailData.subject,
           html: adminEmailData.html
         });
-        
+
         return NextResponse.json({
           status: "PENDING",
           message: "Payment is being processed and requires manual verification. You will be notified once approved.",
@@ -334,8 +334,8 @@ export async function POST(req: NextRequest) {
             transaction_id: transaction_id
           }
         });
-      } 
-      
+      }
+
       else {
         await db.addFunds.update({
           where: { invoiceId: invoice_id },
@@ -345,7 +345,7 @@ export async function POST(req: NextRequest) {
             paymentMethod: gatewayVerificationData?.payment_method || payment.paymentMethod || null,
           }
         });
-        
+
         return NextResponse.json({
           status: "CANCELLED",
           message: "Payment verification failed or was cancelled",

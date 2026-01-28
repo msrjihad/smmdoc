@@ -105,7 +105,7 @@ export function formatCount(count: number | string): string {
 
 export function serializeOrder(order: any): any {
   if (!order) return order;
-  
+
   return {
     ...order,
     qty: typeof order.qty === 'bigint' ? order.qty.toString() : order.qty,
@@ -118,7 +118,7 @@ export function serializeOrder(order: any): any {
 
 export function serializeService(service: any): any {
   if (!service) return service;
-  
+
   return {
     ...service,
     min_order: typeof service.min_order === 'bigint' ? service.min_order.toString() : service.min_order,
@@ -139,15 +139,15 @@ export function detectTimezone(): string {
         return timezone;
       }
     }
-    
+
     if (typeof Date !== 'undefined') {
       const offset = -new Date().getTimezoneOffset();
       const hours = Math.floor(Math.abs(offset) / 60);
       const minutes = Math.abs(offset) % 60;
       const sign = offset >= 0 ? '+' : '-';
-      
+
       const offsetString = `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-      
+
       const timezoneMap: Record<string, string> = {
         '+06:00': 'Asia/Dhaka',
         '+05:30': 'Asia/Kolkata',
@@ -158,15 +158,15 @@ export function detectTimezone(): string {
         '+09:00': 'Asia/Tokyo',
         '+08:00': 'Asia/Shanghai',
       };
-      
+
       if (timezoneMap[offsetString]) {
         return timezoneMap[offsetString];
       }
     }
   } catch (error) {
-    // Silently fallback to default timezone
+
   }
-  
+
   return 'Asia/Dhaka';
 }
 
@@ -184,11 +184,11 @@ export function validateBlogSlug(slug: string): { isValid: boolean; error?: stri
   }
 
   const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-  
+
   if (!slugRegex.test(slug)) {
-    return { 
-      isValid: false, 
-      error: 'Slug can only contain lowercase letters, numbers, and hyphens. It cannot start or end with a hyphen.' 
+    return {
+      isValid: false,
+      error: 'Slug can only contain lowercase letters, numbers, and hyphens. It cannot start or end with a hyphen.'
     };
   }
 

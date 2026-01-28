@@ -23,6 +23,8 @@ export type LoginResult = {
   twoFactor?: boolean;
   redirectTo?: string;
   isAdmin?: boolean;
+  requiresEmailVerification?: boolean;
+  email?: string;
 };
 
 export const login = async (
@@ -130,7 +132,12 @@ export const login = async (
       subject: 'Email Verification',
       html: `<a href="${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${verificationToken?.token}">Click here to verify your email</a>`,
     });
-    return { success: true, message: 'Confirmation email sent!' };
+    return { 
+      success: true, 
+      message: 'Confirmation email sent!', 
+      requiresEmailVerification: true,
+      email: existingUser.email 
+    };
   }
 
 

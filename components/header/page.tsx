@@ -51,11 +51,11 @@ const DropdownMenuContentComponent = dynamic(() => import('@/components/header/d
 });
 
 
-const ThemeToggle = ({ 
-  isMobile = false, 
-  openDropdowns, 
-  handleDropdownChange 
-}: { 
+const ThemeToggle = ({
+  isMobile = false,
+  openDropdowns,
+  handleDropdownChange
+}: {
   isMobile?: boolean;
   openDropdowns?: any;
   handleDropdownChange?: (dropdown: string, isOpen: boolean) => void;
@@ -78,12 +78,12 @@ const ThemeToggle = ({
       }
       if (overlayRef.current) {
         try {
-          // Check if element still exists in DOM before removing
+
           if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
             overlayRef.current.remove();
           }
         } catch (error) {
-          // Element already removed or DOM not available
+
         } finally {
           overlayRef.current = null;
         }
@@ -98,12 +98,12 @@ const ThemeToggle = ({
 
     if (overlayRef.current) {
       try {
-        // Check if element still exists in DOM before removing
+
         if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
           overlayRef.current.remove();
         }
       } catch (error) {
-        // Element already removed or DOM not available
+
       } finally {
         overlayRef.current = null;
       }
@@ -159,12 +159,12 @@ const ThemeToggle = ({
       overlayTimeoutRef.current = setTimeout(() => {
         if (overlayRef.current) {
           try {
-            // Check if element still exists in DOM before removing
+
             if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
               overlayRef.current.remove();
             }
           } catch (error) {
-            // Element already removed or DOM not available
+
           } finally {
             overlayRef.current = null;
           }
@@ -175,7 +175,7 @@ const ThemeToggle = ({
 
   const handleThemeChange = (newTheme: string) => {
     createFadeTransition();
-    
+
     setTimeout(() => {
       setTheme(newTheme);
     }, 150);
@@ -364,7 +364,7 @@ const MobileMenuToggle = ({
   openDropdowns?: any;
   handleDropdownChange?: (dropdown: string, isOpen: boolean) => void;
 }) => (
-  <DropdownMenu 
+  <DropdownMenu
     open={openDropdowns?.mobile}
     onOpenChange={(isOpen) => handleDropdownChange?.('mobile', isOpen)}
   >
@@ -404,11 +404,11 @@ const Header = () => {
   const { currency, setCurrency, rate, isLoading, availableCurrencies, currentCurrencyData } = useCurrency();
   const userData = useSelector((state: any) => state.userDetails);
 
-  // Memoize user object to prevent rerenders when reference changes
+
   const user = useMemo(() => {
     return userData?.id ? userData : currentUser;
   }, [userData?.id, userData, currentUser]);
-  
+
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [contactSystemEnabled, setContactSystemEnabled] = useState(true);
@@ -430,7 +430,7 @@ const Header = () => {
     }));
   }, []);
 
-  // Memoize isAnyDropdownOpen to prevent rerenders
+
   const isAnyDropdownOpen = useMemo(() => {
     return Object.values(openDropdowns).some(Boolean);
   }, [openDropdowns]);
@@ -469,7 +469,7 @@ const Header = () => {
     fetchChildPanelSettings();
   }, []);
 
-  // Memoize isAdmin to prevent rerenders
+
   const isAdmin = useMemo(() => {
     return user?.role?.toLowerCase() === 'admin' ||
            user?.userType?.toLowerCase() === 'admin' ||
@@ -477,16 +477,16 @@ const Header = () => {
   }, [user?.role, user?.userType, user?.isAdmin]);
 
   const { data: userStatsResponse } = useGetUserStatsQuery(undefined);
-  // Memoize balance and currency to prevent rerenders
+
   const balance = useMemo(() => {
     return userStatsResponse?.data?.balance || userData?.balance || 0;
   }, [userStatsResponse?.data?.balance, userData?.balance]);
-  
+
   const userStoredCurrency = useMemo(() => {
     return userStatsResponse?.data?.currency || userData?.currency || 'USD';
   }, [userStatsResponse?.data?.currency, userData?.currency]);
 
-  // Memoize formatCurrency to prevent rerenders
+
   const formatCurrency = useCallback((amount: number) => {
     if (!currentCurrencyData || !availableCurrencies || availableCurrencies.length === 0) {
       return `$${amount.toFixed(2)}`;
@@ -520,10 +520,10 @@ const Header = () => {
 
   const fetchUserRef = useRef(false);
   async function fetchUser() {
-    // Prevent duplicate calls
+
     if (fetchUserRef.current) return;
     fetchUserRef.current = true;
-    
+
     try {
       setIsRefreshing(true);
       const userDetails = await getUserDetails();
@@ -534,7 +534,7 @@ const Header = () => {
       logger.error('Error fetching user details', error);
     } finally {
       setIsRefreshing(false);
-      // Reset after a delay to allow retries
+
       setTimeout(() => {
         fetchUserRef.current = false;
       }, 2000);
@@ -544,10 +544,10 @@ const Header = () => {
   useEffect(() => {
     fetchUser();
 
-    // Increase interval to 60 seconds to reduce API calls
+
     const intervalId = setInterval(() => {
       fetchUser();
-    }, 60000); // Changed from 30s to 60s
+    }, 60000);
 
     const handleCurrencyUpdate = () => {
 
@@ -648,7 +648,7 @@ const Header = () => {
       </div>
       <div className="flex items-center gap-3 sm:gap-4 ml-auto">
         <div className="hidden sm:flex items-center gap-3">
-          <DropdownMenu 
+          <DropdownMenu
             open={openDropdowns.currency}
             onOpenChange={(isOpen) => handleDropdownChange('currency', isOpen)}
           >
@@ -760,14 +760,14 @@ const Header = () => {
           onOpenChange={(isOpen) => handleDropdownChange('notifications', isOpen)}
         />
         <div className="hidden sm:flex items-center">
-          <ThemeToggle 
+          <ThemeToggle
             openDropdowns={openDropdowns}
             handleDropdownChange={handleDropdownChange}
           />
         </div>
         <div className="flex items-center justify-center">
-          {user && <ProfileCard 
-            user={user} 
+          {user && <ProfileCard
+            user={user}
             openDropdowns={openDropdowns}
             handleDropdownChange={handleDropdownChange}
           />}

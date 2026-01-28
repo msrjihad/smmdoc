@@ -156,9 +156,6 @@ export default function TransactionsPage() {
     setPageTitle('Transactions', appName);
   }, [appName])
 
-  // Note: For port 80, http://localhost/transactions (without port) is CORRECT
-  // No redirect needed - the middleware handles this server-side
-  // Client-side redirects are only needed for non-standard ports (like 3000)
 
   useEffect(() => {
     const loadTimeFormat = async () => {
@@ -428,16 +425,13 @@ export default function TransactionsPage() {
       setHasShownPaymentToast(true);
 
       if (paymentStatus === 'cancelled') {
-        // When payment is cancelled, verify with gateway and update status
         setTimeout(async () => {
           try {
-            // Get invoice_id from sessionStorage (stored when payment was created)
             const storedInvoiceId = sessionStorage.getItem('payment_invoice_id');
             
             if (storedInvoiceId) {
               console.log('Payment cancelled, verifying with gateway and updating status:', storedInvoiceId);
               
-              // Verify payment status with gateway
               const verifyResponse = await fetch('/api/payment/verify-payment', {
                 method: 'POST',
                 headers: {
@@ -446,7 +440,7 @@ export default function TransactionsPage() {
                 body: JSON.stringify({ 
                   invoice_id: storedInvoiceId,
                   from_redirect: true,
-                  cancelled_by_user: true // Flag to indicate user cancelled
+                  cancelled_by_user: true
                 }),
               });
 
@@ -460,26 +454,20 @@ export default function TransactionsPage() {
                   verifyData: verifyData,
                 });
 
-                // If gateway confirms cancelled or user explicitly cancelled, show message
                 if (actualStatus === 'Cancelled' || actualStatus === 'CANCELLED') {
                   showToast('Payment was cancelled.', 'warning');
                 } else {
-                  // Gateway might still show Processing, but user cancelled - show message
                   showToast('Payment was cancelled by user.', 'warning');
                 }
               } else {
-                // If verification fails, still show cancelled message
                 showToast('Payment was cancelled.', 'warning');
               }
               
-              // Clear stored invoice_id
               sessionStorage.removeItem('payment_invoice_id');
             } else {
-              // No invoice_id found, just show message
               showToast('Payment was cancelled.', 'warning');
             }
             
-            // Refresh transactions to show updated status
             fetchTransactions(true);
           } catch (error) {
             console.error('Error verifying cancelled payment:', error);

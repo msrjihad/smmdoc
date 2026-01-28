@@ -7,52 +7,68 @@ export default function OfflineDetector({ children }: { children: React.ReactNod
   const [isOnline, setIsOnline] = useState(true);
   const [isCheckingConnection, setIsCheckingConnection] = useState(false);
 
-  const checkConnectivity = async (): Promise<boolean> => {
+  const checkInternetConnectivity = async (): Promise<boolean> => {
     try {
       setIsCheckingConnection(true);
 
-      const response = await fetch('/api/health', {
-        method: 'GET',
-        cache: 'no-cache',
-        signal: AbortSignal.timeout(3000),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-      return response.ok;
+      try {
+        await fetch('https://www.google.com/favicon.ico', {
+          method: 'HEAD',
+          cache: 'no-cache',
+          signal: controller.signal,
+          mode: 'no-cors',
+        });
+        clearTimeout(timeoutId);
+        return true;
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError instanceof Error) {
+          if (fetchError.name === 'AbortError') {
+            return navigator.onLine;
+          }
+          return false;
+        }
+        return false;
+      }
     } catch (error) {
-      console.log('Internet connectivity check failed:', error);
-      return false;
+      return navigator.onLine;
     } finally {
       setIsCheckingConnection(false);
     }
   };
 
   const handleRetryConnection = async () => {
-    const actuallyOnline = await checkConnectivity();
+    if (!navigator.onLine) {
+      setIsOnline(false);
+      return;
+    }
+
+    const actuallyOnline = await checkInternetConnectivity();
     setIsOnline(actuallyOnline);
   };
 
-  const handleOnlineStatusChange = async () => {
+  const handleOnlineStatusChange = () => {
     const browserOnline = navigator.onLine;
 
-    if (browserOnline) {
-      const actuallyOnline = await checkConnectivity();
-      setIsOnline(actuallyOnline);
-    } else {
+    if (!browserOnline) {
       setIsOnline(false);
+      return;
     }
+
+    checkInternetConnectivity().then(setIsOnline);
   };
 
   useEffect(() => {
-    const initialCheck = async () => {
-      if (navigator.onLine) {
-        const actuallyOnline = await checkConnectivity();
-        setIsOnline(actuallyOnline);
-      } else {
-        setIsOnline(false);
-      }
-    };
-
-    initialCheck();
+    const browserOnline = navigator.onLine;
+    
+    if (!browserOnline) {
+      setIsOnline(false);
+    } else {
+      checkInternetConnectivity().then(setIsOnline);
+    }
 
     const handleOnline = () => handleOnlineStatusChange();
     const handleOffline = () => {
@@ -64,7 +80,7 @@ export default function OfflineDetector({ children }: { children: React.ReactNod
 
     const connectivityInterval = setInterval(async () => {
       if (navigator.onLine) {
-        const actuallyOnline = await checkConnectivity();
+        const actuallyOnline = await checkInternetConnectivity();
         setIsOnline(actuallyOnline);
       } else {
         setIsOnline(false);

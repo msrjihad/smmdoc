@@ -10,26 +10,12 @@ import { MenuIcon } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import SideBarNav from './sidebar-nav';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 
 export default function MobileSidebar() {
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (session?.user) {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    } else {
-      setIsLoading(true);
-    }
-  }, [session]);
-
-  const showSkeleton = isLoading || !session?.user;
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -47,25 +33,21 @@ export default function MobileSidebar() {
           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           <div className="flex items-center w-full">
             <div className="logo-container w-full flex items-center">
-              {showSkeleton ? (
-                <div className="w-full h-[40px] bg-slate-700/50 animate-pulse rounded"></div>
-              ) : (
-                <Link href="/" onClick={() => setOpen(false)}>
-                  <Image 
-                    src="/logo.png" 
-                    alt="SMMDOC Logo" 
-                    width={280} 
-                    height={60} 
-                    className="object-cover w-full h-[40px] cursor-pointer hover:opacity-80 transition-opacity duration-200"
-                    priority={true}
-                  />
-                </Link>
-              )}
+              <Link href="/" onClick={() => setOpen(false)}>
+                <Image 
+                  src="/logo.png" 
+                  alt="SMMDOC Logo" 
+                  width={280} 
+                  height={60} 
+                  className="object-cover w-full h-[40px] cursor-pointer hover:opacity-80 transition-opacity duration-200"
+                  priority={true}
+                />
+              </Link>
             </div>
           </div>
         </SheetHeader>
         <div className="sidebar-nav overflow-y-auto overflow-x-hidden h-[calc(100vh-6rem)]">
-          <SideBarNav session={session} setOpen={() => setOpen(false)} />
+          <SideBarNav session={session} setOpen={() => setOpen(false)} skipSkeleton={true} />
         </div>
       </SheetContent>
     </Sheet>

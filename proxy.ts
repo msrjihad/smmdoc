@@ -30,31 +30,22 @@ export default auth(async (req) => {
   );
   const isAuthRoute = authRoutes.includes(nextUrl.pathname);
 
-  // Fix redirect URL if gateway stripped the port (server-side redirect)
-  // This handles the case where gateway redirects to http://localhost/transactions
-  // NOTE: For port 80, http://localhost (without port) is CORRECT - don't redirect!
   if (nextUrl.pathname === '/transactions' && 
       (nextUrl.searchParams.get('payment') || nextUrl.searchParams.get('invoice_id'))) {
     const hostname = nextUrl.hostname;
     const currentPort = nextUrl.port;
     
-    // Get the actual port the server is running on from Host header
     const hostHeader = req.headers.get('host') || '';
     const serverPort = hostHeader.includes(':') ? hostHeader.split(':')[1] : '80';
     
-    // For port 80, URLs without port are correct - don't redirect
-    // Only redirect if server is on a non-standard port and URL doesn't match
     if (hostname === 'localhost' && serverPort !== '80' && serverPort !== '443') {
-      // Server is on a non-standard port (not 80/443)
       if (currentPort !== serverPort) {
-        // Current URL doesn't have the correct port, redirect to add it
         const fixedUrl = new URL(nextUrl);
         fixedUrl.port = serverPort;
         console.log('Middleware: Fixing redirect URL - redirecting to:', fixedUrl.toString());
         return NextResponse.redirect(fixedUrl);
       }
     }
-    // For port 80/443 or if ports already match, allow the request (no redirect)
   }
 
   const clientIP = getClientIP(req);

@@ -15,7 +15,7 @@ class Logger {
 
   private shouldLog(level: LogLevel): boolean {
     if (this.isDevelopment) return true;
-    // In production, only log warnings and errors
+
     return level === 'warn' || level === 'error';
   }
 
@@ -39,7 +39,7 @@ class Logger {
 
   warn(message: string, context?: LogContext | Error | unknown): void {
     if (this.shouldLog('warn')) {
-      // Handle Error objects and unknown types
+
       const logContext = context instanceof Error
         ? { message: context.message, stack: context.stack, name: context.name }
         : context as LogContext | undefined;
@@ -49,17 +49,17 @@ class Logger {
 
   error(message: string, error?: Error | unknown, context?: LogContext): void {
     if (this.shouldLog('error')) {
-      const errorDetails = error instanceof Error 
+      const errorDetails = error instanceof Error
         ? { message: error.message, stack: error.stack, name: error.name }
         : { error };
-      
+
       console.error(
         this.formatMessage('error', message, { ...context, ...errorDetails })
       );
     }
   }
 
-  // API request logging
+
   apiRequest(method: string, url: string, context?: LogContext): void {
     if (this.isDevelopment) {
       this.debug(`API Request: ${method.toUpperCase()} ${url}`, context);
@@ -77,9 +77,9 @@ class Logger {
   }
 }
 
-// Export singleton instance
+
 export const logger = new Logger();
 
-// Export for convenience
+
 export default logger;
 

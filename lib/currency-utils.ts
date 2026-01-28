@@ -34,7 +34,7 @@ export async function fetchCurrencyData(): Promise<{
     };
   }
 
-  // Check if we're in server-side environment
+
   const isServerSide = typeof window === 'undefined';
 
   try {
@@ -42,9 +42,9 @@ export async function fetchCurrencyData(): Promise<{
     let settingsData: any = { success: false, currencySettings: null };
 
     if (isServerSide) {
-      // Server-side: Use direct database queries
+
       const { db } = await import('@/lib/db');
-      
+
       const enabledCurrencies = await db.currencies.findMany({
         where: { enabled: true },
         orderBy: { code: 'asc' }
@@ -81,9 +81,9 @@ export async function fetchCurrencyData(): Promise<{
         console.log('Currency settings: Using fallback due to error:', settingsError);
       }
     } else {
-      // Client-side: Use fetch with absolute URL
+
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-      
+
       const currenciesResponse = await fetch(`${baseUrl}/api/currencies/enabled`, {
         method: 'GET',
         headers: {

@@ -18,16 +18,16 @@ const useSafeSession = () => {
 
   useEffect(() => {
     let isMounted = true;
-    
+
     try {
       import('next-auth/react').then(({ useSession }) => {
         if (!isMounted) return;
-        
-        // Clear any existing timeout
+
+
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
         }
-        
+
         timeoutRef.current = setTimeout(() => {
           if (isMounted) {
             setSessionData({
@@ -48,7 +48,7 @@ const useSafeSession = () => {
         });
       }
     }
-    
+
     return () => {
       isMounted = false;
       if (timeoutRef.current) {
@@ -66,16 +66,16 @@ interface HeaderProps {
   enableAuth?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ 
-  session: propSession, 
+const Header: React.FC<HeaderProps> = ({
+  session: propSession,
   status: propStatus = 'unauthenticated',
-  enableAuth = true 
+  enableAuth = true
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [mobileImageError, setMobileImageError] = useState(false);
-  // Memoize userSettings to prevent rerenders when hook returns new object
+
   const userSettingsHook = useUserSettings();
   const userSettings = useMemo(() => userSettingsHook.settings, [userSettingsHook.settings]);
   const settingsLoading = useMemo(() => userSettingsHook.loading, [userSettingsHook.loading]);
@@ -83,58 +83,58 @@ const Header: React.FC<HeaderProps> = ({
   const [siteDarkLogo, setSiteDarkLogo] = useState<string | null>(null);
   const [logoLoaded, setLogoLoaded] = useState(false);
 
-  // Use session hook - always call it to follow rules of hooks
-  // But only use it if propSession is not provided
-  // Note: refetchOnWindowFocus is controlled by SessionProvider in app/layout.tsx
+
+
+
   const sessionHook = enableAuth ? useSession() : { data: null, status: 'unauthenticated' as const };
-  
-  // Use prop session if available, otherwise use hook session
+
+
   const rawSession = propSession || sessionHook?.data || null;
   const rawStatus = propStatus !== 'unauthenticated' ? propStatus : (sessionHook?.status || 'unauthenticated');
-  
-  // Create stable session reference - only update when actual data changes
+
+
   const sessionKeyRef = useRef<string>('');
   const prevSessionRef = useRef<any>(null);
-  
+
   const memoizedSession = useMemo(() => {
     if (!rawSession) {
       sessionKeyRef.current = '';
       prevSessionRef.current = null;
       return null;
     }
-    
-    // Create stable key from session data
+
+
     const currentKey = `${rawSession?.user?.id || ''}-${rawSession?.user?.email || ''}-${rawSession?.user?.role || ''}-${rawSession?.user?.photo || ''}-${rawSession?.user?.image || ''}`;
-    
-    // Only return new object if key actually changed
+
+
     if (currentKey !== sessionKeyRef.current) {
       sessionKeyRef.current = currentKey;
       prevSessionRef.current = rawSession;
       return rawSession;
     }
-    
-    // Return previous stable reference
+
+
     return prevSessionRef.current || rawSession;
   }, [rawSession?.user?.id, rawSession?.user?.email, rawSession?.user?.role, rawSession?.user?.photo, rawSession?.user?.image]);
-  
+
   const memoizedStatus = useMemo(() => rawStatus, [rawStatus]);
 
-  // Memoize computed values to prevent rerenders
-  const isAuthenticated = useMemo(() => 
+
+  const isAuthenticated = useMemo(() =>
     memoizedStatus === 'authenticated' && memoizedSession?.user,
     [memoizedStatus, memoizedSession?.user]
   );
-  
+
   const isLoading = useMemo(() => memoizedStatus === 'loading', [memoizedStatus]);
 
-  const userRole = useMemo(() => 
+  const userRole = useMemo(() =>
     memoizedSession?.user?.role?.toUpperCase() || '',
     [memoizedSession?.user?.role]
   );
-  
+
   const isAdmin = useMemo(() => userRole === 'ADMIN', [userRole]);
   const isModerator = useMemo(() => userRole === 'MODERATOR', [userRole]);
-  const dashboardRoute = useMemo(() => 
+  const dashboardRoute = useMemo(() =>
     (isAdmin || isModerator) ? '/admin' : '/dashboard',
     [isAdmin, isModerator]
   );
@@ -208,7 +208,7 @@ const Header: React.FC<HeaderProps> = ({
     useEffect(() => {
       if (themeInitialized.current) return;
       themeInitialized.current = true;
-      
+
       setMounted(true);
       const savedTheme = localStorage.getItem('theme') || 'system';
       setTheme(savedTheme);
@@ -240,12 +240,12 @@ const Header: React.FC<HeaderProps> = ({
         }
         if (overlayRef.current) {
           try {
-            // Check if element still exists in DOM before removing
+
             if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
               overlayRef.current.remove();
             }
           } catch (error) {
-            // Element already removed or DOM not available
+
           } finally {
             overlayRef.current = null;
           }
@@ -260,12 +260,12 @@ const Header: React.FC<HeaderProps> = ({
 
       if (overlayRef.current) {
         try {
-          // Check if element still exists in DOM before removing
+
           if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
             overlayRef.current.remove();
           }
         } catch (error) {
-          // Element already removed or DOM not available
+
         } finally {
           overlayRef.current = null;
         }
@@ -321,12 +321,12 @@ const Header: React.FC<HeaderProps> = ({
       overlayTimeoutRef.current = setTimeout(() => {
         if (overlayRef.current) {
           try {
-            // Check if element still exists in DOM before removing
+
             if (overlayRef.current.parentNode && document.body.contains(overlayRef.current)) {
               overlayRef.current.remove();
             }
           } catch (error) {
-            // Element already removed or DOM not available
+
           } finally {
             overlayRef.current = null;
           }
@@ -337,7 +337,7 @@ const Header: React.FC<HeaderProps> = ({
 
     const handleThemeChange = (newTheme: string) => {
       createFadeTransition();
-      
+
       setTimeout(() => {
         setTheme(newTheme);
         if (newTheme === 'system') {
@@ -416,30 +416,30 @@ const Header: React.FC<HeaderProps> = ({
     const imageUrlRef = useRef<string | null>(null);
     const prevImageUrlRef = useRef<string | null>(null);
 
-    const username = useMemo(() => 
+    const username = useMemo(() =>
       user?.username || user?.email?.split('@')[0] || user?.name || 'User',
       [user?.username, user?.email, user?.name]
     );
     const balance = 0;
 
-    // Get stable image URL without timestamp - prevent reload on every render
+
     const avatarImageUrl = useMemo(() => {
       const url = user?.photo || user?.image || '';
       if (!url) {
         imageUrlRef.current = null;
         return null;
       }
-      
-      // Only update if URL actually changed
+
+
       if (imageUrlRef.current !== url) {
         imageUrlRef.current = url;
       }
-      
-      // Always return the stored URL to maintain stable reference
+
+
       return imageUrlRef.current;
     }, [user?.photo, user?.image]);
 
-    // Only reset errors when image URL actually changes (not on every render)
+
     useEffect(() => {
       if (avatarImageUrl && avatarImageUrl !== prevImageUrlRef.current) {
         prevImageUrlRef.current = avatarImageUrl;
@@ -596,22 +596,22 @@ const Header: React.FC<HeaderProps> = ({
 
   const toggleMenu = useCallback(() => setIsMenuOpen(prev => !prev), []);
 
-  // Fetch logo with caching to prevent flicker - only once, not on visibility change
+
   const logoFetchedRef = useRef(false);
   useEffect(() => {
-    // Only fetch once, even if component remounts
+
     if (logoFetchedRef.current) {
       setMounted(true);
       setLogoLoaded(true);
       return;
     }
-    
+
     let isMounted = true;
     let abortController: AbortController | null = null;
-    
+
     const fetchSiteLogo = async () => {
       try {
-        // Use cached fetch to prevent duplicate calls and flicker
+
         abortController = new AbortController();
         const data = await cachedFetch<{
           success: boolean;
@@ -625,7 +625,7 @@ const Header: React.FC<HeaderProps> = ({
             method: 'GET',
             signal: abortController.signal,
           },
-          300000 // Cache for 5 minutes
+          300000
         );
 
         if (!isMounted) return;
@@ -633,7 +633,7 @@ const Header: React.FC<HeaderProps> = ({
         if (data.success && data.generalSettings) {
           const logo = data.generalSettings.siteLogo?.trim() || '/logo.png';
           const darkLogo = data.generalSettings.siteDarkLogo?.trim();
-          
+
           setSiteLogo(logo);
           if (darkLogo) {
             setSiteDarkLogo(darkLogo);
@@ -655,11 +655,11 @@ const Header: React.FC<HeaderProps> = ({
         }
       }
     };
-    
-    // Set mounted immediately to prevent layout shift
+
+
     setMounted(true);
     fetchSiteLogo();
-    
+
     return () => {
       isMounted = false;
       if (abortController) {
@@ -668,12 +668,12 @@ const Header: React.FC<HeaderProps> = ({
     };
   }, []);
 
-  // Memoize mobile avatar image URL to prevent rerenders
+
   const mobileAvatarUrl = useMemo(() => {
     return memoizedSession?.user?.photo || memoizedSession?.user?.image || null;
   }, [memoizedSession?.user?.photo, memoizedSession?.user?.image]);
 
-  // Only reset error when URL actually changes
+
   const prevMobileAvatarUrl = useRef<string | null>(null);
   useEffect(() => {
     if (mobileAvatarUrl && mobileAvatarUrl !== prevMobileAvatarUrl.current) {
@@ -682,7 +682,7 @@ const Header: React.FC<HeaderProps> = ({
     }
   }, [mobileAvatarUrl]);
 
-  // Memoize logo URLs to prevent rerenders
+
   const displayLogo = useMemo(() => siteLogo || '/logo.png', [siteLogo]);
   const displayDarkLogo = useMemo(() => siteDarkLogo || displayLogo, [siteDarkLogo, displayLogo]);
 
@@ -694,33 +694,33 @@ const Header: React.FC<HeaderProps> = ({
             <Link href="/" className="flex items-center">
               {siteDarkLogo && siteDarkLogo !== displayLogo ? (
                 <>
-                  <Image 
-                    src={displayLogo} 
-                    alt="SMMDOC" 
-                    width={400} 
-                    height={50} 
-                    className="h-14 lg:h-16 w-auto max-w-[400px] dark:hidden" 
-                    priority 
+                  <Image
+                    src={displayLogo}
+                    alt="SMMDOC"
+                    width={400}
+                    height={50}
+                    className="h-14 lg:h-16 w-auto max-w-[400px] dark:hidden"
+                    priority
                     unoptimized={displayLogo.startsWith('http')}
                   />
-                  <Image 
-                    src={displayDarkLogo} 
-                    alt="SMMDOC" 
-                    width={400} 
-                    height={50} 
-                    className="h-14 lg:h-16 w-auto max-w-[400px] hidden dark:block" 
-                    priority 
+                  <Image
+                    src={displayDarkLogo}
+                    alt="SMMDOC"
+                    width={400}
+                    height={50}
+                    className="h-14 lg:h-16 w-auto max-w-[400px] hidden dark:block"
+                    priority
                     unoptimized={displayDarkLogo.startsWith('http')}
                   />
                 </>
               ) : (
-                <Image 
-                  src={displayLogo} 
-                  alt="SMMDOC" 
-                  width={400} 
-                  height={50} 
-                  className="h-14 lg:h-16 w-auto max-w-[400px]" 
-                  priority 
+                <Image
+                  src={displayLogo}
+                  alt="SMMDOC"
+                  width={400}
+                  height={50}
+                  className="h-14 lg:h-16 w-auto max-w-[400px]"
+                  priority
                   unoptimized={displayLogo.startsWith('http')}
                 />
               )}
@@ -781,30 +781,30 @@ const Header: React.FC<HeaderProps> = ({
               <Link href="/" className="flex items-center">
                 {siteDarkLogo && siteDarkLogo !== displayLogo ? (
                   <>
-                    <Image 
-                      src={displayLogo} 
-                      alt="SMMDOC" 
-                      width={200} 
-                      height={25} 
-                      className="h-12 w-auto dark:hidden" 
+                    <Image
+                      src={displayLogo}
+                      alt="SMMDOC"
+                      width={200}
+                      height={25}
+                      className="h-12 w-auto dark:hidden"
                       unoptimized={displayLogo.startsWith('http')}
                     />
-                    <Image 
-                      src={displayDarkLogo} 
-                      alt="SMMDOC" 
-                      width={200} 
-                      height={25} 
-                      className="h-12 w-auto hidden dark:block" 
+                    <Image
+                      src={displayDarkLogo}
+                      alt="SMMDOC"
+                      width={200}
+                      height={25}
+                      className="h-12 w-auto hidden dark:block"
                       unoptimized={displayDarkLogo.startsWith('http')}
                     />
                   </>
                 ) : (
-                  <Image 
-                    src={displayLogo} 
-                    alt="SMMDOC" 
-                    width={200} 
-                    height={25} 
-                    className="h-12 w-auto" 
+                  <Image
+                    src={displayLogo}
+                    alt="SMMDOC"
+                    width={200}
+                    height={25}
+                    className="h-12 w-auto"
                     unoptimized={displayLogo.startsWith('http')}
                   />
                 )}

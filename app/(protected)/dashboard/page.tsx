@@ -108,8 +108,6 @@ const DashboardPage = () => {
   }, [userDetails]);
 
   useEffect(() => {
-    // Remove unnecessary setTimeout delays - set loading to false immediately
-    // The actual data loading is handled by SWR/API calls
     setUserInfoLoading(false);
     setFinanceLoading(false);
     setStatisticsLoading(false);
@@ -140,8 +138,6 @@ const DashboardPage = () => {
   const totalSpend = userStats?.totalSpent != null ? Number(userStats.totalSpent) : 0;
   const totalOrders = userStats?.totalOrders || 0;
 
-  // Removed debug console.log - use logger.debug if needed in development
-  // useEffect removed to prevent unnecessary rerenders
   const pendingOrders = userStats?.ordersByStatus?.pending || 0;
   const completedOrders = userStats?.ordersByStatus?.completed || 0;
   const processingOrders = userStats?.ordersByStatus?.processing || 0;

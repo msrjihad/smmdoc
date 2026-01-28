@@ -78,7 +78,7 @@ export function DatabaseErrorDisplay({
 
   const errorMessage = getUserFriendlyErrorMessage(error);
 
-  // Check if it's a database-specific error
+
   const isDatabaseError =
     errorMessage.includes('database') ||
     errorMessage.includes('connection') ||

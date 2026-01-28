@@ -30,9 +30,9 @@ const nunito = Nunito({
 
 export async function generateMetadata(): Promise<Metadata> {
   const appName = await getAppName();
-  
+
   const faviconUrl = '/api/favicon';
-  
+
   return {
     title: {
       template: `%s — ${appName}`,
@@ -65,7 +65,7 @@ export default async function RootLayout({
   const session = await auth();
   const serverCurrency = await getUserCurrency();
   const appName = await getAppName();
-  
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -78,8 +78,8 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                // Fix redirect URL if gateway stripped the port (localhost -> localhost:3000)
-                // This runs immediately, before React loads
+
+
                 try {
                   if (typeof window !== 'undefined' && window.location) {
                     const urlParams = new URLSearchParams(window.location.search);
@@ -87,14 +87,14 @@ export default async function RootLayout({
                     const isLocalhost = window.location.hostname === 'localhost';
                     const port = window.location.port;
                     const hasNoPort = !port || port === '' || port === '0' || port === '80' || port === '443';
-                    
-                    // Only redirect if we're on a non-standard port (not 80/443)
-                    // For port 80, http://localhost (without port) is CORRECT - don't redirect!
+
+
+
                     if (hasPaymentParams && isLocalhost && hasNoPort) {
-                      // Check if we need to redirect to a non-standard port
-                      // This would only happen if the server is on a port other than 80/443
-                      // For now, assume port 80 is correct and don't redirect
-                      // The middleware handles server-side redirects if needed
+
+
+
+
                     }
                   }
                 } catch (e) {
@@ -109,7 +109,7 @@ export default async function RootLayout({
         className={`${nunito.variable} font-nunito antialiased text-black`}
         suppressHydrationWarning
       >
-        <SessionProvider 
+        <SessionProvider
           session={session}
           refetchOnWindowFocus={false}
           refetchInterval={0}

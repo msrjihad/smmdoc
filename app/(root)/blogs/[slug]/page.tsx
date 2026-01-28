@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
     const siteUrl = generalSettings.siteUrl;
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;
-    
+
     if (!baseUrl) {
       throw new Error('NEXT_PUBLIC_APP_URL or NEXTAUTH_URL environment variable is required');
     }
@@ -39,7 +39,6 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
         }
       }
     } catch (error) {
-      // Silently handle meta keywords error - not critical
       if (process.env.NODE_ENV === 'development') {
         console.warn('Error fetching meta keywords:', error);
       }
@@ -100,7 +99,7 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
       }
     };
   } catch (error) {
-    // Log in development only
+
     if (process.env.NODE_ENV === 'development') {
       console.error('Error generating metadata:', error);
     }
@@ -121,7 +120,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   try {
     const { slug } = await params;
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;
-    
+
     if (!baseUrl) {
       throw new Error('NEXT_PUBLIC_APP_URL or NEXTAUTH_URL environment variable is required');
     }
@@ -141,7 +140,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
     return <BlogPostDetailClient post={data.data} />;
   } catch (error) {
-    // Log error in development only
+
     if (process.env.NODE_ENV === 'development') {
       console.error('Error fetching blog post:', error);
     }

@@ -70,7 +70,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({ service, setI
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div 
         className={`fixed inset-0 bg-black transition-opacity duration-300 ${
           isAnimating ? 'bg-opacity-50' : 'bg-opacity-0'

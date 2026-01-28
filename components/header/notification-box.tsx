@@ -84,10 +84,10 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
 
   const fetchUnreadCountRef = useRef(false);
   const fetchUnreadCount = async () => {
-    // Prevent duplicate calls
+
     if (fetchUnreadCountRef.current) return;
     fetchUnreadCountRef.current = true;
-    
+
     try {
       const response = await fetch('/api/notifications/count');
       if (response.ok) {
@@ -97,7 +97,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
     } catch (error) {
       logger.error('Error fetching unread count', error);
     } finally {
-      // Reset after a short delay to allow retries
+
       setTimeout(() => {
         fetchUnreadCountRef.current = false;
       }, 1000);
@@ -106,13 +106,13 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
 
   const fetchNotificationsRef = useRef<Set<string>>(new Set());
   const fetchNotifications = async (limit: number = 5, offset: number = 0, append: boolean = false) => {
-    // Prevent duplicate calls with same parameters
+
     const requestKey = `${limit}-${offset}-${append}`;
     if (fetchNotificationsRef.current.has(requestKey)) {
       return;
     }
     fetchNotificationsRef.current.add(requestKey);
-    
+
     try {
       if (!append) {
         setNotificationsLoading(true);
@@ -152,7 +152,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
       if (!append) {
         setNotificationsLoading(false);
       }
-      // Remove from active requests after a delay
+
       setTimeout(() => {
         fetchNotificationsRef.current.delete(requestKey);
       }, 500);
@@ -161,7 +161,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
 
   const loadMoreNotifications = async () => {
     if (loadingMore || !hasMore) return;
-    
+
     setLoadingMore(true);
     try {
       const currentOffset = notifications.length;
@@ -198,21 +198,21 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
   useEffect(() => {
     fetchNotifications(5, 0, false);
     fetchUnreadCount();
-    
-    // Poll notification count every 30 seconds (reduced from 1 second)
+
+
     const countInterval = setInterval(() => {
       if (!openRef.current) {
         fetchUnreadCount();
       }
-    }, 30000); // 30 seconds instead of 1 second
-    
-    // Poll notifications every 60 seconds (reduced from 5 seconds)
+    }, 30000);
+
+
     const notificationsInterval = setInterval(() => {
       if (!openRef.current) {
         fetchNotifications(displayCountRef.current, 0, false);
       }
-    }, 60000); // 60 seconds instead of 5 seconds
-    
+    }, 60000);
+
     return () => {
       clearInterval(countInterval);
       clearInterval(notificationsInterval);
@@ -222,7 +222,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
   useEffect(() => {
     if (open) {
       setDisplayCount(5);
-      // Only fetch if not already loading to prevent duplicate calls
+
       if (!notificationsLoading) {
         fetchNotifications(5, 0, false);
       }
@@ -255,8 +255,8 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
         method: 'PUT',
       });
       if (response.ok) {
-        setNotifications(prev => 
-          prev.map(notif => 
+        setNotifications(prev =>
+          prev.map(notif =>
             notif.id === notificationId ? { ...notif, read: true } : notif
           )
         );
@@ -299,7 +299,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) return 'Just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
@@ -388,13 +388,13 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
       };
     }
     if (titleLower.includes('received from') || titleLower.includes('received')) {
-      return { 
+      return {
         icon: FaArrowLeft,
-        bgColor: 'bg-green-100 dark:bg-green-900/30', 
-        iconColor: 'text-green-600 dark:text-green-400' 
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+        iconColor: 'text-green-600 dark:text-green-400'
       };
     }
-    
+
     if (titleLower.includes('new service added') || titleLower.includes('service added')) {
       return {
         icon: FaBriefcase,
@@ -409,7 +409,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
         iconColor: 'text-blue-600 dark:text-blue-400'
       };
     }
-    
+
     if (titleLower.includes('order') && (titleLower.includes('completed') || titleLower.includes('success'))) {
       return {
         icon: FaCheckCircle,
@@ -551,7 +551,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
           };
       }
     }
-    
+
     const iconMap: { [key: string]: { icon: any; bgColor: string; iconColor: string } } = {
       order: { icon: FaShoppingCart, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
       payment: { icon: FaWallet, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
@@ -573,8 +573,8 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
     if (notification.link) {
       onOpenChange(false);
       const titleLower = notification.title?.toLowerCase() || '';
-      
-      if (titleLower.includes('new contact message') || 
+
+      if (titleLower.includes('new contact message') ||
           titleLower.includes('contact message')) {
         let link = notification.link;
         const queryMatch = link.match(/\/admin\/contact-messages\?message=(\d+)/);
@@ -588,7 +588,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
           }
         }
         window.location.href = link;
-      } else if (titleLower.includes('new support ticket') || 
+      } else if (titleLower.includes('new support ticket') ||
                  titleLower.includes('support ticket')) {
         let link = notification.link;
         const queryMatch = link.match(/\/admin\/support-tickets\?ticket=(\d+)/);
@@ -648,7 +648,7 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
             Notifications
           </h3>
           {unreadDotCount > 0 && (
-            <button 
+            <button
               className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
               onClick={markAllAsRead}
             >

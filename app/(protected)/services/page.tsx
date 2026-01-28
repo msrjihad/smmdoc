@@ -199,7 +199,6 @@ const UserServiceTable: React.FC = () => {
             throw new Error('Failed to fetch favorites');
           }
         } catch (favError) {
-          // Silently fallback to services without favorites
           const servicesData = data?.data?.map((service: Service) => ({
             ...service,
             isFavorite: false,
@@ -503,13 +502,13 @@ const UserServiceTable: React.FC = () => {
       <div className="page-content">
         <div className="card card-padding">
           <div className="mb-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="flex items-center gap-4 h-12">
+            <div className="flex flex-row items-center gap-2 md:gap-4 md:justify-between">
+              <div className="flex items-center h-12 flex-shrink-0">
                 <div className="relative">
                   <select
                     value={limit}
                     onChange={(e) => handleLimitChange(e.target.value)}
-                    className="form-field pl-4 pr-8 py-3 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer text-sm min-w-[160px] h-12"
+                    className="form-field pl-2 pr-6 py-3 md:pl-3 md:pr-7 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer text-xs md:text-sm min-w-[90px] md:min-w-[130px] h-12"
                   >
                     {totalServices > 0 && (
                       <>
@@ -528,7 +527,7 @@ const UserServiceTable: React.FC = () => {
                   </select>
                 </div>
               </div>
-              <div className="w-full md:w-100 h-12 items-center">
+              <div className="flex-1 md:w-100 h-12 items-center">
                 <div className="form-group mb-0 w-full">
                   <div className="relative flex items-center h-12">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -539,7 +538,7 @@ const UserServiceTable: React.FC = () => {
                       placeholder="Search by ID, Service Name, Category..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="form-field w-full pl-10 pr-10 py-3 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 text-sm h-12"
+                      className="form-field w-full pl-10 pr-10 py-3 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200 text-xs md:text-sm h-12"
                       autoComplete="off"
                     />
                     {isSearchLoading && (

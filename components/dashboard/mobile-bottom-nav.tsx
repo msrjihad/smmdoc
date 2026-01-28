@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   FaTachometerAlt, 
   FaPlus, 
@@ -54,18 +54,6 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (session?.user) {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    } else {
-      setIsLoading(true);
-    }
-  }, [session]);
 
   const isUser = session?.user?.role === 'user' || 
                  (!session?.user?.role || 
@@ -79,8 +67,6 @@ export default function MobileBottomNav() {
   if (!isUser || isAdminPage) {
     return null;
   }
-
-  const showSkeleton = isLoading || !session?.user;
 
   return (
     <>
@@ -167,25 +153,21 @@ export default function MobileBottomNav() {
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <div className="flex items-center w-full">
               <div className="logo-container w-full flex items-center">
-                {showSkeleton ? (
-                  <div className="w-full h-[40px] bg-slate-700/50 animate-pulse rounded"></div>
-                ) : (
-                  <Link href="/" onClick={() => setSidebarOpen(false)}>
-                    <Image 
-                      src="/logo.png" 
-                      alt="SMMDOC Logo" 
-                      width={280} 
-                      height={60} 
-                      className="object-cover w-full h-[40px] cursor-pointer hover:opacity-80 transition-opacity duration-200"
-                      priority={true}
-                    />
-                  </Link>
-                )}
+                <Link href="/" onClick={() => setSidebarOpen(false)}>
+                  <Image 
+                    src="/logo.png" 
+                    alt="SMMDOC Logo" 
+                    width={280} 
+                    height={60} 
+                    className="object-cover w-full h-[40px] cursor-pointer hover:opacity-80 transition-opacity duration-200"
+                    priority={true}
+                  />
+                </Link>
               </div>
             </div>
           </SheetHeader>
           <div className="sidebar-nav overflow-y-auto overflow-x-hidden h-[calc(100vh-6rem)]">
-            <SideBarNav session={session} setOpen={() => setSidebarOpen(false)} />
+            <SideBarNav session={session} setOpen={() => setSidebarOpen(false)} skipSkeleton={true} />
           </div>
         </SheetContent>
       </Sheet>

@@ -58,12 +58,14 @@ interface SideBarNavProps {
   collapsed?: boolean;
   session?: Session | null;
   setOpen?: () => void;
+  skipSkeleton?: boolean;
 }
 
 export default function SideBarNav({
   collapsed = false,
   session,
   setOpen = () => {},
+  skipSkeleton = false,
 }: SideBarNavProps) {
   const path = usePathname() || '';
   const isAdmin = session?.user?.role === 'admin' || session?.user?.role === 'moderator';
@@ -750,6 +752,10 @@ export default function SideBarNav({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (skipSkeleton) {
+      setIsLoading(false);
+      return;
+    }
     if (session?.user) {
       const timer = setTimeout(() => {
         setIsLoading(false);
@@ -758,9 +764,9 @@ export default function SideBarNav({
     } else {
       setIsLoading(true);
     }
-  }, [session]);
+  }, [session, skipSkeleton]);
 
-  if (!session?.user || isLoading) {
+  if (!skipSkeleton && (!session?.user || isLoading)) {
     return (
       <div className="sidebar-nav-container">
         <div className="py-2">

@@ -14,7 +14,7 @@ import {
 import { PriceDisplay } from '@/components/price-display';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { logger } from '@/lib/utils/logger';
-import ServiceViewModal from '@/app/(protected)/services/serviceViewModal';
+import ServiceViewModal from '@/components/frontend/our-services/modals/service-details-modal';
 
 const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   <div className={`${size} ${className} relative`}>
@@ -126,13 +126,13 @@ const ServicesTable: React.FC = () => {
   const fetchServicesRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const fetchServices = async () => {
-      // Prevent duplicate calls with same parameters
+
       const requestKey = `${page}-${limit}-${debouncedSearch}`;
       if (fetchServicesRef.current.has(requestKey)) {
         return;
       }
       fetchServicesRef.current.add(requestKey);
-      
+
       setLoading(true);
       try {
 
@@ -225,7 +225,7 @@ const ServicesTable: React.FC = () => {
           );
           setGroupedServices(ensureGroupedServicesIsValid(grouped));
         } catch (favError) {
-          // Silently fallback to services without favorites
+
           const servicesData =
             data?.data?.map((service: Service) => ({
               ...service,
@@ -283,7 +283,7 @@ const ServicesTable: React.FC = () => {
         setTotalPages(1);
       } finally {
         setLoading(false);
-        // Remove from active requests after a delay
+
         setTimeout(() => {
           fetchServicesRef.current.delete(requestKey);
         }, 1000);
@@ -562,7 +562,7 @@ const ServicesTable: React.FC = () => {
                               isLastRow ? 'last:rounded-br-lg' : ''
                             }`}
                           >
-                            <button 
+                            <button
                               onClick={() => handleViewDetails(service)}
                               className="flex items-center gap-2 px-3 py-1 text-sm text-[var(--primary)] hover:text-[#4F0FD8] border border-[var(--primary)] rounded hover:bg-[var(--primary)]/10 transition-colors duration-200"
                             >
@@ -586,7 +586,7 @@ const ServicesTable: React.FC = () => {
             {search ? 'No services found' : 'No services available'}
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
-            {search 
+            {search
               ? `No services match your search "${search}". Try different keywords.`
               : 'There are no services available at the moment.'
             }

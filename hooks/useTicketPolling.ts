@@ -39,8 +39,8 @@ export const useTicketPolling = <T extends TicketDetails>(
 
     try {
       setIsPolling(true);
-      const apiUrl = apiEndpoint === 'admin' 
-        ? `/api/admin/tickets/${ticketId}` 
+      const apiUrl = apiEndpoint === 'admin'
+        ? `/api/admin/tickets/${ticketId}`
         : `/api/support-tickets/${ticketId}`;
       const response = await fetch(apiUrl);
 
@@ -115,14 +115,14 @@ export const useTicketPolling = <T extends TicketDetails>(
     setHasStatusChange(false);
   };
 
-  // Initialize refs only once when ticketDetails first loads
+
   useEffect(() => {
     if (ticketDetails && !lastUpdateRef.current) {
       setLastMessageCount(ticketDetails.messages?.length || 0);
       lastUpdateRef.current = ticketDetails.lastUpdated;
       lastStatusRef.current = ticketDetails.status || '';
     }
-  }, [ticketDetails?.id]); // Only depend on ticket ID, not the entire object
+  }, [ticketDetails?.id]);
 
   useEffect(() => {
     if (ticketId) {

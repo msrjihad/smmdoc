@@ -40,7 +40,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   useEffect(() => {
     const fetchUserData = async () => {
       if (status === 'loading') return;
-      
+
       try {
         setUserDataLoading(true);
         const response = await fetch('/api/user/current', {
@@ -48,7 +48,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
           cache: 'no-store'
         });
         const userDataResponse = await response.json();
-        
+
         if (userDataResponse.success) {
           setUserData(userDataResponse.data);
           if (userDataResponse.data.isImpersonating) {
@@ -56,7 +56,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
           }
         }
       } catch (error) {
-        // Only log in development
+
         if (process.env.NODE_ENV === 'development') {
           logger.error('Error fetching user data', error);
         }
@@ -64,11 +64,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
         setUserDataLoading(false);
       }
     };
-    
+
     if (status !== 'loading' && session?.user?.id) {
       fetchUserData();
     }
-  }, [status, session?.user?.id]); // Only depend on user ID, not entire user object
+  }, [status, session?.user?.id]);
 
   useEffect(() => {
     if (status === 'loading') {
@@ -77,7 +77,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
     const validateSessionOnMount = async () => {
       setIsValidating(true);
-      
+
       try {
         if (status === 'unauthenticated') {
           const { clearAllSessionData } = await import('@/lib/logout-helper');
@@ -86,7 +86,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
           window.location.href = '/sign-in';
           return;
         }
-        
+
         if (status === 'authenticated' && session?.user?.id) {
           try {
             const response = await fetch('/api/auth/session-check', {
@@ -94,10 +94,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
               credentials: 'include',
               cache: 'no-store',
             });
-            
+
             if (response.ok) {
               const data = await response.json();
-              
+
               if (!data.valid || !data.session) {
                 if (process.env.NODE_ENV === 'development') {
                   logger.warn('Session invalid on mount, clearing and redirecting');
@@ -176,7 +176,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
           await signOut({ callbackUrl: '/sign-in', redirect: true });
         }
       } catch (error) {
-        // Only log in development to avoid console spam
+
         if (process.env.NODE_ENV === 'development') {
           logger.warn('Error checking session validity', error);
         }
