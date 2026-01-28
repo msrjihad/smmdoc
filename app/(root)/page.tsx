@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 import { Metadata } from 'next';
-import { getMetaSettings, getOpenGraphImageUrl } from '@/lib/utils/meta-settings';
+import { getMetaSettings, getDisplayTitle, getOpenGraphImageUrl } from '@/lib/utils/meta-settings';
 
 const Hero = dynamic(() => import('@/components/frontend/homepage/hero'));
 const Statistics = dynamic(() => import('@/components/frontend/homepage/statistics'));
@@ -18,15 +18,16 @@ export async function generateMetadata(): Promise<Metadata> {
   }
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
   const openGraphImage = getOpenGraphImageUrl(metaSettings.thumbnail, baseUrl);
+  const displayTitle = getDisplayTitle(metaSettings);
 
   return {
     title: {
-      absolute: metaSettings.googleTitle,
+      absolute: displayTitle,
     },
     description: metaSettings.siteDescription,
     keywords: metaSettings.keywords,
     openGraph: {
-      title: metaSettings.googleTitle,
+      title: displayTitle,
       description: metaSettings.siteDescription,
       images: [{
         url: openGraphImage,
@@ -38,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: 'summary_large_image',
-      title: metaSettings.googleTitle,
+      title: displayTitle,
       description: metaSettings.siteDescription,
       images: [openGraphImage],
     },

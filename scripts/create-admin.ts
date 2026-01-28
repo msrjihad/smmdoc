@@ -40,11 +40,13 @@ async function main() {
   });
 
   console.log('✅ Admin created successfully!');
+  console.log(`   ID: ${admin.id}`);
   console.log(`   Username: ${admin.username}`);
+  console.log(`   Password: suitableit`);
   console.log(`   Name: ${admin.name}`);
   console.log(`   Email: ${admin.email}`);
   console.log(`   Role: ${admin.role}`);
-  console.log(`   ID: ${admin.id}`);
+
 }
 
 main()

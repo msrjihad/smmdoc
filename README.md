@@ -1,6 +1,6 @@
 # SMMDOC
 
-**Your Social Media Growth Partner** — an SMM (Social Media Marketing) panel for buying and managing social media services (likes, followers, views, etc.) across multiple platforms.
+**Your Social Media Growth Partner** - an SMM (Social Media Marketing) panel for buying and managing social media services (likes, followers, views, etc.) across multiple platforms.
 
 ---
 
@@ -103,7 +103,11 @@ npm run db:seed
 
 **Requirement:** There must be **no existing admin** in the database. If any admin exists, the script exits and does not create another.
 
+Run the following before creating the admin:
+
 ```bash
+npx prisma generate
+npx prisma db push
 npm run create-admin
 ```
 

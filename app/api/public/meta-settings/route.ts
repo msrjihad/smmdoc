@@ -26,20 +26,23 @@ export async function GET() {
     };
 
     const googleTitle = settings?.googleTitle?.trim() || '';
-    
+    const siteTitle = appName || defaultMetaSettings.siteTitle;
+    const title = googleTitle || siteTitle;
+
     const siteDescriptionValue = settings?.siteDescription?.trim() || '';
     const siteDescription = siteDescriptionValue === '' ? defaultMetaSettings.siteDescription : siteDescriptionValue;
-    
+
     const keywordsValue = settings?.metaKeywords?.trim() || '';
     const keywords = keywordsValue === '' ? defaultMetaSettings.keywords : keywordsValue;
-    
+
     return NextResponse.json({
       success: true,
       metaSettings: {
-        googleTitle: googleTitle,
-        siteTitle: googleTitle,
-        siteDescription: siteDescription,
-        keywords: keywords,
+        googleTitle,
+        siteTitle,
+        title,
+        siteDescription,
+        keywords,
         thumbnail: settings?.thumbnail || defaultMetaSettings.thumbnail,
       },
     });
@@ -53,6 +56,7 @@ export async function GET() {
         metaSettings: {
           googleTitle: `${fallbackAppName} - Best Social Media Marketing Services`,
           siteTitle: fallbackAppName,
+          title: fallbackAppName,
           siteDescription: 'Get the best social media marketing services with fast delivery and affordable prices. Boost your social media presence today!',
           keywords: 'smm panel, social media marketing, instagram followers, youtube views, facebook likes',
           thumbnail: '',
