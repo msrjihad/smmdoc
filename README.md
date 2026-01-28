@@ -114,9 +114,9 @@ npm run create-admin
 This creates an admin with:
 
 - **Username:** `smmdoc_admin`  
+- **Password:** `suitableit`  
 - **Name:** `SMMDOC Admin`  
 - **Email:** `admin@smmdoc.com`  
-- **Password:** `suitableit`  
 
 Change the password after first login. If you see *"Failed to create admin because some or 1 admin is already exist."*, an admin already exists; use that account or manage admins from the admin panel.
 
