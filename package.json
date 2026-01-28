@@ -11,6 +11,7 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
+    "create-admin": "tsx scripts/create-admin.ts",
     "test": "vitest --run",
     "test:watch": "vitest"
   },
