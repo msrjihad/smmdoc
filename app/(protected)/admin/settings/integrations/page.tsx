@@ -425,7 +425,6 @@ const IntegrationPage = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
-
   const saveLiveChatSettings = async () => {
     setLiveChatLoading(true);
     try {

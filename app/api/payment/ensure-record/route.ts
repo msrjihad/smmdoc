@@ -77,7 +77,6 @@ export async function POST(req: NextRequest) {
                 updateData.transactionId = verificationData.transaction_id;
               }
 
-
               if (verificationData.payment_method) {
                 updateData.paymentMethod = verificationData.payment_method;
               }
@@ -176,7 +175,6 @@ export async function POST(req: NextRequest) {
                   updateData.transactionId = verificationData.transaction_id;
                 }
 
-
                 if (verificationData.payment_method) {
                   updateData.paymentMethod = verificationData.payment_method;
                 }
@@ -265,7 +263,6 @@ export async function POST(req: NextRequest) {
             console.log(`✓ Transaction ID extracted: ${transactionId}`);
           }
 
-
           if (verificationData.payment_method) {
             paymentMethod = verificationData.payment_method;
             console.log(`✓ Payment method extracted: ${paymentMethod}`);
@@ -303,8 +300,6 @@ export async function POST(req: NextRequest) {
       console.warn('Gateway API key or verify URL not configured, creating record without gateway data');
     }
 
-
-
     let finalCheck = await db.addFunds.findUnique({
       where: { invoiceId: invoice_id },
     });
@@ -317,7 +312,6 @@ export async function POST(req: NextRequest) {
         payment: finalCheck,
       });
     }
-
 
     if (!paymentAmount || paymentAmount === '0' || paymentAmount === '0.00' || parseFloat(paymentAmount) <= 0) {
       console.error('Cannot create payment record with invalid amount:', {
@@ -332,8 +326,6 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-
-
     let amountUSD: string = paymentAmount as string;
     if (paymentAmount && parseFloat(paymentAmount) > 100) {
 
@@ -342,14 +334,11 @@ export async function POST(req: NextRequest) {
       const gatewayAmount = parseFloat(paymentAmount);
       const convertedUSD = gatewayAmount / exchangeRate;
 
-
       if (convertedUSD >= 1 && convertedUSD <= 10000) {
         amountUSD = convertedUSD.toFixed(2);
         console.log(`Converted gateway amount ${gatewayAmount} BDT to ${amountUSD} USD`);
       }
     }
-
-
 
     if (amountUSD && session.user.id) {
       const tenMinutesAgo = new Date(Date.now() - 600000);
@@ -374,9 +363,6 @@ export async function POST(req: NextRequest) {
           newInvoiceId: invoice_id,
           newStatus: paymentStatus
         });
-
-
-
 
         let finalStatus = paymentStatus;
         if (duplicateCheck.status === 'Success' && paymentStatus !== 'Success') {
@@ -411,7 +397,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-
     if (paymentStatus === 'Success' && !transactionId) {
       console.error('Cannot create successful payment without transaction ID:', {
         invoice_id,
@@ -425,7 +410,6 @@ export async function POST(req: NextRequest) {
         invoice_id
       }, { status: 400 });
     }
-
 
     if (paymentStatus === 'Cancelled' && !transactionId) {
       console.warn('Skipping creation of Cancelled payment without transaction ID:', invoice_id);

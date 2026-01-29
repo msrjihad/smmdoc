@@ -164,7 +164,6 @@ interface ActivationFormData {
   withdrawalMethods: WithdrawalMethod[];
 }
 
-
 export default function ActivateAffiliateContent() {
   const { appName } = useAppNameWithFallback();
 
@@ -394,8 +393,6 @@ export default function ActivateAffiliateContent() {
       setLoading(false);
     }
   };
-
-
 
   if (checkingStatus) {
     return (

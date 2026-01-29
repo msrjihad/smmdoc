@@ -72,10 +72,6 @@ export const isValidBangladeshiPhone = (phone: string): boolean => {
 
   const cleanPhone = phone.replace(/\D/g, '');
 
-
-
-
-
   if (cleanPhone.length === 11 && cleanPhone.startsWith('01')) {
     return true;
   }
@@ -120,18 +116,6 @@ export const logSMS = async (smsData: {
       ...smsData,
       timestamp: new Date().toISOString()
     });
-
-
-
-
-
-
-
-
-
-
-
-
 
   } catch (error) {
     console.error('Error logging SMS:', error);

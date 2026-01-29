@@ -79,7 +79,6 @@ export default async function RootLayout({
             __html: `
               (function() {
 
-
                 try {
                   if (typeof window !== 'undefined' && window.location) {
                     const urlParams = new URLSearchParams(window.location.search);
@@ -88,12 +87,7 @@ export default async function RootLayout({
                     const port = window.location.port;
                     const hasNoPort = !port || port === '' || port === '0' || port === '80' || port === '443';
 
-
-
                     if (hasPaymentParams && isLocalhost && hasNoPort) {
-
-
-
 
                     }
                   }

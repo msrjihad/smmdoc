@@ -63,7 +63,6 @@ const CreateCategoryForm = dynamic(
   { ssr: false }
 );
 
-
 const DeleteCategoryModal = dynamic(
   () =>
     import('@/components/admin/services/modals/delete-category').then(
@@ -365,7 +364,6 @@ function AdminServicesPage() {
       }
     }
   );
-
 
   const [stats, setStats] = useState({
     totalServices: 0,
@@ -728,7 +726,6 @@ function AdminServicesPage() {
 
     return data.data.filter((service: any) => {
 
-
       const serviceName = service.name?.toLowerCase() || '';
       const categoryName = service.category?.category_name?.toLowerCase() || '';
       const dynamicProvider = getProviderNameById(service.providerId, service.provider).toLowerCase();
@@ -766,11 +763,9 @@ function AdminServicesPage() {
         matchesStatus = service.deletedAt !== null && service.deletedAt !== undefined;
       } else if (statusFilter === 'all') {
 
-
         matchesStatus = (service.status === 'active' || service.status === 'inactive') && 
                        (service.deletedAt === null || service.deletedAt === undefined);
       }
-
 
       const categoryEnabled = service.category?.hideCategory !== 'yes';
 
@@ -885,7 +880,6 @@ function AdminServicesPage() {
     console.log('isLoading:', isLoading);
 
     const groupedById = new Map<string, { category: any; services: any[] }>();
-
 
     if (statusFilter === 'all' && data?.allCategories) {
       console.log('Initializing all categories for statusFilter=all');
@@ -1545,8 +1539,6 @@ function AdminServicesPage() {
         ...prev,
         [categoryName]: newToggleState,
       }));
-
-
 
       const promises = services.map((service) => {
         let targetStatus = service.status;

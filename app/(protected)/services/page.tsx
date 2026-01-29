@@ -121,7 +121,6 @@ const UserServiceTable: React.FC = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-
   const fetchServices = React.useCallback(async () => {
 
     if (!debouncedSearch && page === 1) {

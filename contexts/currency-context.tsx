@@ -131,7 +131,6 @@ export function CurrencyProvider({
     }
   }, [currency, availableCurrencies]);
 
-
   const setCurrency = useCallback(async (newCurrency: string) => {
     try {
 

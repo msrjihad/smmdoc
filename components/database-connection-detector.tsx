@@ -40,7 +40,6 @@ export default function DatabaseConnectionDetector({ children }: { children: Rea
 
         if (prev === connected) return prev;
 
-
         if (!connected && (prev === true || (prev === null && !toastShownRef.current))) {
           setShowToast(true);
           toastShownRef.current = true;

@@ -1,6 +1,4 @@
-/**
- * Hook for handling API errors consistently
- */
+
 
 import { useState, useCallback } from 'react';
 import { getUserFriendlyErrorMessage, handleApiErrorResponse } from '@/lib/utils/frontend-error-handler';
@@ -32,9 +30,6 @@ export function useApiError() {
   };
 }
 
-/**
- * Safe API call wrapper with error handling
- */
 export async function safeApiCall<T>(
   apiCall: () => Promise<T>,
   onError?: (error: string) => void

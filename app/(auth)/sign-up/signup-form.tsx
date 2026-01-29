@@ -220,7 +220,6 @@ export default function SignUpForm() {
     }
   };
 
-
   const onSubmit: SubmitHandler<DynamicSignUpSchema> = async (values) => {
     setError('');
     setSuccess('');
@@ -592,7 +591,6 @@ export default function SignUpForm() {
             onVerify={(token) => setRecaptchaToken(token)}
             onError={() => {
               setRecaptchaToken(null);
-
 
             }}
             onExpired={() => {

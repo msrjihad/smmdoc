@@ -309,7 +309,6 @@ const useDebounce = (value: string, delay: number) => {
   return debouncedValue;
 };
 
-
 const UsersListPage = () => {
   const { appName } = useAppNameWithFallback();
   const { data: session, update: updateSession } = useSession();
@@ -1604,7 +1603,6 @@ const UsersListPage = () => {
   );
 };
 
-
 const UserCard: React.FC<UserCardProps> = ({
   user,
   isSelected,
@@ -1925,6 +1923,5 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
     </div>
   );
 };
-
 
 export default UsersListPage;

@@ -1,7 +1,4 @@
-/**
- * Centralized error handling utility
- * Provides consistent error handling across the application
- */
+
 
 import { logger } from './logger';
 import { formatError } from '../utils';
@@ -64,13 +61,9 @@ export class ForbiddenError extends AppError {
   }
 }
 
-/**
- * Handle errors and return standardized API response
- */
 export function handleApiError(error: unknown): ApiErrorResponse {
 
   logger.error('API Error occurred', error);
-
 
   if (error instanceof AppError) {
     return {
@@ -81,7 +74,6 @@ export function handleApiError(error: unknown): ApiErrorResponse {
       statusCode: error.statusCode,
     };
   }
-
 
   if (error && typeof error === 'object' && 'code' in error) {
     const prismaError = error as any;
@@ -105,7 +97,6 @@ export function handleApiError(error: unknown): ApiErrorResponse {
     }
   }
 
-
   if (error && typeof error === 'object' && 'name' in error && error.name === 'ZodError') {
     const zodError = error as any;
     const messages = zodError.errors?.map((e: any) => e.message).join(', ') || 'Validation failed';
@@ -117,7 +108,6 @@ export function handleApiError(error: unknown): ApiErrorResponse {
     };
   }
 
-
   const errorMessage = formatError(error);
 
   return {
@@ -128,9 +118,6 @@ export function handleApiError(error: unknown): ApiErrorResponse {
   };
 }
 
-/**
- * Create success response
- */
 export function createSuccessResponse<T>(
   data: T,
   message?: string
@@ -142,9 +129,6 @@ export function createSuccessResponse<T>(
   };
 }
 
-/**
- * Async error handler wrapper for API routes
- */
 export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
   handler: T
 ): T {

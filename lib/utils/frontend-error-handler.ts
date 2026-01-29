@@ -1,7 +1,4 @@
-/**
- * Frontend Error Handler Utility
- * Provides consistent error handling and display for frontend components
- */
+
 
 import { logger } from './logger';
 
@@ -12,39 +9,30 @@ export interface ApiError {
   statusCode?: number;
 }
 
-/**
- * Extract user-friendly error message from API response
- */
 export function extractErrorMessage(error: unknown): string {
 
   if (error instanceof Response) {
     return `HTTP ${error.status}: ${error.statusText}`;
   }
 
-
   if (error instanceof Error) {
     return error.message;
   }
 
-
   if (error && typeof error === 'object') {
     const apiError = error as any;
-
 
     if (apiError.error) {
       return apiError.error;
     }
 
-
     if (apiError.message) {
       return apiError.message;
     }
 
-
     if (apiError.details) {
       return apiError.details;
     }
-
 
     if (apiError.response?.data) {
       const data = apiError.response.data;
@@ -54,22 +42,16 @@ export function extractErrorMessage(error: unknown): string {
     }
   }
 
-
   if (typeof error === 'string') {
     return error;
   }
 
-
   return 'An unexpected error occurred. Please try again.';
 }
 
-/**
- * Extract database error message (user-friendly)
- */
 export function extractDatabaseErrorMessage(error: unknown): string {
   if (error && typeof error === 'object') {
     const dbError = error as any;
-
 
     if (dbError.code) {
       switch (dbError.code) {
@@ -92,11 +74,9 @@ export function extractDatabaseErrorMessage(error: unknown): string {
       }
     }
 
-
     if (dbError.name === 'PrismaClientInitializationError') {
       return 'Database connection failed. Please try again later.';
     }
-
 
     if (dbError.meta) {
       if (dbError.meta.target) {
@@ -111,9 +91,6 @@ export function extractDatabaseErrorMessage(error: unknown): string {
   return extractErrorMessage(error);
 }
 
-/**
- * Handle API error and return user-friendly message
- */
 export function handleApiErrorResponse(error: unknown): {
   message: string;
   code?: string;
@@ -124,7 +101,6 @@ export function handleApiErrorResponse(error: unknown): {
   if (error && typeof error === 'object') {
     const apiError = error as any;
 
-
     if (apiError.error || apiError.message) {
       return {
         message: apiError.error || apiError.message,
@@ -132,7 +108,6 @@ export function handleApiErrorResponse(error: unknown): {
         statusCode: apiError.statusCode || apiError.status,
       };
     }
-
 
     if (apiError.response?.data) {
       const data = apiError.response.data;
@@ -142,7 +117,6 @@ export function handleApiErrorResponse(error: unknown): {
         statusCode: apiError.response.status,
       };
     }
-
 
     if (apiError.status) {
       return {
@@ -157,9 +131,6 @@ export function handleApiErrorResponse(error: unknown): {
   };
 }
 
-/**
- * Check if error is a network error
- */
 export function isNetworkError(error: unknown): boolean {
   if (error instanceof Error) {
     return (
@@ -173,9 +144,6 @@ export function isNetworkError(error: unknown): boolean {
   return false;
 }
 
-/**
- * Check if error is a timeout error
- */
 export function isTimeoutError(error: unknown): boolean {
   if (error instanceof Error) {
     return (
@@ -187,9 +155,6 @@ export function isTimeoutError(error: unknown): boolean {
   return false;
 }
 
-/**
- * Get user-friendly error message based on error type
- */
 export function getUserFriendlyErrorMessage(error: unknown): string {
   if (isNetworkError(error)) {
     return 'Network connection failed. Please check your internet connection and try again.';

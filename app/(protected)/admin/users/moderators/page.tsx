@@ -195,8 +195,6 @@ interface UpdateStatusModalProps {
   title: string;
 }
 
-
-
 const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -212,7 +210,6 @@ const useDebounce = (value: string, delay: number) => {
 
   return debouncedValue;
 };
-
 
 const ModeratorsPage = () => {
   const { appName } = useAppNameWithFallback();
@@ -308,8 +305,6 @@ const ModeratorsPage = () => {
       timeZone: userTimezone,
     });
   };
-
-
 
   const [moderators, setModerators] = useState<Moderator[]>([]);
   const [stats, setStats] = useState<ModeratorStats>({
@@ -537,7 +532,6 @@ const ModeratorsPage = () => {
     };
     return icons[status as keyof typeof icons] || icons.inactive;
   };
-
 
   const formatCurrency = useCallback((amount: number) => {
     return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -930,7 +924,6 @@ const ModeratorsPage = () => {
   );
 };
 
-
 const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({ isOpen, onClose, onConfirm, isLoading }) => {
   if (!isOpen) return null;
 
@@ -996,7 +989,5 @@ const UpdateStatusModal: React.FC<UpdateStatusModalProps> = ({ isOpen, currentSt
     </div>
   );
 };
-
-
 
 export default ModeratorsPage;

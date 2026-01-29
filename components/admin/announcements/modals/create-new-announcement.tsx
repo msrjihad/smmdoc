@@ -223,4 +223,3 @@ const CreateNewAnnouncementModal: React.FC<CreateNewAnnouncementModalProps> = ({
 
 export default CreateNewAnnouncementModal;
 
-

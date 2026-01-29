@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FaCheckCircle,
@@ -8,7 +8,7 @@ import {
   FaTimes,
   FaUpload
 } from 'react-icons/fa';
-import JoditEditor from 'jodit-react';
+import { EmailTemplateEditor } from '@/components/admin/email-template-editor';
 import { useTheme } from 'next-themes';
 
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
@@ -175,33 +175,6 @@ const NewPostPage = () => {
   });
 
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
-
-  const editorConfig = useMemo(() => ({
-    readonly: false,
-    placeholder: 'Write your post content here...',
-    height: 400,
-    toolbar: true,
-    spellcheck: true,
-    language: 'en',
-    toolbarButtonSize: 'middle' as const,
-    theme: isDarkMode ? 'dark' : 'default',
-    enableDragAndDropFileToEditor: true,
-    uploader: {
-      insertImageAsBase64URI: true
-    },
-    removeButtons: ['source', 'fullsize', 'about'],
-    showCharsCounter: true,
-    showWordsCounter: true,
-    showXPathInStatusbar: false,
-    askBeforePasteHTML: false,
-    askBeforePasteFromWord: false,
-    defaultActionOnPaste: 'insert_clear_html' as const,
-    style: {
-      background: isDarkMode ? '#1f2937' : '#ffffff',
-      color: isDarkMode ? '#f3f4f6' : '#000000'
-    },
-    editorCssClass: isDarkMode ? 'jodit-editor-dark-bg' : 'jodit-editor-white-bg'
-  }), [isDarkMode]);
 
   const checkSlugAvailability = async (slug: string) => {
     const validation = validateBlogSlug(slug);
@@ -560,12 +533,12 @@ const NewPostPage = () => {
                   Post Content *
                 </label>
                 <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                  <JoditEditor
+                  <EmailTemplateEditor
                     value={formData.content}
-                    config={editorConfig}
-                    onBlur={(newContent) => handleInputChange('content', newContent)}
-                    onChange={() => {}}
-                    className={isDarkMode ? 'jodit-editor-dark-bg' : 'jodit-editor-white-bg'}
+                    onChange={(newContent) => handleInputChange('content', newContent)}
+                    placeholder="Write your post content here..."
+                    isDarkMode={isDarkMode}
+                    editorKey="new-post-content"
                   />
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">

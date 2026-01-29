@@ -4,7 +4,6 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 import { getTicketSettings } from '@/lib/utils/ticket-settings';
 
-
 const bulkOperationSchema = z.object({
   ticketIds: z.array(z.string()),
   operation: z.enum(['mark_read', 'mark_unread', 'delete_selected'])

@@ -309,8 +309,6 @@ export async function GET(request: Request) {
       }
     }
 
-
-
     const servicesWithConvertedPrices = serializeServices(services).map(service => {
       const priceUSD = service.rate;
       const convertedPrice = convertFromUSD(priceUSD, currency, currencies);

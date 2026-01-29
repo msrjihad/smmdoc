@@ -1,6 +1,7 @@
-﻿import { auth } from '@/auth';
+import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { emailTemplates, transactionEmailTemplates } from '@/lib/email-templates';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
 import { sendMail } from '@/lib/nodemailer';
 import { sendTransactionSuccessNotification } from '@/lib/notifications/user-notifications';
 import { NextRequest, NextResponse } from 'next/server';
@@ -87,51 +88,30 @@ export async function POST(
       });
 
       if (transaction.user.email) {
-        const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-        const supportEmail = await getSupportEmail();
-        const whatsappNumber = await getWhatsAppNumber();
-        
-        const emailData = emailTemplates.paymentSuccess({
-          userName: transaction.user.name || 'Customer',
-          userEmail: transaction.user.email,
-          transactionId: (transaction.transactionId || transaction.invoiceId || '0').toString(),
-          amount: transaction.amount.toString(),
-          currency: transaction.currency || 'BDT',
-          date: new Date().toLocaleDateString(),
-          userId: transaction.userId.toString(),
-          supportEmail: supportEmail,
-          whatsappNumber: whatsappNumber,
-        });
-        
-        await sendMail({
-          sendTo: transaction.user.email,
-          subject: emailData.subject,
-          html: emailData.html
-        });
+        const emailData = await resolveEmailContent(
+          'transaction_payment_success',
+          templateContextFromUser(transaction.user)
+        );
+        if (emailData) {
+          await sendMail({
+            sendTo: transaction.user.email,
+            subject: emailData.subject,
+            html: emailData.html,
+            fromName: emailData.fromName ?? undefined,
+          });
+        }
       }
 
       const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-      const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-      const supportEmail = await getSupportEmail();
-      const whatsappNumber = await getWhatsAppNumber();
-      
-      const adminEmailData = transactionEmailTemplates.adminAutoApproved({
-        userName: transaction.user.name || 'Unknown User',
-        userEmail: transaction.user.email || '',
-        transactionId: (transaction.transactionId || transaction.invoiceId || '0').toString(),
-        amount: transaction.amount.toString(),
-        currency: transaction.currency || 'USD',
-        date: new Date().toLocaleDateString(),
-        userId: transaction.userId.toString(),
-        supportEmail: supportEmail,
-        whatsappNumber: whatsappNumber,
-      });
-      
-      await sendMail({
-        sendTo: adminEmail,
-        subject: adminEmailData.subject,
-        html: adminEmailData.html
-      });
+      const adminEmailData = await resolveEmailContent('transaction_admin_auto_approved');
+      if (adminEmailData) {
+        await sendMail({
+          sendTo: adminEmail,
+          subject: adminEmailData.subject,
+          html: adminEmailData.html,
+          fromName: adminEmailData.fromName ?? undefined,
+        });
+      }
       
       return NextResponse.json({
         success: true,

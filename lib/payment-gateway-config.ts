@@ -90,7 +90,6 @@ export async function getPaymentGatewayVerifyUrl(): Promise<string> {
 
   const cleanUrl = baseUrl.replace(/\/$/, '');
 
-
   if (cleanUrl.includes('/checkout/verify-payment-data') || cleanUrl.includes('/verify-payment-data')) {
     return cleanUrl;
   }
@@ -102,10 +101,6 @@ export async function getPaymentGatewayVerifyUrl(): Promise<string> {
   if (cleanUrl.includes('/verify-payment')) {
     return cleanUrl;
   }
-
-
-
-
 
   if (cleanUrl.includes('sandbox.uddoktapay.com')) {
     try {
@@ -129,9 +124,6 @@ export async function getPaymentGatewayVerifyUrl(): Promise<string> {
     }
   }
 
-
-
-
   if (cleanUrl.includes('uddoktapay.com') && !cleanUrl.includes('sandbox')) {
     try {
 
@@ -148,7 +140,6 @@ export async function getPaymentGatewayVerifyUrl(): Promise<string> {
     }
   }
 
-
   if (cleanUrl.includes('/api')) {
 
     if (cleanUrl.includes('/checkout-v2')) {
@@ -156,7 +147,6 @@ export async function getPaymentGatewayVerifyUrl(): Promise<string> {
     }
     return `${cleanUrl}/verify-payment`;
   }
-
 
   return `${cleanUrl}/api/verify-payment`;
 }

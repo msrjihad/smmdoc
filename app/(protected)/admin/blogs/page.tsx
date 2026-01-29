@@ -175,7 +175,6 @@ interface PaginationInfo {
   hasPrev: boolean;
 }
 
-
 const BlogsPage = () => {
   const { appName } = useAppNameWithFallback();
   const searchParams = useSearchParams();
@@ -488,7 +487,6 @@ const BlogsPage = () => {
 
     loadData();
   }, []);
-
 
   useEffect(() => {
     if (pagination.total > 0) {

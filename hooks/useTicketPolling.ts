@@ -115,7 +115,6 @@ export const useTicketPolling = <T extends TicketDetails>(
     setHasStatusChange(false);
   };
 
-
   useEffect(() => {
     if (ticketDetails && !lastUpdateRef.current) {
       setLastMessageCount(ticketDetails.messages?.length || 0);

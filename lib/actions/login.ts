@@ -140,47 +140,6 @@ export const login = async (
     };
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   try {
 
     const isAdmin = existingUser.role === 'admin';
@@ -268,15 +227,6 @@ export const toggleTwoFactor = async (toggle: boolean) => {
       isTwoFactorEnabled: toggle,
     },
   });
-
-
-
-
-
-
-
-
-
 
   return { success: true, message: 'Two factor authentication updated!' };
 };

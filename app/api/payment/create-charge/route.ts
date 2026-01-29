@@ -172,7 +172,6 @@ export async function POST(req: NextRequest) {
           },
         });
 
-
         const recentPayment = await db.addFunds.findFirst({
           where: {
             userId: session.user.id,
@@ -266,12 +265,10 @@ export async function POST(req: NextRequest) {
         if (data.status || data.payment_url) {
           let gatewayInvoiceId: string | null = null;
 
-
           if (data.invoice_id) {
             gatewayInvoiceId = data.invoice_id;
             console.log(`✓ Got invoice_id directly from gateway response: ${gatewayInvoiceId}`);
           }
-
 
           if (!gatewayInvoiceId && data.payment_url) {
             console.log('=== Extracting invoice_id from payment_url (for payment record creation) ===');
@@ -282,8 +279,6 @@ export async function POST(req: NextRequest) {
               const url = new URL(data.payment_url);
               const pathParts = url.pathname.split('/').filter(part => part.length > 0);
 
-
-
               const checkoutIndex = pathParts.findIndex(part => part === 'checkout');
               if (checkoutIndex >= 0 && checkoutIndex < pathParts.length - 1) {
                 const nextPart = pathParts[checkoutIndex + 1];
@@ -293,7 +288,6 @@ export async function POST(req: NextRequest) {
                 }
               }
 
-
               if (!gatewayInvoiceId) {
                 const paymentIndex = pathParts.findIndex(part => part === 'payment');
                 if (paymentIndex >= 0 && paymentIndex < pathParts.length - 1) {
@@ -301,7 +295,6 @@ export async function POST(req: NextRequest) {
                   console.log(`✓ Extracted invoice_id from /payment/ path: ${gatewayInvoiceId}`);
                 }
               }
-
 
               if (!gatewayInvoiceId && pathParts.length > 0) {
                 const lastSegment = pathParts[pathParts.length - 1];
@@ -311,7 +304,6 @@ export async function POST(req: NextRequest) {
                   console.log(`✓ Extracted invoice_id from last path segment: ${gatewayInvoiceId}`);
                 }
               }
-
 
               if (!gatewayInvoiceId) {
                 gatewayInvoiceId = url.searchParams.get('invoice_id') ||
@@ -341,7 +333,6 @@ export async function POST(req: NextRequest) {
             );
           }
 
-
           try {
 
             const existingPaymentCheck = await db.addFunds.findUnique({
@@ -366,7 +357,6 @@ export async function POST(req: NextRequest) {
               );
             }
 
-
             const payment = await db.$transaction(async (prisma) => {
 
               const existingInTransaction = await prisma.addFunds.findUnique({
@@ -379,7 +369,6 @@ export async function POST(req: NextRequest) {
 
                 throw new Error('PAYMENT_EXISTS');
               }
-
 
               const thirtySecondsAgo = new Date(Date.now() - 30000);
               const amountStr = amountUSD.toFixed(2);
@@ -414,7 +403,6 @@ export async function POST(req: NextRequest) {
                 throw new Error('DUPLICATE_PAYMENT');
               }
 
-
               if (amountUSD <= 0 || isNaN(amountUSD)) {
                 console.error('Attempted to create payment with invalid amount:', {
                   amountUSD,
@@ -427,14 +415,11 @@ export async function POST(req: NextRequest) {
 
               const finalAmount = amountUSD.toFixed(2);
 
-
-
               console.log('Creating payment record with status: Processing', {
                 invoiceId: gatewayInvoiceId,
                 amount: finalAmount,
                 userId: session.user.id,
               });
-
 
               const paymentRecord = await prisma.addFunds.create({
                 data: {
@@ -457,16 +442,12 @@ export async function POST(req: NextRequest) {
                 expectedStatus: 'Processing',
               });
 
-
               return paymentRecord;
             }, {
               timeout: 10000,
             });
 
             console.log(`✓ Payment record created with gateway invoice_id: ${gatewayInvoiceId}`);
-
-
-
 
             let finalPayment = payment;
             try {
@@ -476,13 +457,11 @@ export async function POST(req: NextRequest) {
                 currentStatus: payment.status,
               });
 
-
               await db.$executeRaw`
                 UPDATE add_funds
                 SET status = 'Processing'
                 WHERE id = ${payment.id}
               `;
-
 
               const updatedPayment = await db.addFunds.findUnique({
                 where: { id: payment.id },
@@ -496,13 +475,11 @@ export async function POST(req: NextRequest) {
                   expectedStatus: 'Processing',
                 });
 
-
                 if (updatedPayment.status !== 'Processing') {
                   console.error('CRITICAL: Status still not Processing after update!', {
                     id: updatedPayment.id,
                     actualStatus: updatedPayment.status,
                   });
-
 
                   await db.$executeRawUnsafe(
                     `UPDATE add_funds SET status = 'Processing' WHERE id = ${updatedPayment.id}`
@@ -527,7 +504,6 @@ export async function POST(req: NextRequest) {
               console.error('Error forcing status to Processing:', statusUpdateError);
 
             }
-
 
             const paymentToUse = finalPayment || payment;
 
@@ -566,7 +542,6 @@ export async function POST(req: NextRequest) {
           } catch (createError: any) {
             console.error('Error creating payment record:', createError);
 
-
             if (createError.message === 'PAYMENT_EXISTS') {
               const existingPayment = await db.addFunds.findUnique({
                 where: {
@@ -586,7 +561,6 @@ export async function POST(req: NextRequest) {
               }
             }
 
-
             if (createError.message === 'INVALID_AMOUNT') {
               return NextResponse.json(
                 {
@@ -596,7 +570,6 @@ export async function POST(req: NextRequest) {
               );
             }
 
-
             if (createError.message === 'DUPLICATE_PAYMENT') {
               return NextResponse.json(
                 {
@@ -605,7 +578,6 @@ export async function POST(req: NextRequest) {
                 { status: 429, headers: corsHeaders }
               );
             }
-
 
             if (createError.code === 'P2002') {
 

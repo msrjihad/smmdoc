@@ -75,12 +75,9 @@ export async function GET(request: NextRequest) {
       db.addFunds.count({ where })
     ]);
 
-
     if (process.env.NODE_ENV === 'development' && transactions.length > 0) {
       console.log(`Fetched ${transactions.length} transactions from database`);
     }
-
-
 
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
 
@@ -93,11 +90,9 @@ export async function GET(request: NextRequest) {
       return isRecent && needsRefresh && tx.paymentGateway === 'UddoktaPay';
     });
 
-
     if (transactionsToRefresh.length > 0) {
 
       const transactionsToRefreshLimited = transactionsToRefresh.slice(0, 3);
-
 
       if (process.env.NODE_ENV === 'development') {
         console.log(`Auto-refreshing ${transactionsToRefreshLimited.length} recent transactions from payment gateway...`);
@@ -126,7 +121,6 @@ export async function GET(request: NextRequest) {
           if (!verificationResponse.ok) {
             const errorText = await verificationResponse.text();
 
-
             if (verificationResponse.status !== 403) {
               console.error(`Gateway verify API error for ${transaction.invoiceId}:`, {
                 status: verificationResponse.status,
@@ -139,7 +133,6 @@ export async function GET(request: NextRequest) {
             }
             return null;
           }
-
 
           const contentType = verificationResponse.headers.get('content-type');
           if (!contentType || !contentType.includes('application/json')) {
@@ -170,8 +163,6 @@ export async function GET(request: NextRequest) {
                                        verificationData.method ||
                                        null;
 
-
-
           const validTransactionId = extractedTransactionId &&
                                    extractedTransactionId !== transaction.invoiceId
                                    ? extractedTransactionId
@@ -184,16 +175,9 @@ export async function GET(request: NextRequest) {
             newStatus = 'Processing';
           } else if (verificationData.status === 'ERROR' || verificationData.status === 'CANCELLED' || verificationData.status === 'FAILED') {
 
-
-
-
-
-
-
             if (validTransactionId || transaction.status === 'Cancelled' || transaction.status === 'Success') {
               newStatus = 'Cancelled';
             } else {
-
 
               newStatus = 'Processing';
             }
@@ -208,7 +192,6 @@ export async function GET(request: NextRequest) {
           if (extractedPaymentMethod && extractedPaymentMethod !== transaction.paymentMethod) {
             updateData.paymentMethod = extractedPaymentMethod;
           }
-
 
           if (newStatus !== transaction.status) {
             updateData.status = newStatus;
@@ -246,12 +229,10 @@ export async function GET(request: NextRequest) {
                     }
                   });
 
-
                   if (process.env.NODE_ENV === 'development') {
                     console.log(`User ${paymentRecord.userId} balance updated. Original: ${originalAmount}, Bonus: ${bonusAmount}, Total: ${totalAmountToAdd}`);
                   }
                 }
-
 
                 await prisma.addFunds.update({
                   where: transaction.invoiceId
@@ -279,7 +260,6 @@ export async function GET(request: NextRequest) {
             if (updateData.status) {
               transaction.status = updateData.status;
             }
-
 
             if (process.env.NODE_ENV === 'development') {
               console.log(`Updated transaction ${transaction.invoiceId} with gateway data:`, updateData);
@@ -404,8 +384,6 @@ export async function GET(request: NextRequest) {
         }
         finalTransactionId = null;
       }
-
-
 
       const amount = transaction.amount
         ? (typeof transaction.amount === 'object' && transaction.amount !== null

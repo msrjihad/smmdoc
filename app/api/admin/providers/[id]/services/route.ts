@@ -49,8 +49,6 @@ export async function GET(
       );
     }
 
-
-
     if (!provider.api_url || !provider.api_key) {
 
       return NextResponse.json(
@@ -88,8 +86,6 @@ export async function GET(
         requestOptions.body = formData.toString();
       }
 
-
-
       const response = await fetch(servicesUrl, requestOptions);
 
       if (!response.ok) {
@@ -97,8 +93,6 @@ export async function GET(
       }
 
       const apiServices = await response.json();
-
-
 
       let servicesArray = [];
 

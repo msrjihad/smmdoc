@@ -1,7 +1,4 @@
-/**
- * Centralized logging utility
- * Replaces console.log/error/warn with production-safe logging
- */
+
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -59,7 +56,6 @@ class Logger {
     }
   }
 
-
   apiRequest(method: string, url: string, context?: LogContext): void {
     if (this.isDevelopment) {
       this.debug(`API Request: ${method.toUpperCase()} ${url}`, context);
@@ -77,9 +73,7 @@ class Logger {
   }
 }
 
-
 export const logger = new Logger();
-
 
 export default logger;
 

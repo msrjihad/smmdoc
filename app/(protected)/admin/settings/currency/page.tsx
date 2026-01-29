@@ -589,7 +589,6 @@ const PaymentCurrencyPage = () => {
     }
   };
 
-
   if (isPageLoading) {
     return (
       <div className="page-container">

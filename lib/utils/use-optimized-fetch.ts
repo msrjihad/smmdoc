@@ -1,7 +1,4 @@
-/**
- * Optimized fetch hook with deduplication and caching
- * Prevents duplicate API calls and provides automatic caching
- */
+
 
 import { useCallback, useRef } from 'react';
 import { cachedFetch } from './api-cache';
@@ -12,9 +9,6 @@ interface UseOptimizedFetchOptions {
   skipCache?: boolean;
 }
 
-/**
- * Hook for optimized fetch with automatic deduplication
- */
 export function useOptimizedFetch() {
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
 
@@ -25,7 +19,6 @@ export function useOptimizedFetch() {
       fetchOptions?: UseOptimizedFetchOptions
     ): Promise<T> => {
       const { ttl = 60000, skipCache = false } = fetchOptions || {};
-
 
       const controller = new AbortController();
       const requestId = `${url}-${Date.now()}`;
@@ -39,7 +32,6 @@ export function useOptimizedFetch() {
             signal: controller.signal,
           }, ttl);
         }
-
 
         const response = await globalThis.fetch(url, {
           ...options,
@@ -70,7 +62,6 @@ export function useOptimizedFetch() {
     },
     []
   );
-
 
   const abortAll = useCallback(() => {
     abortControllersRef.current.forEach((controller) => {

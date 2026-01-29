@@ -4,7 +4,6 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 import { getTicketSettings } from '@/lib/utils/ticket-settings';
 
-
 const updateTicketSchema = z.object({
   status: z.enum(['Open', 'in_progress', 'resolved', 'closed', 'on_hold']).optional(),
   isRead: z.boolean().optional(),

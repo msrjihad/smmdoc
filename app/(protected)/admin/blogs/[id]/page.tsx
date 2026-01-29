@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   FaArrowLeft,
@@ -10,7 +10,7 @@ import {
   FaTimes,
   FaUpload
 } from 'react-icons/fa';
-import JoditEditor from 'jodit-react';
+import { EmailTemplateEditor } from '@/components/admin/email-template-editor';
 import { useTheme } from 'next-themes';
 
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
@@ -209,6 +209,8 @@ const EditBlogPostPage = () => {
   useEffect(() => {
     setPageTitle('Edit Post', appName);
   }, [appName]);
+
+  const editorKey = postId ? `edit-post-${postId}` : 'edit-post-content';
 
   useEffect(() => {
     const loadPost = async () => {
@@ -439,38 +441,6 @@ const EditBlogPostPage = () => {
       }
     }
   };
-
-  const editorConfig = useMemo(() => ({
-    readonly: false,
-    placeholder: 'Write your post content here...',
-    height: 400,
-    toolbar: true,
-    spellcheck: true,
-    language: 'en',
-    toolbarButtonSize: 'middle' as const,
-    theme: isDarkMode ? 'dark' : 'default',
-    enableDragAndDropFileToEditor: true,
-    uploader: {
-      insertImageAsBase64URI: true
-    },
-    removeButtons: ['source', 'fullsize', 'about'],
-    showCharsCounter: true,
-    showWordsCounter: true,
-    showXPathInStatusbar: false,
-    askBeforePasteHTML: false,
-    askBeforePasteFromWord: false,
-    defaultActionOnPaste: 'insert_clear_html' as const,
-    style: {
-      background: isDarkMode ? '#1f2937' : '#ffffff',
-      color: isDarkMode ? '#f3f4f6' : '#000000'
-    },
-    editorCssClass: isDarkMode ? 'jodit-editor-dark-bg' : 'jodit-editor-white-bg',
-    events: {
-      afterInit: function (editor: any) {
-        editor.focus();
-      }
-    }
-  }), [isDarkMode]);
 
   const handleImageUpload = async (file: File) => {
     try {
@@ -777,12 +747,12 @@ const EditBlogPostPage = () => {
                   Post Content *
                 </label>
                 <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                  <JoditEditor
+                  <EmailTemplateEditor
                     value={formData.content}
-                    config={editorConfig}
-                    onBlur={(newContent) => handleInputChange('content', newContent)}
                     onChange={(newContent) => handleInputChange('content', newContent)}
-                    className={isDarkMode ? 'jodit-editor-dark-bg' : 'jodit-editor-white-bg'}
+                    placeholder="Write your post content here..."
+                    isDarkMode={isDarkMode}
+                    editorKey={editorKey}
                   />
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">

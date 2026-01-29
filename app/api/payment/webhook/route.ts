@@ -86,7 +86,6 @@ export async function POST(req: NextRequest) {
             gatewayFee: fee !== undefined ? fee : payment.gatewayFee,
             name: full_name || payment.name,
 
-
             amount: payment.amount,
           }
         });

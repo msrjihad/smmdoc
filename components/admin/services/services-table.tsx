@@ -27,7 +27,6 @@ const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   </div>
 );
 
-
 const getStatusIcon = (status: string, deletedAt?: string | null) => {
   if (deletedAt) {
     return <FaTrash className="h-3 w-3 text-red-500 dark:text-red-400" />;
@@ -273,8 +272,6 @@ export const ServicesTable: React.FC<ServicesTableProps> = ({
         <tbody>
           {(Object.entries(groupedServices) as [string, any[]][])
             .filter(([categoryName, services]) => {
-
-
 
               if (statusFilter === 'inactive') {
                 const actualCategoryName = getActualCategoryName(categoryName);

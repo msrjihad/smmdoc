@@ -1,4 +1,4 @@
-﻿import { auth } from '@/auth';
+import { auth } from '@/auth';
 import { contactDB } from '@/lib/contact-db';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -145,16 +145,11 @@ export async function PUT(
           const contactMessage = await contactDB.getContactMessageById(messageId);
           if (contactMessage && contactMessage.user) {
             const { sendMail } = await import('@/lib/nodemailer');
-            const { contactEmailTemplates } = await import('@/lib/email-templates');
+            const { resolveEmailContent } = await import('@/lib/email-templates/resolve-email-content');
             const { sendSMS } = await import('@/lib/sms');
             const { smsTemplates } = await import('@/lib/sms');
-            const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-            
             const userEmail = contactMessage.user.email;
-            const userName = (contactMessage.user as any).name || contactMessage.user.username || 'User';
             const userPhone = (contactMessage.user as any).phone;
-            const supportEmail = await getSupportEmail();
-            const whatsappNumber = await getWhatsAppNumber();
             
             if (userEmail) {
               let adminAttachments = undefined;
@@ -186,23 +181,19 @@ export async function PUT(
                 }
               }
               
-              const emailTemplate = contactEmailTemplates.adminReplyToUser({
-                userName,
-                subject: contactMessage.subject,
-                adminReply: adminReply.trim(),
-                adminName: session.user.name || session.user.username || 'Admin',
-                messageId: messageId,
-                originalMessage: contactMessage.message,
-                supportEmail: supportEmail,
-                whatsappNumber: whatsappNumber,
-                attachments: adminAttachments
-              });
-              
-              await sendMail({
-                sendTo: userEmail,
-                subject: emailTemplate.subject,
-                html: emailTemplate.html
-              });
+              const { templateContextFromUser } = await import('@/lib/email-templates/replace-template-variables');
+              const emailTemplate = await resolveEmailContent(
+                'contact-message_admin_reply_to_user',
+                templateContextFromUser(contactMessage.user)
+              );
+              if (emailTemplate) {
+                await sendMail({
+                  sendTo: userEmail,
+                  subject: emailTemplate.subject,
+                  html: emailTemplate.html,
+                  fromName: emailTemplate.fromName ?? undefined,
+                });
+              }
             }
             
              if (userPhone) {

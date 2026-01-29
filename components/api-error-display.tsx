@@ -1,8 +1,3 @@
-/**
- * API Error Display Component
- * Shows user-friendly error messages from API calls
- */
-
 'use client';
 
 import { FaExclamationTriangle, FaTimes, FaRedo } from 'react-icons/fa';
@@ -64,10 +59,6 @@ export function ApiErrorDisplay({
   );
 }
 
-/**
- * Database Error Display Component
- * Shows specific database error messages
- */
 export function DatabaseErrorDisplay({
   error,
   onRetry,
@@ -77,7 +68,6 @@ export function DatabaseErrorDisplay({
   if (!error) return null;
 
   const errorMessage = getUserFriendlyErrorMessage(error);
-
 
   const isDatabaseError =
     errorMessage.includes('database') ||

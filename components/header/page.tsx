@@ -50,7 +50,6 @@ const DropdownMenuContentComponent = dynamic(() => import('@/components/header/d
   ssr: false,
 });
 
-
 const ThemeToggle = ({
   isMobile = false,
   openDropdowns,
@@ -397,13 +396,11 @@ const MobileMenuToggle = ({
   </DropdownMenu>
 );
 
-
 const Header = () => {
   const currentUser = useCurrentUser();
   const dispatch = useDispatch();
   const { currency, setCurrency, rate, isLoading, availableCurrencies, currentCurrencyData } = useCurrency();
   const userData = useSelector((state: any) => state.userDetails);
-
 
   const user = useMemo(() => {
     return userData?.id ? userData : currentUser;
@@ -429,7 +426,6 @@ const Header = () => {
       [dropdownName]: isOpen
     }));
   }, []);
-
 
   const isAnyDropdownOpen = useMemo(() => {
     return Object.values(openDropdowns).some(Boolean);
@@ -469,7 +465,6 @@ const Header = () => {
     fetchChildPanelSettings();
   }, []);
 
-
   const isAdmin = useMemo(() => {
     return user?.role?.toLowerCase() === 'admin' ||
            user?.userType?.toLowerCase() === 'admin' ||
@@ -485,7 +480,6 @@ const Header = () => {
   const userStoredCurrency = useMemo(() => {
     return userStatsResponse?.data?.currency || userData?.currency || 'USD';
   }, [userStatsResponse?.data?.currency, userData?.currency]);
-
 
   const formatCurrency = useCallback((amount: number) => {
     if (!currentCurrencyData || !availableCurrencies || availableCurrencies.length === 0) {
@@ -543,7 +537,6 @@ const Header = () => {
 
   useEffect(() => {
     fetchUser();
-
 
     const intervalId = setInterval(() => {
       fetchUser();

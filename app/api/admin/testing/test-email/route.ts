@@ -1,7 +1,15 @@
 import { auth } from '@/auth';
 import { sendMail } from '@/lib/nodemailer';
-import { emailTemplates, transactionEmailTemplates } from '@/lib/email-templates';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
 import { NextRequest, NextResponse } from 'next/server';
+
+const TEMPLATE_KEYS: Record<string, string> = {
+  payment_success: 'transaction_payment_success',
+  payment_cancelled: 'transaction_payment_cancelled',
+  admin_pending: 'transaction_admin_pending_review',
+  admin_approved: 'transaction_admin_auto_approved',
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,84 +23,34 @@ export async function POST(req: NextRequest) {
     }
     
     const body = await req.json();
-    const { type, amount, transaction_id } = body;
+    const { type } = body;
+    
+    const templateKey = TEMPLATE_KEYS[type];
+    if (!templateKey) {
+      return NextResponse.json(
+        { error: 'Invalid email type' },
+        { status: 400 }
+      );
+    }
     
     const testEmail = session.user.email || process.env.ADMIN_EMAIL || 'admin@example.com';
-    const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-    const supportEmail = await getSupportEmail();
-    const whatsappNumber = await getWhatsAppNumber();
+    const emailData = await resolveEmailContent(
+      templateKey,
+      templateContextFromUser(session.user)
+    );
     
-    let emailData;
-    
-    switch (type) {
-      case 'payment_success':
-        emailData = emailTemplates.paymentSuccess({
-          userName: 'Test User',
-          userEmail: testEmail,
-          transactionId: transaction_id || 'TEST-TXN-123',
-          amount: (parseFloat(amount) || 100).toString(),
-          currency: 'BDT',
-          date: new Date().toLocaleDateString(),
-          userId: 'test-user-id',
-          supportEmail: supportEmail,
-          whatsappNumber: whatsappNumber,
-        });
-        break;
-        
-      case 'payment_cancelled':
-        emailData = emailTemplates.paymentCancelled({
-          userName: 'Test User',
-          userEmail: testEmail,
-          transactionId: transaction_id || 'TEST-TXN-123',
-          amount: (parseFloat(amount) || 100).toString(),
-          currency: 'BDT',
-          date: new Date().toLocaleDateString(),
-          userId: 'test-user-id',
-          supportEmail: supportEmail,
-          whatsappNumber: whatsappNumber,
-        });
-        break;
-        
-      case 'admin_pending':
-        emailData = transactionEmailTemplates.adminPendingReview({
-          userName: 'Test User',
-          userEmail: testEmail,
-          transactionId: transaction_id || 'TEST-TXN-123',
-          amount: (parseFloat(amount) || 100).toString(),
-          currency: 'BDT',
-          date: new Date().toLocaleDateString(),
-          userId: 'test-user-id',
-          phone: '+8801712345678',
-          supportEmail: supportEmail,
-          whatsappNumber: whatsappNumber,
-        });
-        break;
-        
-      case 'admin_approved':
-        emailData = transactionEmailTemplates.adminAutoApproved({
-          userName: 'Test User',
-          userEmail: testEmail,
-          transactionId: transaction_id || 'TEST-TXN-123',
-          amount: (parseFloat(amount) || 100).toString(),
-          currency: 'BDT',
-          date: new Date().toLocaleDateString(),
-          userId: 'test-user-id',
-          supportEmail: supportEmail,
-          whatsappNumber: whatsappNumber,
-        });
-        break;
-        
-      default:
-        return NextResponse.json(
-          { error: 'Invalid email type' },
-          { status: 400 }
-        );
+    if (!emailData) {
+      return NextResponse.json(
+        { error: 'No email template found for this type. Create the template in Admin → Email Templates first.' },
+        { status: 404 }
+      );
     }
     
     const emailSent = await sendMail({
       sendTo: testEmail,
-      subject: `${emailData.subject}`,
-      html: emailData.html
+      subject: emailData.subject,
+      html: emailData.html,
+      fromName: emailData.fromName ?? undefined,
     });
     
     if (emailSent) {

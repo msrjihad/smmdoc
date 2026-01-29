@@ -1,4 +1,4 @@
-﻿import { auth } from '@/auth';
+import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -84,29 +84,19 @@ export async function POST(request: NextRequest) {
 
     try {
       const { sendMail } = await import('@/lib/nodemailer');
-      const { contactEmailTemplates } = await import('@/lib/email-templates');
-      const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-      
-      const supportEmail = await getSupportEmail();
-      const whatsappNumber = await getWhatsAppNumber();
-      
-      const emailTemplate = contactEmailTemplates.newContactMessageAdmin({
-        userName: name,
-        userEmail: email,
-        subject: subject.trim(),
-        message: `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\n\nMessage: ${message}`,
-        category: 'General Inquiry',
-        messageId: contactMessageId,
-        attachments: undefined,
-        supportEmail: supportEmail,
-        whatsappNumber: whatsappNumber
+      const { resolveEmailContent } = await import('@/lib/email-templates/resolve-email-content');
+      const emailTemplate = await resolveEmailContent('contact-message_new_contact_message_admin', {
+        user_full_name: name,
+        user_email: email,
       });
-      
-      await sendMail({
-        sendTo: adminEmail,
-        subject: emailTemplate.subject,
-        html: emailTemplate.html
-      });
+      if (emailTemplate) {
+        await sendMail({
+          sendTo: adminEmail,
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
+          fromName: emailTemplate.fromName ?? undefined,
+        });
+      }
       
       console.log('Contact form email sent to admin:', adminEmail);
     } catch (emailError) {

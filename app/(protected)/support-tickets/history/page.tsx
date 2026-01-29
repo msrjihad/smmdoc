@@ -68,7 +68,6 @@ const Toast = ({
   </div>
 );
 
-
 export default function TicketsHistory() {
   const { appName } = useAppNameWithFallback();
   const userDetails = useSelector((state: any) => state.userDetails);
@@ -272,7 +271,6 @@ export default function TicketsHistory() {
 
   useEffect(() => {
     if (search) {
-
 
       return;
     }
@@ -485,7 +483,6 @@ export default function TicketsHistory() {
       </div>
     );
   }
-
 
   return (
     <TicketSystemGuard>

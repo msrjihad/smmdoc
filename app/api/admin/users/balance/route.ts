@@ -1,7 +1,8 @@
-﻿import { auth } from '@/auth';
+import { auth } from '@/auth';
 import { ActivityLogger, getClientIP } from '@/lib/activity-logger';
 import { db } from '@/lib/db';
-import { emailTemplates, transactionEmailTemplates } from '@/lib/email-templates';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
 import { sendMail } from '@/lib/nodemailer';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -159,8 +160,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-
-
     const result = await db.$transaction(async (prisma) => {
       const updatedUser = await prisma.users.update({
         where: { id: user.id },
@@ -198,61 +197,30 @@ export async function POST(request: NextRequest) {
 
     try {
       if (user.email) {
-        const displayAmount = `${adminCurrencySymbol}${amount}`;
-        const notificationMessage = action === 'add'
-          ? `${displayAmount} has been added to your account by admin.`
-          : `${displayAmount} has been deducted from your account by admin.`;
-
-        const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-        const supportEmail = await getSupportEmail();
-        const whatsappNumber = await getWhatsAppNumber();
-        
-        const emailData = emailTemplates.paymentSuccess({
-          userName: user.name || 'Customer',
-          userEmail: user.email,
-          transactionId: result.transactionRecord.id.toString(),
-          amount: amount.toString(),
-          currency: transactionCurrency,
-          date: new Date().toLocaleDateString(),
-          userId: user.id.toString(),
-          supportEmail: supportEmail,
-          whatsappNumber: whatsappNumber,
-        });
-
-        await sendMail({
-          sendTo: user.email,
-          subject: `Balance ${action === 'add' ? 'Added' : 'Deducted'} - Manual Adjustment`,
-          html: emailData.html
-            .replace('Payment Successful!', `Balance ${action === 'add' ? 'Added' : 'Deducted'}`)
-            .replace('Your payment has been successfully processed', notificationMessage)
-            .replace('funds have been added to your account', `your new balance is ${adminCurrencySymbol}${result.updatedUser.balance}`)
-        });
+        const emailData = await resolveEmailContent(
+          'transaction_payment_success',
+          templateContextFromUser(user)
+        );
+        if (emailData) {
+          await sendMail({
+            sendTo: user.email,
+            subject: emailData.subject,
+            html: emailData.html,
+            fromName: emailData.fromName ?? undefined,
+          });
+        }
       }
 
       const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-      const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-      const supportEmail = await getSupportEmail();
-      const whatsappNumber = await getWhatsAppNumber();
-      
-      const adminEmailData = transactionEmailTemplates.adminAutoApproved({
-        userName: user.name || 'Unknown User',
-        userEmail: user.email || '',
-        transactionId: result.transactionRecord.id.toString(),
-        amount: amount.toString(),
-        currency: transactionCurrency,
-        date: new Date().toLocaleDateString(),
-        supportEmail: supportEmail,
-        whatsappNumber: whatsappNumber,
-        userId: user.id.toString()
-      });
-
-      await sendMail({
-        sendTo: adminEmail,
-        subject: `Manual Balance ${action === 'add' ? 'Addition' : 'Deduction'} - ${user.username}`,
-        html: adminEmailData.html
-          .replace('Auto-Approved', `Manual ${action === 'add' ? 'Addition' : 'Deduction'}`)
-          .replace('has been automatically approved', `balance has been manually ${action === 'add' ? 'added' : 'deducted'} by admin`)
-      });
+      const adminEmailData = await resolveEmailContent('transaction_admin_auto_approved');
+      if (adminEmailData) {
+        await sendMail({
+          sendTo: adminEmail,
+          subject: adminEmailData.subject,
+          html: adminEmailData.html,
+          fromName: adminEmailData.fromName ?? undefined,
+        });
+      }
     } catch (emailError) {
       console.error('Error sending notification emails:', emailError);
     }

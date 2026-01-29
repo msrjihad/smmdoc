@@ -1119,7 +1119,6 @@ const APIProvidersPage = () => {
     }
   };
 
-
   if (isPageLoading) {
     return (
       <div className="page-container">

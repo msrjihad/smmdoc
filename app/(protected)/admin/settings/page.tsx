@@ -770,7 +770,6 @@ const GeneralSettingsPage = () => {
     }
   };
 
-
   const handleDeleteImage = async (field: 'siteIcon' | 'siteLogo' | 'siteDarkLogo') => {
     const imageType = field === 'siteIcon' ? 'Site Icon' : field === 'siteLogo' ? 'Site Logo' : 'Site Dark Logo';
 

@@ -36,6 +36,7 @@ interface AdminSections {
   additional: NavItem[];
   reseller: NavItem[];
   settings: NavItem[];
+  emailSettings: NavItem[];
   security: NavItem[];
   account: NavItem[];
   [key: string]: NavItem[];
@@ -90,6 +91,7 @@ export default function SideBarNav({
     'Additional': 'FaChartBar',
     'Reseller Panels': 'FaSitemap',
     'Settings': 'FaCog',
+    'Email Settings': 'FaEnvelope',
     'Security': 'FaLock',
     'Account': 'FaUserCog',
     'Integrations': 'FaPlug',
@@ -324,10 +326,12 @@ export default function SideBarNav({
             'Payment Gateway',
             'Payment Currency',
             'Notification Settings',
-            'Email Settings',
             'Integrations',
             'Custom Codes',
           ].includes(item.title)
+        ),
+        emailSettings: items.filter((item) =>
+          ['SMTP Configuration', 'Email Templates'].includes(item.title)
         ),
         security: items.filter((item) =>
           [
@@ -399,13 +403,11 @@ export default function SideBarNav({
     }
   }, [isAdmin, items, ticketSystemEnabled, contactSystemEnabled, affiliateSystemEnabled, childPanelSellingEnabled, massOrderEnabled, serviceUpdateLogsEnabled]);
 
-
   const isActive = (itemPath: string) => {
 
     if (path === itemPath) return true;
 
     if (itemPath === '/' && path === '/') return true;
-
 
     if (path.startsWith(itemPath + '/')) {
 
@@ -912,6 +914,7 @@ export default function SideBarNav({
             {renderNavSection('Additional', getSectionItems('additional'))}
             {renderNavSection('Reseller Panels', getSectionItems('reseller'))}
             {renderNavSection('Settings', getSectionItems('settings'))}
+            {renderNavSection('Email Settings', getSectionItems('emailSettings'))}
             {renderNavSection('Security', getSectionItems('security'))}
             {renderNavSection('Account', accountItemsWithoutLogoutAndSettings)}
           </>

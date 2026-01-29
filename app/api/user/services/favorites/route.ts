@@ -111,7 +111,6 @@ export async function GET(request: Request) {
     };
     
 
-
     const [services, total, allCategories] = await Promise.all([
       db.services.findMany({
         where: whereClause,

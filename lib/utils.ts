@@ -36,11 +36,6 @@ export function formatError(error: unknown): string {
       return 'Database connection failed. Please check your database configuration.';
     }
 
-
-
-
-
-
     return error.message;
   }
 

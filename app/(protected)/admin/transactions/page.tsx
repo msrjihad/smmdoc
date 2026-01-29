@@ -365,7 +365,6 @@ const AdminAllTransactionsPage = () => {
     }
   }, [availableCurrencies]);
 
-
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [stats, setStats] = useState<TransactionStats>({
     totalTransactions: 0,
@@ -504,7 +503,6 @@ const AdminAllTransactionsPage = () => {
   });
 
   const [balanceSubmitting, setBalanceSubmitting] = useState(false);
-
 
   const fetchTransactions = useCallback(async () => {
     try {

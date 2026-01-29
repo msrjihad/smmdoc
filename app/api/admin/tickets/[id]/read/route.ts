@@ -4,7 +4,6 @@ import { db } from '@/lib/db';
 import { z } from 'zod';
 import { getTicketSettings } from '@/lib/utils/ticket-settings';
 
-
 const readStatusSchema = z.object({
   isRead: z.boolean()
 });

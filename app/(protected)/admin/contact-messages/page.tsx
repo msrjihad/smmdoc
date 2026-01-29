@@ -251,7 +251,6 @@ const ContactMessagesPage = () => {
     replied: 0
   });
 
-
   const statusFilter = searchParams.get('status') || 'all';
   const searchTerm = searchParams.get('search') || '';
 

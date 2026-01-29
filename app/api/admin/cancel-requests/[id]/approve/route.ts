@@ -42,7 +42,6 @@ export async function PUT(
       );
     }
 
-
     const existingRequest = await db.cancelRequests.findUnique({
       where: {
         id: requestId

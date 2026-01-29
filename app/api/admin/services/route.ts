@@ -317,7 +317,6 @@ export async function POST(request: Request) {
       isSecret,
     } = body;
 
-
     const toBool = (value: unknown): boolean => {
       if (typeof value === 'boolean') return value;
       if (typeof value === 'string') {

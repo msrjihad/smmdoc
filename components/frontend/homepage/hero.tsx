@@ -107,14 +107,12 @@ const Hero: React.FC = () => {
         const finalTotalOrders = typeof totalOrders === 'number' ? totalOrders : (totalOrders === null || totalOrders === undefined ? 0 : Number(totalOrders) || 0);
         const finalActiveUsers = typeof activeUsers === 'number' ? activeUsers : (activeUsers === null || activeUsers === undefined ? 0 : Number(activeUsers) || 0);
 
-
         startTransition(() => {
           setUsersCount(finalUsersCount);
           setCompletedOrdersCount(finalCompletedOrders);
           setTotalOrdersCount(finalTotalOrders);
           setActiveUsersCount(finalActiveUsers);
         });
-
 
         if (process.env.NODE_ENV === 'development') {
           setDebugInfo({

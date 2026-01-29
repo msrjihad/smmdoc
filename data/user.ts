@@ -26,10 +26,6 @@ const getUserIdMapping = async (oldStringId: string): Promise<number | null> => 
       return numericId;
     }
 
-
-
-
-
     return null;
   } catch {
     return null;

@@ -71,7 +71,7 @@ export function formatKeywords(keywords: string): string[] {
   return keywords.split(',').map(k => k.trim()).filter(k => k.length > 0);
 }
 
-/** SEO title when set, otherwise Site Title. Use for document title and OG/twitter title. */
+ 
 export function getDisplayTitle(meta: MetaSettings): string {
   return meta.googleTitle || meta.siteTitle;
 }

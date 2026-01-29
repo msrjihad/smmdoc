@@ -1,5 +1,6 @@
-﻿import { db } from '@/lib/db';
-import { emailTemplates, transactionEmailTemplates } from '@/lib/email-templates';
+import { db } from '@/lib/db';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
 import { sendMail } from '@/lib/nodemailer';
 import { logSMS, sendSMS, smsTemplates } from '@/lib/sms';
 import { sendTransactionSuccessNotification } from '@/lib/notifications/user-notifications';
@@ -55,7 +56,6 @@ export async function POST(req: NextRequest) {
       let isSuccessful = false;
       let gatewayVerificationData: any = null;
 
-
       if (apiKey && verifyUrl) {
         try {
           console.log(`Calling gateway verify API: ${verifyUrl} with invoice_id: ${invoice_id}`);
@@ -86,7 +86,6 @@ export async function POST(req: NextRequest) {
             gatewayVerificationData = await verificationResponse.json();
             console.log('Gateway verification response:', gatewayVerificationData);
 
-
             if (gatewayVerificationData.status === 'COMPLETED' || gatewayVerificationData.status === 'SUCCESS') {
               isSuccessful = true;
               verificationStatus = "COMPLETED";
@@ -97,7 +96,6 @@ export async function POST(req: NextRequest) {
             } else {
               verificationStatus = "PENDING";
             }
-
 
             if (gatewayVerificationData.transaction_id && gatewayVerificationData.transaction_id !== invoice_id) {
               transaction_id = gatewayVerificationData.transaction_id;
@@ -112,7 +110,6 @@ export async function POST(req: NextRequest) {
 
         }
       }
-
 
       if (!gatewayVerificationData && response_type) {
         const responseTypeLower = response_type.toLowerCase();
@@ -156,7 +153,6 @@ export async function POST(req: NextRequest) {
                 transactionId: transaction_id || gatewayVerificationData?.transaction_id || null,
                 paymentMethod: gatewayVerificationData?.payment_method || payment.paymentMethod || null,
                 gatewayFee: gatewayVerificationData?.fee !== undefined ? gatewayVerificationData.fee : payment.gatewayFee,
-
 
                 amount: payment.amount,
               }
@@ -202,51 +198,30 @@ export async function POST(req: NextRequest) {
           });
 
           if (payment.user.email) {
-            const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-            const supportEmail = await getSupportEmail();
-            const whatsappNumber = await getWhatsAppNumber();
-
-            const emailData = emailTemplates.paymentSuccess({
-              userName: payment.user.name || 'Customer',
-              userEmail: payment.user.email,
-              transactionId: transaction_id,
-              amount: (payment.amount || 0).toString(),
-              currency: payment.currency || 'USD',
-              date: new Date().toLocaleDateString(),
-              userId: payment.userId.toString(),
-              supportEmail: supportEmail,
-              whatsappNumber: whatsappNumber,
-            });
-
-            await sendMail({
-              sendTo: payment.user.email,
-              subject: emailData.subject,
-              html: emailData.html
-            });
+            const emailData = await resolveEmailContent(
+              'transaction_payment_success',
+              templateContextFromUser(payment.user)
+            );
+            if (emailData) {
+              await sendMail({
+                sendTo: payment.user.email,
+                subject: emailData.subject,
+                html: emailData.html,
+                fromName: emailData.fromName ?? undefined,
+              });
+            }
           }
 
           const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-          const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-          const supportEmail = await getSupportEmail();
-          const whatsappNumber = await getWhatsAppNumber();
-
-          const adminEmailData = transactionEmailTemplates.adminAutoApproved({
-            userName: payment.user.name || 'Unknown User',
-            userEmail: payment.user.email || '',
-            transactionId: transaction_id,
-            amount: payment.amount.toString(),
-            currency: 'USD',
-            date: new Date().toLocaleDateString(),
-            userId: payment.userId.toString(),
-            supportEmail: supportEmail,
-            whatsappNumber: whatsappNumber,
-          });
-
-          await sendMail({
-            sendTo: adminEmail,
-            subject: adminEmailData.subject,
-            html: adminEmailData.html
-          });
+          const adminEmailData = await resolveEmailContent('transaction_admin_auto_approved');
+          if (adminEmailData) {
+            await sendMail({
+              sendTo: adminEmail,
+              subject: adminEmailData.subject,
+              html: adminEmailData.html,
+              fromName: adminEmailData.fromName ?? undefined,
+            });
+          }
 
           if (phone && payment.user) {
             const smsMessage = smsTemplates.paymentSuccess(
@@ -301,28 +276,15 @@ export async function POST(req: NextRequest) {
         });
 
         const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-        const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-        const supportEmail = await getSupportEmail();
-        const whatsappNumber = await getWhatsAppNumber();
-
-        const adminEmailData = emailTemplates.adminPendingReview({
-          userName: payment.user?.name || 'Unknown User',
-          userEmail: payment.user?.email || '',
-          transactionId: transaction_id,
-          amount: payment.amount.toString(),
-          currency: 'BDT',
-          date: new Date().toLocaleDateString(),
-          userId: payment.userId.toString(),
-          phone: phone,
-          supportEmail: supportEmail,
-          whatsappNumber: whatsappNumber,
-        });
-
-        await sendMail({
-          sendTo: adminEmail,
-          subject: adminEmailData.subject,
-          html: adminEmailData.html
-        });
+        const adminEmailData = await resolveEmailContent('transaction_admin_pending_review');
+        if (adminEmailData) {
+          await sendMail({
+            sendTo: adminEmail,
+            subject: adminEmailData.subject,
+            html: adminEmailData.html,
+            fromName: adminEmailData.fromName ?? undefined,
+          });
+        }
 
         return NextResponse.json({
           status: "PENDING",

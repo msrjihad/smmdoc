@@ -434,4 +434,3 @@ const AnnouncementsTable: React.FC<AnnouncementsTableProps> = ({
 
 export default AnnouncementsTable;
 
-

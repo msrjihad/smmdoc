@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
 
     const gatewayName = await getPaymentGatewayName();
 
-
     const { getAppUrlWithPort } = await import('@/lib/utils/redirect-url');
     const appUrl = getAppUrlWithPort();
 

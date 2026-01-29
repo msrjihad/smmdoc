@@ -930,73 +930,6 @@ li:not(.sidebar li):not(.bg-\[\#1B1E2F\] li) {
   color: #e5e7eb;
 }
 
-.jodit-wysiwyg {
-  background-color: #5f1de8 !important;
-}
-
-.jodit-wysiwyg * {
-  color: #fff !important;
-}
-
-/* Jodit Editor White Background Theme */
-.jodit-editor-white-bg .jodit-wysiwyg {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-}
-
-.jodit-editor-white-bg .jodit-wysiwyg * {
-  color: #000000 !important;
-}
-
-.jodit-editor-white-bg .jodit-workplace {
-  background-color: #ffffff !important;
-}
-
-.jodit-editor-white-bg .jodit-container {
-  background-color: #ffffff !important;
-}
-
-.jodit-editor-white-bg .jodit-wysiwyg[contenteditable="true"] {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-}
-
-.jodit-editor-white-bg .jodit-wysiwyg p {
-  color: #000000 !important;
-}
-
-.jodit-editor-white-bg .jodit-wysiwyg div {
-  color: #000000 !important;
-}
-
-.jodit-editor-white-bg .jodit-wysiwyg span {
-  color: #000000 !important;
-}
-
-.jodit-editor-white-bg .jodit-wysiwyg h1, 
-.jodit-editor-white-bg .jodit-wysiwyg h2, 
-.jodit-editor-white-bg .jodit-wysiwyg h3, 
-.jodit-editor-white-bg .jodit-wysiwyg h4, 
-.jodit-editor-white-bg .jodit-wysiwyg h5, 
-.jodit-editor-white-bg .jodit-wysiwyg h6 {
-  color: #000000 !important;
-}
-
-.jodit-editor-white-bg .jodit-wysiwyg ul, 
-.jodit-editor-white-bg .jodit-wysiwyg ol, 
-.jodit-editor-white-bg .jodit-wysiwyg li {
-  color: #000000 !important;
-}
-
-.jodit-editor-white-bg .jodit-wysiwyg a {
-  color: #0066cc !important;
-}
-
-.jodit-editor-white-bg .jodit-wysiwyg blockquote {
-  color: #000000 !important;
-  background-color: #f8f9fa !important;
-}
-
 /* Sidebar Styles */
 .sidebar-full-height {
   height: 100%;
@@ -1696,59 +1629,255 @@ body {
   }
 }
 
-/* JoditEditor Dark Mode Styles */
-.jodit-editor-dark-bg .jodit-container,
-.jodit-editor-dark-bg .jodit-container .jodit-wysiwyg,
-.jodit-editor-dark-bg .jodit-container .jodit-wysiwyg iframe {
-  background-color: #1f2937 !important;
-  color: #f3f4f6 !important;
+/* TipTap email template editor – actual visual text styles in Visual tab */
+.email-template-tiptap .ProseMirror {
+  min-height: 280px;
+  max-height: 320px;
+  overflow-y: auto;
+  outline: none;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: inherit;
 }
 
-.jodit-editor-dark-bg .jodit-toolbar,
-.jodit-editor-dark-bg .jodit-toolbar-editor-collection {
-  background-color: #374151 !important;
-  border-color: #4b5563 !important;
+/* Headings */
+.email-template-tiptap .ProseMirror h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  line-height: 1.25;
+}
+.email-template-tiptap .ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+.email-template-tiptap .ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  line-height: 1.4;
 }
 
-.jodit-editor-dark-bg .jodit-toolbar-button,
-.jodit-editor-dark-bg .jodit-toolbar-button__button {
-  color: #f3f4f6 !important;
+/* Paragraphs */
+.email-template-tiptap .ProseMirror p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
 }
 
-.jodit-editor-dark-bg .jodit-toolbar-button:hover,
-.jodit-editor-dark-bg .jodit-toolbar-button__button:hover {
-  background-color: #4b5563 !important;
+/* Inline styles */
+.email-template-tiptap .ProseMirror strong {
+  font-weight: 700;
+}
+.email-template-tiptap .ProseMirror em {
+  font-style: italic;
+}
+.email-template-tiptap .ProseMirror u {
+  text-decoration: underline;
+}
+.email-template-tiptap .ProseMirror s {
+  text-decoration: line-through;
+}
+.email-template-tiptap .ProseMirror code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.875em;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  background: rgba(0, 0, 0, 0.06);
+}
+.dark .email-template-tiptap .ProseMirror code {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.jodit-editor-dark-bg .jodit-toolbar-button.jodit-toolbar-button_active,
-.jodit-editor-dark-bg .jodit-toolbar-button__button.jodit-toolbar-button_active {
-  background-color: #6b7280 !important;
+/* Lists */
+.email-template-tiptap .ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5em 0;
+}
+.email-template-tiptap .ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5em 0;
+}
+.email-template-tiptap .ProseMirror li {
+  margin: 0.25em 0;
 }
 
-.jodit-editor-dark-bg .jodit-statusbar {
-  background-color: #374151 !important;
-  border-color: #4b5563 !important;
-  color: #f3f4f6 !important;
+/* Blockquote */
+.email-template-tiptap .ProseMirror blockquote {
+  border-left: 4px solid var(--primary);
+  padding-left: 1rem;
+  margin: 0.75em 0;
+  font-style: italic;
+  color: var(--text-secondary);
 }
 
-.jodit-editor-dark-bg .jodit-statusbar .jodit-statusbar-item {
-  color: #f3f4f6 !important;
+/* Links */
+.email-template-tiptap .ProseMirror a {
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.email-template-tiptap .ProseMirror a:hover {
+  opacity: 0.9;
 }
 
-.jodit-editor-dark-bg .jodit-placeholder {
-  color: #9ca3af !important;
+/* Text alignment */
+.email-template-tiptap .ProseMirror [style*="text-align: left"] {
+  text-align: left;
+}
+.email-template-tiptap .ProseMirror [style*="text-align: center"] {
+  text-align: center;
+}
+.email-template-tiptap .ProseMirror [style*="text-align: right"] {
+  text-align: right;
+}
+.email-template-tiptap .ProseMirror [style*="text-align: justify"] {
+  text-align: justify;
 }
 
-.jodit-editor-dark-bg .jodit-wysiwyg p,
-.jodit-editor-dark-bg .jodit-wysiwyg div,
-.jodit-editor-dark-bg .jodit-wysiwyg span,
-.jodit-editor-dark-bg .jodit-wysiwyg h1,
-.jodit-editor-dark-bg .jodit-wysiwyg h2,
-.jodit-editor-dark-bg .jodit-wysiwyg h3,
-.jodit-editor-dark-bg .jodit-wysiwyg h4,
-.jodit-editor-dark-bg .jodit-wysiwyg h5,
-.jodit-editor-dark-bg .jodit-wysiwyg h6 {
-  color: #f3f4f6 !important;
+/* Images */
+.email-template-tiptap .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.5em 0;
+}
+
+/* Horizontal rule */
+.email-template-tiptap .ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--border-primary);
+  margin: 1em 0;
+}
+
+/* Tables */
+.email-template-tiptap .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75em 0;
+}
+.email-template-tiptap .ProseMirror th,
+.email-template-tiptap .ProseMirror td {
+  border: 1px solid var(--border-primary);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.email-template-tiptap .ProseMirror th {
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.05);
+}
+.dark .email-template-tiptap .ProseMirror th {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Extra HTML nodes: div, span, form, input, etc. */
+.email-template-tiptap .ProseMirror div:not([data-type]),
+.email-template-tiptap .ProseMirror section,
+.email-template-tiptap .ProseMirror header,
+.email-template-tiptap .ProseMirror footer,
+.email-template-tiptap .ProseMirror main,
+.email-template-tiptap .ProseMirror article,
+.email-template-tiptap .ProseMirror aside,
+.email-template-tiptap .ProseMirror nav {
+  margin: 0.5em 0;
+}
+.email-template-tiptap .ProseMirror form,
+.email-template-tiptap .ProseMirror fieldset {
+  margin: 0.75em 0;
+  padding: 0.75em;
+  border: 1px solid var(--border-primary);
+  border-radius: 0.25rem;
+}
+.email-template-tiptap .ProseMirror legend {
+  padding: 0 0.5em;
+  font-weight: 600;
+}
+.email-template-tiptap .ProseMirror input,
+.email-template-tiptap .ProseMirror textarea,
+.email-template-tiptap .ProseMirror select {
+  margin: 0.25em 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 0.25rem;
+  font: inherit;
+  max-width: 100%;
+}
+.email-template-tiptap .ProseMirror button,
+.email-template-tiptap .ProseMirror .email-template-tiptap .ProseMirror button {
+  padding: 0.5rem 1rem;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  border: 1px solid var(--border-primary);
+  background: var(--input-bg);
+}
+.email-template-tiptap .ProseMirror label {
+  margin-right: 0.5em;
+}
+
+/* Button (CTA) in Visual tab */
+.email-template-tiptap .ProseMirror a.email-cta-button {
+  display: inline-block;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
+  color: #ffffff !important;
+  text-decoration: none !important;
+  border-radius: 6px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  margin: 0.25em 0;
+}
+.email-template-tiptap .ProseMirror a.email-cta-button:hover {
+  opacity: 0.9;
+}
+.dark .email-template-tiptap .ProseMirror a.email-cta-button {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
+}
+
+.email-template-tiptap .ProseMirror p.is-editor-empty:first-child::before {
+  content: 'Write your email template content here. Header and footer are added automatically.';
+  float: left;
+  color: var(--text-muted);
+  pointer-events: none;
+  height: 0;
+}
+
+.email-template-tiptap.is-fullscreen .ProseMirror {
+  min-height: 400px;
+  max-height: none;
+  flex: 1;
+}
+
+/* Code tab: full width of editor box */
+.email-template-code-editor {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.email-template-code-textarea {
+  width: 100% !important;
+  min-width: 0;
+  box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+.email-template-tiptap.is-fullscreen .email-template-code-editor {
+  flex: 1;
+  min-height: 400px;
+}
+.email-template-tiptap.is-fullscreen .email-template-code-textarea {
+  flex: 1;
+  min-height: 400px;
+  resize: none;
 }
 
 /* Mobile notification panel offset */

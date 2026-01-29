@@ -278,7 +278,6 @@ export default function SignInForm() {
                 onError={() => {
                   setRecaptchaToken(null);
 
-
                 }}
                 onExpired={() => {
                   setRecaptchaToken(null);
@@ -292,7 +291,6 @@ export default function SignInForm() {
                 <input
                   type="checkbox"
                   id="remember"
-
 
                   className="h-4 w-4 text-[var(--primary)] focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 transition-colors duration-200"
                 />

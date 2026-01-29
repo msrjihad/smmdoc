@@ -198,8 +198,6 @@ interface UpdateStatusModalProps {
   title: string;
 }
 
-
-
 const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -215,7 +213,6 @@ const useDebounce = (value: string, delay: number) => {
 
   return debouncedValue;
 };
-
 
 const AdminsListPage = () => {
   const { appName } = useAppNameWithFallback();
@@ -546,7 +543,6 @@ const AdminsListPage = () => {
     };
     return icons[status as keyof typeof icons] || icons.inactive;
   };
-
 
   const formatCurrency = useCallback((amount: number) => {
     return `$${amount.toLocaleString('en-US', {
@@ -987,7 +983,6 @@ const AdminsListPage = () => {
   );
 };
 
-
 const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   isOpen,
   onClose,
@@ -1082,7 +1077,5 @@ const UpdateStatusModal: React.FC<UpdateStatusModalProps> = ({
     </div>
   );
 };
-
-
 
 export default AdminsListPage;

@@ -183,8 +183,6 @@ export async function GET(req: NextRequest) {
       allProviders = allProviders.filter(provider => provider.importedServices > 0);
     }
 
-
-
     return NextResponse.json({
       success: true,
       data: {

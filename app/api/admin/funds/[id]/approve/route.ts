@@ -1,6 +1,7 @@
-﻿import { auth } from '@/auth';
+import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { emailTemplates } from '@/lib/email-templates';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
 import { sendMail } from '@/lib/nodemailer';
 import { sendTransactionSuccessNotification } from '@/lib/notifications/user-notifications';
 import { NextRequest, NextResponse } from 'next/server';
@@ -95,27 +96,18 @@ export async function POST(
       }
 
       if (transaction.user.email) {
-        const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-        const supportEmail = await getSupportEmail();
-        const whatsappNumber = await getWhatsAppNumber();
-        
-        const emailData = emailTemplates.paymentSuccess({
-          userName: transaction.user.name || 'Customer',
-          userEmail: transaction.user.email,
-          transactionId: modifiedTransactionId?.trim() || transaction.transactionId || 'N/A',
-          amount: transaction.amount.toString(),
-          currency: transaction.currency || 'BDT',
-          date: new Date().toLocaleDateString(),
-          userId: transaction.userId.toString(),
-          supportEmail: supportEmail,
-          whatsappNumber: whatsappNumber,
-        });
-
-        await sendMail({
-          sendTo: transaction.user.email,
-          subject: emailData.subject,
-          html: emailData.html
-        });
+        const emailData = await resolveEmailContent(
+          'transaction_payment_success',
+          templateContextFromUser(transaction.user)
+        );
+        if (emailData) {
+          await sendMail({
+            sendTo: transaction.user.email,
+            subject: emailData.subject,
+            html: emailData.html,
+            fromName: emailData.fromName ?? undefined,
+          });
+        }
       }
 
       return NextResponse.json({

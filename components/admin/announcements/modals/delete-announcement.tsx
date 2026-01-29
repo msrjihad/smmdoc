@@ -58,4 +58,3 @@ const DeleteAnnouncementModal: React.FC<DeleteAnnouncementModalProps> = ({
 
 export default DeleteAnnouncementModal;
 
-

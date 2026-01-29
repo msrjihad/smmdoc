@@ -46,7 +46,6 @@ interface OrderWithCancelRequests {
   [key: string]: any;
 }
 
-
 const Toast = ({
   message,
   type = 'success',
@@ -78,7 +77,6 @@ const Toast = ({
     </div>
   </div>
 );
-
 
 export default function OrdersList() {
   const { appName } = useAppNameWithFallback();
@@ -135,7 +133,6 @@ export default function OrdersList() {
     status,
     search: debouncedSearch,
   });
-
 
   useEffect(() => {
     if (!isLoading && (data !== undefined || error !== undefined)) {
@@ -792,7 +789,6 @@ export default function OrdersList() {
         return 'bg-gray-100 dark:bg-gray-900/20 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-800';
     }
   };
-
 
   return (
     <div className="page-container">

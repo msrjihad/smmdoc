@@ -156,7 +156,6 @@ export default function TransactionsPage() {
     setPageTitle('Transactions', appName);
   }, [appName])
 
-
   useEffect(() => {
     const loadTimeFormat = async () => {
       const storedTimeFormat = (userDetails as any)?.timeFormat;

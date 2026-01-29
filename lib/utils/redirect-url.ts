@@ -1,12 +1,10 @@
-/**
- * Gets the port from environment variable or defaults to 80
- */
+
+
 function getAppPort(): string {
 
   if (process.env.PORT) {
     return process.env.PORT;
   }
-
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;
   if (appUrl) {
@@ -20,14 +18,9 @@ function getAppPort(): string {
     }
   }
 
-
   return '80';
 }
 
-/**
- * Ensures localhost URLs always include the correct port
- * This is critical because payment gateways often strip ports from redirect URLs
- */
 export function ensureLocalhostPort(url: string): string {
   if (!url) return url;
 
@@ -35,8 +28,6 @@ export function ensureLocalhostPort(url: string): string {
 
   try {
     const urlObj = new URL(url);
-
-
 
     if (urlObj.hostname === 'localhost' && !urlObj.port) {
       if (targetPort !== '80' && targetPort !== '443') {
@@ -46,12 +37,10 @@ export function ensureLocalhostPort(url: string): string {
       return urlObj.toString().replace(/\/$/, '');
     }
 
-
     if (urlObj.hostname === 'localhost' && (urlObj.port === '80' || urlObj.port === '443')) {
       urlObj.port = '';
       return urlObj.toString().replace(/\/$/, '');
     }
-
 
     if (urlObj.hostname === 'localhost' && (targetPort === '80' || targetPort === '443')) {
       if (urlObj.port === '80' || urlObj.port === '443') {
@@ -64,7 +53,6 @@ export function ensureLocalhostPort(url: string): string {
   } catch (urlError) {
 
     let fixedUrl = url;
-
 
     if (targetPort === '80' || targetPort === '443') {
 
@@ -95,9 +83,6 @@ export function ensureLocalhostPort(url: string): string {
   }
 }
 
-/**
- * Gets the app URL from environment variables and ensures localhost has the correct port
- */
 export function getAppUrlWithPort(): string {
   let appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;
 

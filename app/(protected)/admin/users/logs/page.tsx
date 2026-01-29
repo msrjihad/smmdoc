@@ -295,7 +295,6 @@ const UserActivityLogsPage = () => {
     fetchActivityLogs();
   }, []);
 
-
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
     fetchActivityLogs(newPage, searchTerm, searchBy);

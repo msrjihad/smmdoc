@@ -1,7 +1,4 @@
-/**
- * API Request Deduplication and Caching Utility
- * Prevents duplicate API calls and provides request caching
- */
+
 
 interface CacheEntry<T> {
   data: T;
@@ -19,9 +16,8 @@ class ApiCache {
   private pendingRequests = new Map<string, PendingRequest<any>>();
   private defaultTTL = 60000;
 
-  /**
-   * Get cached data if available and not expired
-   */
+  
+
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
@@ -34,9 +30,8 @@ class ApiCache {
     return entry.data as T;
   }
 
-  /**
-   * Set cache entry with TTL
-   */
+  
+
   set<T>(key: string, data: T, ttl: number = this.defaultTTL): void {
     const expiresAt = Date.now() + ttl;
     this.cache.set(key, {
@@ -46,13 +41,11 @@ class ApiCache {
     });
   }
 
-  /**
-   * Check if a request is already pending
-   */
+  
+
   getPendingRequest<T>(key: string): Promise<T> | null {
     const pending = this.pendingRequests.get(key);
     if (!pending) return null;
-
 
     if (Date.now() - pending.timestamp > 30000) {
       this.pendingRequests.delete(key);
@@ -62,15 +55,13 @@ class ApiCache {
     return pending.promise;
   }
 
-  /**
-   * Set a pending request
-   */
+  
+
   setPendingRequest<T>(key: string, promise: Promise<T>): void {
     this.pendingRequests.set(key, {
       promise,
       timestamp: Date.now(),
     });
-
 
     promise
       .finally(() => {
@@ -81,34 +72,30 @@ class ApiCache {
       });
   }
 
-  /**
-   * Clear cache entry
-   */
+  
+
   delete(key: string): void {
     this.cache.delete(key);
     this.pendingRequests.delete(key);
   }
 
-  /**
-   * Clear all cache
-   */
+  
+
   clear(): void {
     this.cache.clear();
     this.pendingRequests.clear();
   }
 
-  /**
-   * Generate cache key from URL and options
-   */
+  
+
   generateKey(url: string, options?: RequestInit): string {
     const method = options?.method || 'GET';
     const body = options?.body ? JSON.stringify(options.body) : '';
     return `${method}:${url}:${body}`;
   }
 
-  /**
-   * Fetch with deduplication and caching
-   */
+  
+
   async fetch<T>(
     url: string,
     options?: RequestInit,
@@ -116,18 +103,15 @@ class ApiCache {
   ): Promise<T> {
     const key = this.generateKey(url, options);
 
-
     const cached = this.get<T>(key);
     if (cached !== null) {
       return cached;
     }
 
-
     const pending = this.getPendingRequest<T>(key);
     if (pending) {
       return pending;
     }
-
 
     const promise = fetch(url, {
       ...options,
@@ -160,12 +144,8 @@ class ApiCache {
   }
 }
 
-
 export const apiCache = new ApiCache();
 
-/**
- * Hook-friendly fetch wrapper with deduplication
- */
 export async function cachedFetch<T>(
   url: string,
   options?: RequestInit,
@@ -174,9 +154,6 @@ export async function cachedFetch<T>(
   return apiCache.fetch<T>(url, options, ttl);
 }
 
-/**
- * Clear cache for specific URL pattern
- */
 export function clearCachePattern(pattern: string | RegExp): void {
   const regex = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
 

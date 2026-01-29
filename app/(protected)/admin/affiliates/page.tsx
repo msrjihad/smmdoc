@@ -191,8 +191,6 @@ interface PaginationInfo {
   hasPrev: boolean;
 }
 
-
-
 const AffiliateReferralsPage = () => {
   const { appName } = useAppNameWithFallback();
   const searchParams = useSearchParams();
@@ -375,7 +373,6 @@ const AffiliateReferralsPage = () => {
     affiliate: null,
   });
 
-
   const calculateStatusCounts = (affiliatesData: AffiliateReferral[]) => {
     const counts = {
       active: 0,
@@ -485,7 +482,6 @@ const AffiliateReferralsPage = () => {
     }
     loadData()
   }, []);
-
 
   useEffect(() => {
     if (pagination.total > 0) {

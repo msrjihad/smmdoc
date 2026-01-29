@@ -31,7 +31,6 @@ interface PaginationInfo {
   hasPrev: boolean;
 }
 
-
 const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
   <div className={`${size} ${className} relative`}>
     <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 animate-spin">
@@ -39,7 +38,6 @@ const GradientSpinner = ({ size = 'w-16 h-16', className = '' }) => (
     </div>
   </div>
 );
-
 
 const AnnouncementsSkeleton = () => {
   const rows = Array.from({ length: 5 });
@@ -855,7 +853,6 @@ const AnnouncementsPage = () => {
     }
   };
 
-
   return (
     <div className="page-container">
       <div className="toast-container">
@@ -1088,6 +1085,5 @@ const AnnouncementsPage = () => {
     </div>
   );
 };
-
 
 export default AnnouncementsPage;

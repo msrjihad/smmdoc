@@ -1,6 +1,7 @@
-﻿import { auth } from '@/auth';
+import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { emailTemplates, transactionEmailTemplates } from '@/lib/email-templates';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
 import { sendMail } from '@/lib/nodemailer';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -137,58 +138,30 @@ export async function PATCH(
 
     try {
       if (result.currentUser.email && notificationMessage) {
-        const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-        const supportEmail = await getSupportEmail();
-        const whatsappNumber = await getWhatsAppNumber();
-        
-        const usdAmount = typeof transaction.amount === 'object' && transaction.amount !== null
-          ? Number(transaction.amount)
-          : Number(transaction.amount || 0);
-        const emailData = emailTemplates.paymentSuccess({
-          userName: result.currentUser.name || 'Customer',
-          userEmail: result.currentUser.email,
-          transactionId: (transaction.transactionId || transaction.id.toString()),
-          amount: usdAmount.toString(),
-          currency: transaction.currency || 'BDT',
-          date: new Date().toLocaleDateString(),
-          userId: transaction.userId.toString(),
-          supportEmail: supportEmail,
-          whatsappNumber: whatsappNumber,
-        });
-
-        await sendMail({
-          sendTo: result.currentUser.email,
-          subject: `Transaction Status Updated - ${updateData.status || status}`,
-          html: emailData.html.replace('Payment Successful!', `Transaction ${updateData.status || status}`)
-            .replace('Your payment has been successfully processed', notificationMessage)
-        });
+        const emailData = await resolveEmailContent(
+          'transaction_payment_success',
+          templateContextFromUser(result.currentUser)
+        );
+        if (emailData) {
+          await sendMail({
+            sendTo: result.currentUser.email,
+            subject: emailData.subject,
+            html: emailData.html,
+            fromName: emailData.fromName ?? undefined,
+          });
+        }
       }
 
       const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-      const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-      const supportEmail = await getSupportEmail();
-      const whatsappNumber = await getWhatsAppNumber();
-      
-      const usdAmount = typeof transaction.amount === 'object' && transaction.amount !== null
-        ? Number(transaction.amount)
-        : Number(transaction.amount || 0);
-      const adminEmailData = transactionEmailTemplates.adminAutoApproved({
-        userName: result.currentUser.name || 'Unknown User',
-        userEmail: result.currentUser.email || '',
-        transactionId: (transaction.transactionId || transaction.id.toString()),
-        amount: usdAmount.toString(),
-        currency: 'BDT',
-        supportEmail: supportEmail,
-        whatsappNumber: whatsappNumber,
-        date: new Date().toLocaleDateString(),
-        userId: transaction.userId.toString()
-      });
-
-      await sendMail({
-        sendTo: adminEmail,
-        subject: `Transaction Status Updated by Admin - ${updateData.status || status}`,
-        html: adminEmailData.html.replace('Auto-Approved', `Status Updated to ${updateData.status || status}`)
-      });
+      const adminEmailData = await resolveEmailContent('transaction_admin_auto_approved');
+      if (adminEmailData) {
+        await sendMail({
+          sendTo: adminEmail,
+          subject: adminEmailData.subject,
+          html: adminEmailData.html,
+          fromName: adminEmailData.fromName ?? undefined,
+        });
+      }
     } catch (emailError) {
       console.error('Error sending notification emails:', emailError);
     }

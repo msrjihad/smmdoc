@@ -253,7 +253,6 @@ export default function UpdateServiceTable() {
     if (page < totalPages) setPage(page + 1);
   };
 
-
   if (loading) {
     return (
       <div className="page-container">

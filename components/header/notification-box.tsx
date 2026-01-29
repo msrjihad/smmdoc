@@ -199,13 +199,11 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
     fetchNotifications(5, 0, false);
     fetchUnreadCount();
 
-
     const countInterval = setInterval(() => {
       if (!openRef.current) {
         fetchUnreadCount();
       }
     }, 30000);
-
 
     const notificationsInterval = setInterval(() => {
       if (!openRef.current) {

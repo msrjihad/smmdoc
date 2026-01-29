@@ -730,7 +730,6 @@ export default function AdminDashboardPage() {
     } catch (error) {
       console.error('Critical error in fetchAllData:', error);
 
-
       setStatsLoading(false);
       setLatestUsersLoading(false);
       setTransactionsLoading(false);
@@ -756,7 +755,6 @@ export default function AdminDashboardPage() {
 
       fetchAllData(false);
     }
-
 
     const interval = setInterval(() => {
 
@@ -1020,7 +1018,6 @@ export default function AdminDashboardPage() {
     
     return `${symbol}${formatNumber(convertedAmount)}`;
   }, [currency, currentCurrencyData, availableCurrencies]);
-
 
   if (false) {
     return (

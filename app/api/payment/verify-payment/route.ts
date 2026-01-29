@@ -289,7 +289,6 @@ export async function GET(req: NextRequest) {
         });
       }
 
-
       if (verificationResponse && verificationResponse.ok && verificationData) {
         if (verificationData.status === 'ERROR') {
           console.log('Payment verification returned ERROR status:', verificationData.message || 'Unknown error');
@@ -832,7 +831,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-
     let payment = await db.addFunds.findUnique({
       where: {
         invoiceId: invoice_id,
@@ -890,8 +888,6 @@ export async function POST(req: NextRequest) {
 
     if (!payment) {
       console.error("Payment record not found for invoice_id (POST):", invoice_id);
-
-
 
       if (from_redirect) {
         const session = await auth();
@@ -1078,7 +1074,6 @@ export async function POST(req: NextRequest) {
 
       }
 
-
       if (cancelled_by_user) {
         console.log('User cancelled payment, setting status to Cancelled');
         paymentStatus = "Cancelled";
@@ -1101,8 +1096,6 @@ export async function POST(req: NextRequest) {
       } else {
         paymentStatus = payment.status || "Processing";
       }
-
-
 
       if (payment && (from_redirect || paymentStatus !== payment.status)) {
         console.log('Updating payment record with gateway verification data (POST):', {

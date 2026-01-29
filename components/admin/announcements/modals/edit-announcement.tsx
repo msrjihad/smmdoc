@@ -242,4 +242,3 @@ const EditAnnouncementModal: React.FC<EditAnnouncementModalProps> = ({
 
 export default EditAnnouncementModal;
 
-

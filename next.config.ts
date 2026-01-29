@@ -24,7 +24,7 @@ const nextConfig: NextConfig = {
         };
       } else {
         config.watchOptions = {
-          ignored: ['**/node_modules/**', '**/.next/**'],
+          ignored: ['**/node_modules .next/**'],
           aggregateTimeout: 300,
         };
       }

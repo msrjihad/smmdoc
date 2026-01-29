@@ -23,7 +23,6 @@ const useSafeSession = () => {
       import('next-auth/react').then(({ useSession }) => {
         if (!isMounted) return;
 
-
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
         }
@@ -83,15 +82,10 @@ const Header: React.FC<HeaderProps> = ({
   const [siteDarkLogo, setSiteDarkLogo] = useState<string | null>(null);
   const [logoLoaded, setLogoLoaded] = useState(false);
 
-
-
-
   const sessionHook = enableAuth ? useSession() : { data: null, status: 'unauthenticated' as const };
-
 
   const rawSession = propSession || sessionHook?.data || null;
   const rawStatus = propStatus !== 'unauthenticated' ? propStatus : (sessionHook?.status || 'unauthenticated');
-
 
   const sessionKeyRef = useRef<string>('');
   const prevSessionRef = useRef<any>(null);
@@ -103,9 +97,7 @@ const Header: React.FC<HeaderProps> = ({
       return null;
     }
 
-
     const currentKey = `${rawSession?.user?.id || ''}-${rawSession?.user?.email || ''}-${rawSession?.user?.role || ''}-${rawSession?.user?.photo || ''}-${rawSession?.user?.image || ''}`;
-
 
     if (currentKey !== sessionKeyRef.current) {
       sessionKeyRef.current = currentKey;
@@ -113,12 +105,10 @@ const Header: React.FC<HeaderProps> = ({
       return rawSession;
     }
 
-
     return prevSessionRef.current || rawSession;
   }, [rawSession?.user?.id, rawSession?.user?.email, rawSession?.user?.role, rawSession?.user?.photo, rawSession?.user?.image]);
 
   const memoizedStatus = useMemo(() => rawStatus, [rawStatus]);
-
 
   const isAuthenticated = useMemo(() =>
     memoizedStatus === 'authenticated' && memoizedSession?.user,
@@ -422,7 +412,6 @@ const Header: React.FC<HeaderProps> = ({
     );
     const balance = 0;
 
-
     const avatarImageUrl = useMemo(() => {
       const url = user?.photo || user?.image || '';
       if (!url) {
@@ -430,15 +419,12 @@ const Header: React.FC<HeaderProps> = ({
         return null;
       }
 
-
       if (imageUrlRef.current !== url) {
         imageUrlRef.current = url;
       }
 
-
       return imageUrlRef.current;
     }, [user?.photo, user?.image]);
-
 
     useEffect(() => {
       if (avatarImageUrl && avatarImageUrl !== prevImageUrlRef.current) {
@@ -596,7 +582,6 @@ const Header: React.FC<HeaderProps> = ({
 
   const toggleMenu = useCallback(() => setIsMenuOpen(prev => !prev), []);
 
-
   const logoFetchedRef = useRef(false);
   useEffect(() => {
 
@@ -656,7 +641,6 @@ const Header: React.FC<HeaderProps> = ({
       }
     };
 
-
     setMounted(true);
     fetchSiteLogo();
 
@@ -668,11 +652,9 @@ const Header: React.FC<HeaderProps> = ({
     };
   }, []);
 
-
   const mobileAvatarUrl = useMemo(() => {
     return memoizedSession?.user?.photo || memoizedSession?.user?.image || null;
   }, [memoizedSession?.user?.photo, memoizedSession?.user?.image]);
-
 
   const prevMobileAvatarUrl = useRef<string | null>(null);
   useEffect(() => {
@@ -681,7 +663,6 @@ const Header: React.FC<HeaderProps> = ({
       setMobileImageError(false);
     }
   }, [mobileAvatarUrl]);
-
 
   const displayLogo = useMemo(() => siteLogo || '/logo.png', [siteLogo]);
   const displayDarkLogo = useMemo(() => siteDarkLogo || displayLogo, [siteDarkLogo, displayLogo]);

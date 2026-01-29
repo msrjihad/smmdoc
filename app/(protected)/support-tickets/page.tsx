@@ -740,7 +740,6 @@ const TicketPage: React.FC = () => {
                       onError={() => {
                         setRecaptchaToken(null);
 
-
                       }}
                       onExpired={() => {
                         setRecaptchaToken(null);

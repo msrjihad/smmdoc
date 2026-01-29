@@ -38,12 +38,6 @@ export default function MyOrdersPage() {
       try {
         setLoading(true);
 
-
-
-
-
-
-
         setTimeout(() => {
           setOrders([]);
           setStats({

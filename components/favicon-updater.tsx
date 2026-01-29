@@ -8,7 +8,6 @@ export default function FaviconUpdater() {
       const timestamp = Date.now();
       const faviconHref = `/api/favicon?t=${timestamp}`;
 
-
       if (typeof document === 'undefined' || !document.head) {
         return;
       }

@@ -628,7 +628,6 @@ async function processFakeCompleteRequest(orderIds: string[], userId: number) {
   }
 }
 
-
 const createTicketSchema = z.object({
   subject: z.string().min(1, 'Subject is required').max(200, 'Subject too long'),
   message: z.string().min(1, 'Message is required').max(5000, 'Message too long'),

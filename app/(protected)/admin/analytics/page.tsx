@@ -111,7 +111,6 @@ const PlatformChartSkeleton = () => {
   );
 };
 
-
 type AnalyticsData = {
   month: string;
   orders: number;

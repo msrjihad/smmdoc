@@ -632,7 +632,6 @@ function ContactSupportPage() {
                     onError={() => {
                       setRecaptchaToken(null);
 
-
                     }}
                     onExpired={() => {
                       setRecaptchaToken(null);

@@ -425,7 +425,6 @@ const SupportTicketsPage = () => {
     }
   };
 
-
   const typeFilteredTickets = useMemo(() => {
     if (typeFilter === 'all' || !typeFilter) {
       return supportTickets;
@@ -562,7 +561,6 @@ const SupportTicketsPage = () => {
       showToast('Error updating ticket status', 'error');
     }
   };
-
 
   const handleCloseTicket = async (ticketId: string) => {
     const confirmed = window.confirm('Are you sure you want to close this ticket? This action cannot be undone.');

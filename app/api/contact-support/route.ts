@@ -1,4 +1,4 @@
-﻿import { auth } from '@/auth';
+import { auth } from '@/auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
@@ -182,34 +182,27 @@ export async function POST(request: NextRequest) {
 
     try {
       const { sendMail } = await import('@/lib/nodemailer');
-      const { contactEmailTemplates } = await import('@/lib/email-templates');
+      const { resolveEmailContent } = await import('@/lib/email-templates/resolve-email-content');
       const { sendSMS } = await import('@/lib/sms');
       const { smsTemplates } = await import('@/lib/sms');
       
       const { getFromEmailAddress } = await import('@/lib/email-config');
-      const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
       const adminEmail = process.env.ADMIN_EMAIL || await getFromEmailAddress();
-      const supportEmail = await getSupportEmail();
-      const whatsappNumber = await getWhatsAppNumber();
       
       if (adminEmail) {
-        const emailTemplate = contactEmailTemplates.newContactMessageAdmin({
-          userName,
-          userEmail: userEmail || 'No email',
-          subject: subject.trim(),
-          message: message.trim(),
-          category: categories.find(cat => cat.id === parseInt(category))?.name || 'Unknown',
-          messageId: messageId,
-          attachments: attachmentsJson ? JSON.parse(attachmentsJson) : undefined,
-          supportEmail: supportEmail,
-          whatsappNumber: whatsappNumber
-        });
-        
-        await sendMail({
-          sendTo: adminEmail,
-          subject: emailTemplate.subject,
-          html: emailTemplate.html
-        });
+        const { templateContextFromUser } = await import('@/lib/email-templates/replace-template-variables');
+        const emailTemplate = await resolveEmailContent(
+          'contact-message_new_contact_message_admin',
+          templateContextFromUser(session.user)
+        );
+        if (emailTemplate) {
+          await sendMail({
+            sendTo: adminEmail,
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            fromName: emailTemplate.fromName ?? undefined,
+          });
+        }
       }
       
       const adminPhone = process.env.ADMIN_PHONE;

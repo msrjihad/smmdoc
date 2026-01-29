@@ -120,7 +120,6 @@ interface ActivationFormData {
   withdrawalMethods: WithdrawalMethod[];
 }
 
-
 export default function ActivateAffiliatePage() {
   const { appName } = useAppNameWithFallback();
   const router = useRouter();
@@ -370,7 +369,6 @@ export default function ActivateAffiliatePage() {
       } catch {}
     })()
   }, [])
-
 
   if (checkingStatus) {
     return (

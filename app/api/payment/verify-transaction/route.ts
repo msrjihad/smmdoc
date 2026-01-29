@@ -1,5 +1,6 @@
-﻿import { db } from '@/lib/db';
-import { emailTemplates, transactionEmailTemplates } from '@/lib/email-templates';
+import { db } from '@/lib/db';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
 import { sendMail } from '@/lib/nodemailer';
 import { sendTransactionSuccessNotification } from '@/lib/notifications/user-notifications';
 import { NextRequest, NextResponse } from 'next/server';
@@ -163,51 +164,30 @@ export async function POST(req: NextRequest) {
           });
 
           if (payment.user.email) {
-            const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-            const supportEmail = await getSupportEmail();
-            const whatsappNumber = await getWhatsAppNumber();
-            
-            const emailData = emailTemplates.paymentSuccess({
-              userName: payment.user.name || 'Customer',
-              userEmail: payment.user.email,
-              transactionId: finalTransactionId,
-              amount: payment.amount.toString(),
-              currency: payment.currency || 'USD',
-              date: new Date().toLocaleDateString(),
-              userId: payment.userId.toString(),
-              supportEmail: supportEmail,
-              whatsappNumber: whatsappNumber,
-            });
-
-            await sendMail({
-              sendTo: payment.user.email,
-              subject: emailData.subject,
-              html: emailData.html,
-            });
+            const emailData = await resolveEmailContent(
+              'transaction_payment_success',
+              templateContextFromUser(payment.user)
+            );
+            if (emailData) {
+              await sendMail({
+                sendTo: payment.user.email,
+                subject: emailData.subject,
+                html: emailData.html,
+                fromName: emailData.fromName ?? undefined,
+              });
+            }
           }
 
           const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-          const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-          const supportEmail = await getSupportEmail();
-          const whatsappNumber = await getWhatsAppNumber();
-          
-          const adminEmailData = transactionEmailTemplates.adminAutoApproved({
-            userName: payment.user.name || 'Unknown User',
-            userEmail: payment.user.email || '',
-            transactionId: transaction_id,
-            amount: payment.amount.toString(),
-            currency: 'USD',
-            date: new Date().toLocaleDateString(),
-            userId: payment.userId.toString(),
-            supportEmail: supportEmail,
-            whatsappNumber: whatsappNumber,
-          });
-
-          await sendMail({
-            sendTo: adminEmail,
-            subject: adminEmailData.subject,
-            html: adminEmailData.html,
-          });
+          const adminEmailData = await resolveEmailContent('transaction_admin_auto_approved');
+          if (adminEmailData) {
+            await sendMail({
+              sendTo: adminEmail,
+              subject: adminEmailData.subject,
+              html: adminEmailData.html,
+              fromName: adminEmailData.fromName ?? undefined,
+            });
+          }
 
           return NextResponse.json({
             status: 'COMPLETED',
@@ -238,28 +218,15 @@ export async function POST(req: NextRequest) {
         });
 
         const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-        const { getSupportEmail, getWhatsAppNumber } = await import('@/lib/utils/general-settings');
-        const supportEmail = await getSupportEmail();
-        const whatsappNumber = await getWhatsAppNumber();
-        
-        const adminEmailData = emailTemplates.adminPendingReview({
-          userName: payment.user?.name || 'Unknown User',
-          userEmail: payment.user?.email || '',
-          transactionId: transaction_id,
-          amount: payment.amount.toString(),
-          currency: 'BDT',
-          date: new Date().toLocaleDateString(),
-          userId: payment.userId.toString(),
-          phone: undefined,
-          supportEmail: supportEmail,
-          whatsappNumber: whatsappNumber,
-        });
-
-        await sendMail({
-          sendTo: adminEmail,
-          subject: adminEmailData.subject,
-          html: adminEmailData.html,
-        });
+        const adminEmailData = await resolveEmailContent('transaction_admin_pending_review');
+        if (adminEmailData) {
+          await sendMail({
+            sendTo: adminEmail,
+            subject: adminEmailData.subject,
+            html: adminEmailData.html,
+            fromName: adminEmailData.fromName ?? undefined,
+          });
+        }
 
         return NextResponse.json({
           status: 'PENDING',

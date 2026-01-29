@@ -34,7 +34,6 @@ export async function fetchCurrencyData(): Promise<{
     };
   }
 
-
   const isServerSide = typeof window === 'undefined';
 
   try {

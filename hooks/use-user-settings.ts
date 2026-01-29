@@ -85,7 +85,6 @@ export function useUserSettings(): UseUserSettingsReturn {
     });
   }, []);
 
-
   const memoizedRefetch = useMemo(() => fetchSettings, []);
 
   return useMemo(() => ({

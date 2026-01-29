@@ -10,11 +10,9 @@ export const SWRProvider = ({ children }: { children: React.ReactNode }) => {
 
         dedupingInterval: 2000,
 
-
         revalidateOnFocus: false,
         revalidateOnReconnect: true,
         revalidateIfStale: true,
-
 
         shouldRetryOnError: (error) => {
 
@@ -26,14 +24,11 @@ export const SWRProvider = ({ children }: { children: React.ReactNode }) => {
         errorRetryCount: 3,
         errorRetryInterval: 1000,
 
-
         keepPreviousData: true,
-
 
         onError: (error, key) => {
           logger.error('SWR Error', error, { key });
         },
-
 
         fetcher: async (url: string) => {
           try {

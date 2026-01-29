@@ -7,12 +7,14 @@ interface MailOptions {
   sendTo: string;
   subject: string;
   html: string;
+  fromName?: string | null;
 }
 
 export const sendMail = async ({
   sendTo,
   subject,
   html,
+  fromName: fromNameOverride,
 }: MailOptions): Promise<boolean> => {
   try {
 
@@ -31,12 +33,13 @@ export const sendMail = async ({
     }
 
     const appName = await getAppName();
+    const displayName = (fromNameOverride != null && fromNameOverride !== '') ? fromNameOverride : appName;
 
     const randomBytes = crypto.randomBytes(8).toString('hex');
     const messageId = `<${Date.now()}.${randomBytes}@${fromEmail.split('@')[1]}>`;
 
     await transporter.sendMail({
-      from: `"${appName}" <${fromEmail}>`,
+      from: `"${displayName}" <${fromEmail}>`,
       to: sendTo,
       subject: subject,
       html: html,

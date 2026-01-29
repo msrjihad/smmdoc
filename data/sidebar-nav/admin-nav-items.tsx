@@ -146,7 +146,6 @@ export const adminNavItems = [
     permission: 'announcements',
   },
 
-
   {
     title: 'Affiliate Users',
     href: '/admin/affiliates',
@@ -224,10 +223,17 @@ export const adminNavItems = [
     roles: ['admin'],
   },
   {
-    title: 'Email Settings',
+    title: 'SMTP Configuration',
     href: '/admin/settings/email',
     icon: 'FaEnvelope',
-    label: 'Email Settings',
+    label: 'SMTP Configuration',
+    roles: ['admin'],
+  },
+  {
+    title: 'Email Templates',
+    href: '/admin/settings/email/templates',
+    icon: 'FaFileAlt',
+    label: 'Email Templates',
     roles: ['admin'],
   },
   {
