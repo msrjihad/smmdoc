@@ -17,13 +17,21 @@ const TestEmailModal = dynamic(
   { ssr: false }
 );
 
+const PAYMENT_TEMPLATE_KEYS = ['transaction_payment_success', 'transaction_payment_cancelled', 'transaction_user_payment_pending'];
+
 const FALLBACK_PREVIEW_CONTEXT: EmailTemplateContext = {
   sitename: 'My SMM Panel',
+  site_url: process.env.NEXT_PUBLIC_APP_URL || 'https://example.com',
   username: 'johndoe',
   user_full_name: 'John Doe',
   user_email: 'user@example.com',
   user_id: '12345',
 };
+
+interface TemplateVariableDef {
+  placeholder: string;
+  description: string;
+}
 
 interface TemplateData {
   templateId: number;
@@ -35,6 +43,8 @@ interface TemplateData {
   subject: string;
   bodyHtml: string;
   isCustom: boolean;
+  trigger?: string;
+  templateVariables?: TemplateVariableDef[];
 }
 
 const Toast = ({
@@ -288,7 +298,29 @@ export default function EmailTemplateEditPage() {
     );
   }
 
-  const previewContext = previewVariableContext ?? FALLBACK_PREVIEW_CONTEXT;
+  const previewContext = (() => {
+    const base = previewVariableContext ?? FALLBACK_PREVIEW_CONTEXT;
+    if (data?.templateKey === 'account_user_account_verification') {
+      return { ...base, otp: base.otp ?? '123456' };
+    }
+    if (data?.templateKey && PAYMENT_TEMPLATE_KEYS.includes(data.templateKey)) {
+      return {
+        ...base,
+        fund_amount: base.fund_amount ?? '100.00',
+        transaction_id: base.transaction_id ?? 'TXN-12345',
+      };
+    }
+    if (data?.templateKey === 'contact-message_admin_reply_to_user') {
+      return {
+        ...base,
+        user_message: base.user_message ?? 'Subject: Sample inquiry\n\nHello, I had a question about my order. Can you please help?',
+        contact_message_id: base.contact_message_id ?? '12345',
+        message_subject: base.message_subject ?? 'Sample inquiry',
+        admin_message: base.admin_message ?? 'Thank you for your message. We have reviewed your inquiry and here is our response.',
+      };
+    }
+    return base;
+  })();
   const previewFromName = replaceTemplateVariables(localForm.fromName, previewContext);
   const previewSubject = replaceTemplateVariables(localForm.subject, previewContext);
   const previewBodyHtml = replaceTemplateVariables(localForm.bodyHtml, previewContext);
@@ -336,80 +368,98 @@ export default function EmailTemplateEditPage() {
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {data.categoryName} • Edit subject and HTML content. Custom content is used when sending emails.
                   </p>
+                  {data.trigger && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                      <span className="font-medium text-gray-700 dark:text-gray-200">Trigger:</span> {data.trigger}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div style={{ padding: '0 24px 24px 24px' }}>
-              <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800/50 space-y-4">
-                <div>
-                  <label className="form-label block mb-1">Template Title</label>
-                  <input
-                    type="text"
-                    value={data.name}
-                    readOnly
-                    className="form-field w-full px-4 py-3 bg-gray-100 dark:bg-gray-600/50 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 cursor-not-allowed"
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label block mb-1">From Name</label>
-                  <input
-                    type="text"
-                    value={localForm.fromName}
-                    onChange={(e) => updateLocal('fromName', e.target.value)}
-                    className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] text-gray-900 dark:text-white"
-                    placeholder="e.g. Support Team, SMM Panel"
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label block mb-1">Subject</label>
-                  <input
-                    type="text"
-                    value={localForm.subject}
-                    onChange={(e) => updateLocal('subject', e.target.value)}
-                    className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] text-gray-900 dark:text-white"
-                    placeholder="Email subject"
-                  />
-                </div>
-
-                <div>
-                  <label className="form-label block mb-1">Template content (between header and footer)</label>
-                  <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                    <EmailTemplateEditor
-                      key={data.templateKey}
-                      editorKey={data.templateKey}
-                      value={localForm.bodyHtml}
-                      onChange={(newContent) => updateLocal('bodyHtml', newContent)}
-                      isDarkMode={isDarkMode}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    Use the rich text editor to format your content. Header and footer are added automatically when sending.
-                  </p>
-                  <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 px-4 py-3">
-                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Template variables work in <strong>From Name</strong>, <strong>Subject</strong>, and the <strong>Editor</strong> field. They are replaced when the email is sent:</p>
-                    <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 font-mono">
-                      <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{sitename}'}</code> Site name</li>
-                      <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{username}'}</code> User login / username</li>
-                      <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{user_id}'}</code> User ID</li>
-                      <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{user_full_name}'}</code> User full name</li>
-                      <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{user_email}'}</code> User email address</li>
-                    </ul>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="btn btn-primary flex items-center gap-2"
-                >
-                  {!saving && <FaSave className="w-4 h-4" />}
-                  {saving ? 'Saving...' : 'Save Template'}
-                </button>
+            <div style={{ padding: '0 24px 24px 24px' }} className="space-y-4">
+              <div>
+                <label className="form-label block mb-1">Template Title</label>
+                <input
+                  type="text"
+                  value={data.name}
+                  readOnly
+                  className="form-field w-full px-4 py-3 bg-gray-100 dark:bg-gray-600/50 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 cursor-not-allowed"
+                />
               </div>
+
+              <div>
+                <label className="form-label block mb-1">From Name</label>
+                <input
+                  type="text"
+                  value={localForm.fromName}
+                  onChange={(e) => updateLocal('fromName', e.target.value)}
+                  className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] text-gray-900 dark:text-white"
+                  placeholder="e.g. Support Team, SMM Panel"
+                />
+              </div>
+
+              <div>
+                <label className="form-label block mb-1">Subject</label>
+                <input
+                  type="text"
+                  value={localForm.subject}
+                  onChange={(e) => updateLocal('subject', e.target.value)}
+                  className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] text-gray-900 dark:text-white"
+                  placeholder="Email subject"
+                />
+              </div>
+
+              <div>
+                <label className="form-label block mb-1">Template content (between header and footer)</label>
+                <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                  <EmailTemplateEditor
+                    key={data.templateKey}
+                    editorKey={data.templateKey}
+                    value={localForm.bodyHtml}
+                    onChange={(newContent) => updateLocal('bodyHtml', newContent)}
+                    isDarkMode={isDarkMode}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Use the rich text editor to format your content. Header and footer are added automatically when sending.
+                </p>
+                <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 px-4 py-3">
+                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Template variables work in <strong>From Name</strong>, <strong>Subject</strong>, and the <strong>Editor</strong> field. They are replaced when the email is sent:</p>
+                  <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 font-mono">
+                    <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{sitename}'}</code> Site name</li>
+                    <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{site_url}'}</code> Site URL</li>
+                    <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{username}'}</code> User login / username</li>
+                    <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{user_id}'}</code> User ID</li>
+                    <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{user_full_name}'}</code> User full name</li>
+                    <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{user_email}'}</code> User email address</li>
+                    {data.templateKey === 'account_user_account_verification' && (
+                      <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{otp}'}</code> OTP code for email verification</li>
+                    )}
+                    {PAYMENT_TEMPLATE_KEYS.includes(data.templateKey) && (
+                      <>
+                        <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{fund_amount}'}</code> Funded amount (add_funds.amount)</li>
+                        <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{transaction_id}'}</code> Transaction ID (add_funds.transaction_id)</li>
+                      </>
+                    )}
+                    {data.templateVariables?.map((v) => (
+                      <li key={v.placeholder}>
+                        <code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{v.placeholder}</code> {v.description}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                {!saving && <FaSave className="w-4 h-4" />}
+                {saving ? 'Saving...' : 'Save Template'}
+              </button>
             </div>
           </div>
 

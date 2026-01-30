@@ -62,6 +62,46 @@ export const generatePasswordResetToken = async (email: string) => {
   return passwordResetToken;
 };
 
+export const generatePasswordResetOTP = async (email: string) => {
+  const userSettings = await db.userSettings.findFirst();
+  const resetLinkMax = userSettings?.resetLinkMax || 3;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const todayResetCount = await db.passwordResetTokens.count({
+    where: {
+      email,
+      createdAt: {
+        gte: today,
+        lt: tomorrow,
+      },
+    },
+  });
+
+  if (todayResetCount >= resetLinkMax) {
+    throw new Error(`You have reached the maximum number of password reset attempts (${resetLinkMax}) for today. Please try again tomorrow.`);
+  }
+
+  await db.passwordResetTokens.deleteMany({
+    where: { email },
+  });
+
+  const code = crypto.randomInt(100_000, 1000_000).toString();
+  const expires = new Date(new Date().getTime() + 1000 * 60 * 15);
+
+  const passwordResetToken = await db.passwordResetTokens.create({
+    data: {
+      token: code,
+      email,
+      expires,
+    },
+  });
+  return passwordResetToken;
+};
+
 export const generateVerificationToken = async (email: string) => {
   const token = uuidv4();
   const expires = new Date(new Date().getTime() + 1000 * 60 * 60 * 24);

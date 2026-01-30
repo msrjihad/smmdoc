@@ -199,7 +199,11 @@ export async function POST(request: NextRequest) {
       if (user.email) {
         const emailData = await resolveEmailContent(
           'transaction_payment_success',
-          templateContextFromUser(user)
+          {
+            ...templateContextFromUser(user),
+            fund_amount: String(result.transactionRecord.amount ?? ''),
+            transaction_id: result.transactionRecord.transactionId ?? String(result.transactionRecord.id),
+          }
         );
         if (emailData) {
           await sendMail({
@@ -209,17 +213,6 @@ export async function POST(request: NextRequest) {
             fromName: emailData.fromName ?? undefined,
           });
         }
-      }
-
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-      const adminEmailData = await resolveEmailContent('transaction_admin_auto_approved');
-      if (adminEmailData) {
-        await sendMail({
-          sendTo: adminEmail,
-          subject: adminEmailData.subject,
-          html: adminEmailData.html,
-          fromName: adminEmailData.fromName ?? undefined,
-        });
       }
     } catch (emailError) {
       console.error('Error sending notification emails:', emailError);

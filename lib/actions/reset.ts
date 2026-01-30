@@ -4,10 +4,12 @@ import { getUserByEmail } from "@/data/user";
 import * as z from "zod";
 import { db } from "../db";
 import { sendMail } from "../nodemailer";
-import { generatePasswordResetToken } from "../tokens";
+import { generatePasswordResetOTP } from "../tokens";
 import { resetSchema } from "../validators/auth.validator";
+import { resolveEmailContent } from "@/lib/email-templates/resolve-email-content";
+import { templateContextFromUser } from "@/lib/email-templates/replace-template-variables";
 
-export const resetPassword = async (values: z.infer<typeof resetSchema>) => {
+export const resetPassword = async (values: z.infer<typeof resetSchema>) => {
   const userSettings = await db.userSettings.findFirst();
   const resetPasswordEnabled = userSettings?.resetPasswordEnabled ?? true;
 
@@ -25,19 +27,38 @@ export const resetPassword = async (values: z.infer<typeof resetSchema>) => {
     return { success: false, error: "Email does not exist!" };
   }
 
-  try {
-    const resetPasswordToken = await generatePasswordResetToken(email);
-    await sendMail({
-      sendTo: email,
-      subject: "Reset Password",
-      html: `<a href="${process.env.NEXT_PUBLIC_APP_URL}/new-password?token=${resetPasswordToken.token}">Click here to reset your password</a>`,
-    });
+  try {
+    const resetPasswordToken = await generatePasswordResetOTP(email);
+    const emailData = await resolveEmailContent(
+      'account_user_account_verification',
+      {
+        ...templateContextFromUser(existingUser),
+        otp: resetPasswordToken.token,
+      }
+    );
+    if (emailData) {
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '');
+      const resetLink = `${appUrl}/new-password?token=${resetPasswordToken.token}`;
+      const htmlWithResetLink = emailData.html + `<p style="margin-top: 20px;">To reset your password, <a href="${resetLink}">click here</a>.</p>`;
+      await sendMail({
+        sendTo: email,
+        subject: emailData.subject,
+        html: htmlWithResetLink,
+        fromName: emailData.fromName ?? undefined,
+      });
+    } else {
+      await sendMail({
+        sendTo: email,
+        subject: "Reset Password - Verification Code",
+        html: `Your password reset code is: <strong>${resetPasswordToken.token}</strong>. Visit ${process.env.NEXT_PUBLIC_APP_URL}/new-password?token=${resetPasswordToken.token} to reset your password.`,
+      });
+    }
     return {
-    success: true,
-    error: "",
-    message: "Reset password link email sent",
-  };
-  } catch (error) {
+      success: true,
+      error: "",
+      message: "Reset password OTP sent to your email",
+    };
+  } catch (error) {
     if (error instanceof Error && error.message.includes('maximum number of password reset attempts')) {
       return { success: false, error: error.message };
     }

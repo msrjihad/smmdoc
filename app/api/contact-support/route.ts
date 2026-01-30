@@ -181,29 +181,8 @@ export async function POST(request: NextRequest) {
     const userUsername = session.user.username || 'User';
 
     try {
-      const { sendMail } = await import('@/lib/nodemailer');
-      const { resolveEmailContent } = await import('@/lib/email-templates/resolve-email-content');
       const { sendSMS } = await import('@/lib/sms');
       const { smsTemplates } = await import('@/lib/sms');
-      
-      const { getFromEmailAddress } = await import('@/lib/email-config');
-      const adminEmail = process.env.ADMIN_EMAIL || await getFromEmailAddress();
-      
-      if (adminEmail) {
-        const { templateContextFromUser } = await import('@/lib/email-templates/replace-template-variables');
-        const emailTemplate = await resolveEmailContent(
-          'contact-message_new_contact_message_admin',
-          templateContextFromUser(session.user)
-        );
-        if (emailTemplate) {
-          await sendMail({
-            sendTo: adminEmail,
-            subject: emailTemplate.subject,
-            html: emailTemplate.html,
-            fromName: emailTemplate.fromName ?? undefined,
-          });
-        }
-      }
       
       const adminPhone = process.env.ADMIN_PHONE;
       if (adminPhone) {

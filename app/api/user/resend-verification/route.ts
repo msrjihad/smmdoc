@@ -1,8 +1,10 @@
 import { auth } from '@/auth';
 import { ActivityLogger } from '@/lib/activity-logger';
 import { db } from '@/lib/db';
-import { sendVerificationEmail } from '@/lib/nodemailer';
-import { generateVerificationToken } from '@/lib/tokens';
+import { sendVerificationCodeEmail } from '@/lib/nodemailer';
+import { generateVerificationCode } from '@/lib/tokens';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
 import { NextResponse } from 'next/server';
 
 export async function POST() {
@@ -26,6 +28,7 @@ export async function POST() {
         id: true,
         email: true,
         username: true,
+        name: true,
         emailVerified: true
       }
     });
@@ -63,12 +66,12 @@ export async function POST() {
       );
     }
 
-    const verificationToken = await generateVerificationToken(user.email);
+    const verificationToken = await generateVerificationCode(user.email);
 
     if (!verificationToken) {
       return NextResponse.json(
         {
-          error: 'Failed to generate verification token',
+          error: 'Failed to generate verification code',
           success: false,
           data: null
         },
@@ -77,10 +80,28 @@ export async function POST() {
     }
 
     try {
-      await sendVerificationEmail(
-        verificationToken.email,
-        verificationToken.token
+      const emailData = await resolveEmailContent(
+        'account_user_account_verification',
+        {
+          ...templateContextFromUser(user),
+          otp: verificationToken.token,
+        }
       );
+      const emailSent = emailData
+        ? await sendVerificationCodeEmail(
+            user.email,
+            verificationToken.token,
+            user.name || user.username || undefined,
+            emailData
+          )
+        : await sendVerificationCodeEmail(
+            user.email,
+            verificationToken.token,
+            user.name || user.username || undefined
+          );
+      if (!emailSent) {
+        throw new Error('Failed to send verification email');
+      }
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
       return NextResponse.json(

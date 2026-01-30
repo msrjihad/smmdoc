@@ -1,5 +1,8 @@
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
+import { sendMail } from '@/lib/nodemailer';
 import { getPaymentGatewayName, getPaymentGatewayApiKey, getPaymentGatewayVerifyUrl } from '@/lib/payment-gateway-config';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -444,6 +447,52 @@ export async function POST(req: NextRequest) {
         amountUSD: amountUSD,
         gatewayAmount: paymentAmount
       });
+
+      if (paymentStatus === 'Processing' && user.email) {
+        try {
+          const emailData = await resolveEmailContent(
+            'transaction_user_payment_pending',
+            {
+              ...templateContextFromUser(user),
+              fund_amount: String(amountUSD ?? ''),
+              transaction_id: transactionId ?? invoice_id ?? '',
+            }
+          );
+          if (emailData) {
+            await sendMail({
+              sendTo: user.email,
+              subject: emailData.subject,
+              html: emailData.html,
+              fromName: emailData.fromName ?? undefined,
+            });
+          }
+        } catch (emailError) {
+          console.error('Error sending payment pending email:', emailError);
+        }
+      }
+
+      if (paymentStatus === 'Success' && user.email) {
+        try {
+          const emailData = await resolveEmailContent(
+            'transaction_payment_success',
+            {
+              ...templateContextFromUser(user),
+              fund_amount: String(amountUSD ?? ''),
+              transaction_id: transactionId ?? invoice_id ?? '',
+            }
+          );
+          if (emailData) {
+            await sendMail({
+              sendTo: user.email,
+              subject: emailData.subject,
+              html: emailData.html,
+              fromName: emailData.fromName ?? undefined,
+            });
+          }
+        } catch (emailError) {
+          console.error('Error sending payment success email:', emailError);
+        }
+      }
 
       return NextResponse.json({
         success: true,

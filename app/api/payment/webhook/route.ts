@@ -1,4 +1,7 @@
-﻿import { db } from '@/lib/db';
+import { db } from '@/lib/db';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
+import { sendMail } from '@/lib/nodemailer';
 import { sendTransactionSuccessNotification } from '@/lib/notifications/user-notifications';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -129,6 +132,52 @@ export async function POST(req: NextRequest) {
             );
           } catch (notifError) {
             console.error('Error sending transaction success notification:', notifError);
+          }
+
+          if (payment.user?.email) {
+            try {
+              const emailData = await resolveEmailContent(
+                'transaction_payment_success',
+                {
+                  ...templateContextFromUser(payment.user),
+                  fund_amount: String(payment.amount ?? ''),
+                  transaction_id: transaction_id ?? payment.transactionId ?? '',
+                }
+              );
+              if (emailData) {
+                await sendMail({
+                  sendTo: payment.user.email,
+                  subject: emailData.subject,
+                  html: emailData.html,
+                  fromName: emailData.fromName ?? undefined,
+                });
+              }
+            } catch (emailError) {
+              console.error('Error sending payment success email:', emailError);
+            }
+          }
+        }
+
+        if (paymentStatus === "Processing" && payment.user?.email) {
+          try {
+            const emailData = await resolveEmailContent(
+              'transaction_user_payment_pending',
+              {
+                ...templateContextFromUser(payment.user),
+                fund_amount: String(payment.amount ?? ''),
+                transaction_id: transaction_id ?? payment.transactionId ?? '',
+              }
+            );
+            if (emailData) {
+              await sendMail({
+                sendTo: payment.user.email,
+                subject: emailData.subject,
+                html: emailData.html,
+                fromName: emailData.fromName ?? undefined,
+              });
+            }
+          } catch (emailError) {
+            console.error('Error sending payment pending email:', emailError);
           }
         }
 

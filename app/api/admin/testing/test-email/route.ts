@@ -7,8 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const TEMPLATE_KEYS: Record<string, string> = {
   payment_success: 'transaction_payment_success',
   payment_cancelled: 'transaction_payment_cancelled',
-  admin_pending: 'transaction_admin_pending_review',
-  admin_approved: 'transaction_admin_auto_approved',
+  payment_pending: 'transaction_user_payment_pending',
 };
 
 export async function POST(req: NextRequest) {
@@ -34,10 +33,11 @@ export async function POST(req: NextRequest) {
     }
     
     const testEmail = session.user.email || process.env.ADMIN_EMAIL || 'admin@example.com';
-    const emailData = await resolveEmailContent(
-      templateKey,
-      templateContextFromUser(session.user)
-    );
+    const baseContext = templateContextFromUser(session.user);
+    const context = ['transaction_payment_success', 'transaction_payment_cancelled', 'transaction_user_payment_pending'].includes(templateKey)
+      ? { ...baseContext, fund_amount: '100.00', transaction_id: 'TXN-12345' }
+      : baseContext;
+    const emailData = await resolveEmailContent(templateKey, context);
     
     if (!emailData) {
       return NextResponse.json(

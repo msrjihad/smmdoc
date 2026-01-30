@@ -145,8 +145,18 @@ export const sendPasswordResetEmail = async (
 export const sendVerificationCodeEmail = async (
   email: string,
   code: string,
-  userName?: string
+  userName?: string,
+  customEmail?: { subject: string; fromName: string | null; html: string }
 ): Promise<boolean> => {
+  if (customEmail) {
+    return await sendMail({
+      sendTo: email,
+      subject: customEmail.subject,
+      html: customEmail.html,
+      fromName: customEmail.fromName,
+    });
+  }
+
   const name = userName || 'User';
   const appName = await getAppName();
 

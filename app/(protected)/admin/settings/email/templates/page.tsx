@@ -2,7 +2,7 @@
 
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   FaEdit,
   FaEnvelope,
@@ -14,6 +14,8 @@ import {
   FaPlug,
   FaUser,
   FaCreditCard,
+  FaToggleOn,
+  FaToggleOff,
 } from 'react-icons/fa';
 import Link from 'next/link';
 import type { EmailCategoryId } from '@/app/api/admin/email-templates/template-data';
@@ -21,6 +23,7 @@ import {
   type AudienceRole,
   PREDEFINED_EMAIL_CATEGORIES,
   PREDEFINED_EMAIL_TEMPLATES,
+  getPredefinedTemplateById,
 } from '@/app/api/admin/email-templates/template-data';
 
 const AUDIENCE_FILTER_OPTIONS: Array<{ value: '' | AudienceRole; label: string }> = [
@@ -71,10 +74,55 @@ export default function EmailTemplatesPage() {
   const [audienceFilter, setAudienceFilter] = useState<'' | AudienceRole>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [templateStatuses, setTemplateStatuses] = useState<Record<string, boolean>>({});
+  const [statusLoading, setStatusLoading] = useState<Record<string, boolean>>({});
+  const [emailSystemEnabled, setEmailSystemEnabled] = useState<boolean>(true);
 
   useEffect(() => {
     setPageTitle('Email Templates', appName);
   }, [appName]);
+
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      try {
+        const res = await fetch('/api/admin/email-templates/statuses');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data) {
+            setTemplateStatuses(json.data);
+          }
+          if (typeof json.emailSystemEnabled === 'boolean') {
+            setEmailSystemEnabled(json.emailSystemEnabled);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch template statuses', e);
+      }
+    };
+    fetchStatuses();
+  }, []);
+
+  const toggleTemplateStatus = useCallback(async (templateKey: string) => {
+    if (!emailSystemEnabled) return;
+    const current = templateStatuses[templateKey] ?? true;
+    const next = !current;
+    setStatusLoading((prev) => ({ ...prev, [templateKey]: true }));
+    try {
+      const res = await fetch('/api/admin/email-templates/toggle-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateKey, isActive: next }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setTemplateStatuses((prev) => ({ ...prev, [templateKey]: next }));
+      }
+    } catch (e) {
+      console.error('Failed to toggle template status', e);
+    } finally {
+      setStatusLoading((prev) => ({ ...prev, [templateKey]: false }));
+    }
+  }, [templateStatuses, emailSystemEnabled]);
 
   const filteredCategories = useMemo(() => {
     let list = EMAIL_TEMPLATE_CATEGORIES;
@@ -97,6 +145,17 @@ export default function EmailTemplatesPage() {
   return (
     <div className="page-container">
       <div className="page-content">
+        {!emailSystemEnabled && (
+          <div className="mb-6 p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+            <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+              Email system is disabled. No emails will be sent until you enable <strong>Email Notification</strong> in{' '}
+              <Link href="/admin/settings/integrations" className="underline hover:no-underline">
+                Admin → Settings → Integrations
+              </Link>{' '}
+              (Notification box).
+            </p>
+          </div>
+        )}
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div className="flex flex-wrap items-center gap-2 w-full md:w-auto mb-2 md:mb-0">
@@ -156,6 +215,9 @@ export default function EmailTemplatesPage() {
               </div>
               <div className="flex-1">
                 <h3 className="card-title">Email Templates</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Use the Status toggle to enable or disable each template. Disabled templates will not trigger emails. Requires Email Notification enabled in Admin → Settings → Integrations.
+                </p>
               </div>
             </div>
           </div>
@@ -165,6 +227,9 @@ export default function EmailTemplatesPage() {
               <table className="w-full text-sm min-w-[640px]">
                 <thead className="sticky top-0 bg-white dark:bg-[var(--card-bg)] border-b dark:border-gray-700 z-10">
                   <tr>
+                    <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
+                      Status
+                    </th>
                     <th className="text-left p-3 font-semibold text-gray-900 dark:text-gray-100">
                       Template Name
                     </th>
@@ -202,11 +267,47 @@ export default function EmailTemplatesPage() {
                             key: String(category.id),
                           },
                         ];
-                    return rows.map(({ category: cat, templateName, templateDescription, templateId, key }) => (
+                    return rows.map(({ category: cat, templateName, templateDescription, templateId, key }) => {
+                      const templateKeys = templateId != null
+                        ? [getPredefinedTemplateById(templateId)?.templateKey].filter(Boolean) as string[]
+                        : (cat.templateIds ?? []).map((id) => getPredefinedTemplateById(id)?.templateKey).filter(Boolean) as string[];
+                      return (
                       <tr
                         key={key}
                         className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[var(--card-bg)] transition-colors duration-200"
                       >
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-2">
+                            {templateKeys.map((templateKey) => {
+                              const isActive = templateStatuses[templateKey] ?? true;
+                              const isLoading = statusLoading[templateKey] ?? false;
+                              return (
+                                <button
+                                  key={templateKey}
+                                  type="button"
+                                  onClick={() => toggleTemplateStatus(templateKey)}
+                                  disabled={isLoading || !emailSystemEnabled}
+                                  className={`p-1 rounded transition-colors ${
+                                    isLoading
+                                      ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                                      : isActive
+                                      ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'
+                                      : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30'
+                                  }`}
+                                  title={!emailSystemEnabled ? 'Enable Email Notification in Integrations first' : isActive ? 'Disable template' : 'Enable template'}
+                                >
+                                  {isLoading ? (
+                                    <span className="inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                  ) : isActive ? (
+                                    <FaToggleOn className="h-5 w-5" />
+                                  ) : (
+                                    <FaToggleOff className="h-5 w-5" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </td>
                         <td className="p-3">
                           <div className="flex flex-wrap gap-1">
                             {(templateName ? [templateName] : cat.templates).map((name) => (
@@ -256,7 +357,8 @@ export default function EmailTemplatesPage() {
                           </Link>
                         </td>
                       </tr>
-                    ));
+                    );
+                    });
                   })}
                 </tbody>
               </table>

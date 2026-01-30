@@ -3,6 +3,8 @@ import { db } from '@/lib/db';
 import {
   getPredefinedTemplateById,
   getPredefinedCategory,
+  getTemplateTrigger,
+  getTemplateSpecificVariables,
 } from '@/app/api/admin/email-templates/template-data';
 import { getDefaultContent } from '@/lib/email-templates/get-default-content';
 import { NextRequest, NextResponse } from 'next/server';
@@ -62,6 +64,8 @@ export async function GET(
         subject,
         bodyHtml,
         isCustom: !!custom,
+        trigger: getTemplateTrigger(predefined.templateKey),
+        templateVariables: getTemplateSpecificVariables(predefined.templateKey),
       },
     });
   } catch (error) {

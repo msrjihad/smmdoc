@@ -1,6 +1,9 @@
 import { auth } from '@/auth';
 import { ActivityLogger, getClientIP } from '@/lib/activity-logger';
 import { db } from '@/lib/db';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
+import { sendMail } from '@/lib/nodemailer';
 import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { sendApiKeyChangedNotification } from '@/lib/notifications/user-notifications';
@@ -50,6 +53,31 @@ export async function POST(req: NextRequest) {
     sendApiKeyChangedNotification(parseInt(session.user.id), false).catch(err => {
       console.error('Failed to send API key changed notification:', err);
     });
+
+    if (session.user.email) {
+      try {
+        const userForContext = {
+          id: session.user.id,
+          username: session.user.username ?? session.user.email?.split('@')[0] ?? `user${session.user.id}`,
+          name: session.user.name ?? null,
+          email: session.user.email,
+        };
+        const emailData = await resolveEmailContent(
+          'api_user_api_key_generated',
+          templateContextFromUser(userForContext)
+        );
+        if (emailData) {
+          await sendMail({
+            sendTo: session.user.email,
+            subject: emailData.subject,
+            html: emailData.html,
+            fromName: emailData.fromName ?? undefined,
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending API key generated email:', emailError);
+      }
+    }
 
     return NextResponse.json(
       {

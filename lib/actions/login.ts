@@ -10,9 +10,11 @@ import bcrypt from 'bcryptjs';
 import { AuthError } from 'next-auth';
 import { ActivityLogger } from '../activity-logger';
 import { db } from '../db';
-import { sendMail } from '../nodemailer';
+import { sendMail, sendVerificationCodeEmail } from '../nodemailer';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
 import { DEFAULT_SIGN_IN_REDIRECT } from '../routes';
-import { generateTwoFactorToken, generateVerificationToken } from '../tokens';
+import { generateTwoFactorToken, generateVerificationCode } from '../tokens';
 import { signInSchema } from '../validators/auth.validator';
 import { verifyReCAPTCHA, getReCAPTCHASettings } from '../recaptcha';
 
@@ -122,16 +124,85 @@ export const login = async (
     }
   }
 
+  if (existingUser.isTwoFactorEnabled) {
+    if (!code || !code.trim()) {
+      const twoFactorToken = await generateTwoFactorToken(existingUser.email);
+      if (twoFactorToken) {
+        const emailData = await resolveEmailContent(
+          'account_user_account_verification',
+          {
+            ...templateContextFromUser(existingUser),
+            otp: twoFactorToken.token,
+          }
+        );
+        const emailSent = emailData
+          ? await sendVerificationCodeEmail(
+              existingUser.email,
+              twoFactorToken.token,
+              existingUser.name || existingUser.username || undefined,
+              emailData
+            )
+          : await sendVerificationCodeEmail(
+              existingUser.email,
+              twoFactorToken.token,
+              existingUser.name || existingUser.username || undefined
+            );
+        if (!emailSent) {
+          return { success: false, error: 'Failed to send 2FA code. Please try again.' };
+        }
+      }
+      return {
+        success: true,
+        message: '2FA code sent to your email',
+        twoFactor: true,
+      };
+    }
+    const twoFactorToken = await getTwoFactorTokenByEmail(existingUser.email);
+    if (!twoFactorToken || twoFactorToken.token !== code.trim()) {
+      return { success: false, error: 'Invalid 2FA code' };
+    }
+    const hasExpired = new Date(twoFactorToken.expires) < new Date();
+    if (hasExpired) {
+      return { success: false, error: '2FA code has expired. Please request a new one.' };
+    }
+    await db.twoFactorTokens.delete({ where: { id: twoFactorToken.id } });
+    const twoFactorConfirmation = await getTwoFactorConfirmationByUserId(String(existingUser.id));
+    if (!twoFactorConfirmation) {
+      await db.twoFactorConfirmations.create({
+        data: { userId: existingUser.id },
+      });
+    }
+  }
+
   if (!existingUser.emailVerified) {
-    const verificationToken = await generateVerificationToken(
+    const verificationToken = await generateVerificationCode(
       existingUser.email
     );
 
-    await sendMail({
-      sendTo: existingUser.email,
-      subject: 'Email Verification',
-      html: `<a href="${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${verificationToken?.token}">Click here to verify your email</a>`,
-    });
+    if (verificationToken) {
+      const emailData = await resolveEmailContent(
+        'account_user_account_verification',
+        {
+          ...templateContextFromUser(existingUser),
+          otp: verificationToken.token,
+        }
+      );
+      const emailSent = emailData
+        ? await sendVerificationCodeEmail(
+            existingUser.email,
+            verificationToken.token,
+            existingUser.name || existingUser.username || undefined,
+            emailData
+          )
+        : await sendVerificationCodeEmail(
+            existingUser.email,
+            verificationToken.token,
+            existingUser.name || existingUser.username || undefined
+          );
+      if (!emailSent) {
+        return { success: false, error: 'Failed to send verification email. Please try again.' };
+      }
+    }
     return { 
       success: true, 
       message: 'Confirmation email sent!', 

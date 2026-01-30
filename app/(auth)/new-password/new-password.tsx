@@ -9,15 +9,30 @@ import {
 } from '@/lib/validators/auth.validator';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, useTransition } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { FaLock } from 'react-icons/fa';
 
+const TOKEN_STORAGE_KEY = 'passwordResetToken';
+
 export default function NewPasswordForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams?.get('token') || '';
+  const [token, setToken] = useState('');
+  const [hasCheckedToken, setHasCheckedToken] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    const urlToken = searchParams?.get('token') || '';
+    const storedToken = typeof window !== 'undefined' ? sessionStorage.getItem(TOKEN_STORAGE_KEY) : null;
+    const resolvedToken = storedToken || urlToken;
+    setToken(resolvedToken);
+    setHasCheckedToken(true);
+    if (!resolvedToken) {
+      router.replace('/reset-password');
+    }
+  }, [searchParams, router]);
   const [error, setError] = useState<string | undefined>('');
   const [success, setSuccess] = useState<string | undefined>('');
 
@@ -40,6 +55,12 @@ export default function NewPasswordForm() {
           if (data?.message) {
             setSuccess(data.message);
           }
+          if (data?.success) {
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+            }
+            router.push('/sign-in');
+          }
         })
         .catch((err) => {
           setError('An unexpected error occurred. Please try again.');
@@ -47,6 +68,14 @@ export default function NewPasswordForm() {
         });
     });
   };
+
+  if (!hasCheckedToken || !token) {
+    return (
+      <div className="bg-white dark:bg-gray-800/50 dark:backdrop-blur-sm w-full py-5 px-4 md:p-8 md:rounded-2xl md:shadow-lg md:border md:border-gray-200 md:dark:border-gray-700 transition-all duration-200 flex items-center justify-center min-h-[200px]">
+        <p className="text-gray-600 dark:text-gray-300">Redirecting...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-gray-800/50 dark:backdrop-blur-sm w-full py-5 px-4 md:p-8 md:rounded-2xl md:shadow-lg md:border md:border-gray-200 md:dark:border-gray-700 transition-all duration-200">

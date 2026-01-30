@@ -82,26 +82,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    try {
-      const { sendMail } = await import('@/lib/nodemailer');
-      const { resolveEmailContent } = await import('@/lib/email-templates/resolve-email-content');
-      const emailTemplate = await resolveEmailContent('contact-message_new_contact_message_admin', {
-        user_full_name: name,
-        user_email: email,
-      });
-      if (emailTemplate) {
-        await sendMail({
-          sendTo: adminEmail,
-          subject: emailTemplate.subject,
-          html: emailTemplate.html,
-          fromName: emailTemplate.fromName ?? undefined,
-        });
-      }
-      
-      console.log('Contact form email sent to admin:', adminEmail);
-    } catch (emailError) {
-      console.error('Error sending contact form email to admin:', emailError);
-    }
 
     console.log('Contact form submission received:', {
       name,

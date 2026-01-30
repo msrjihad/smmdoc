@@ -18,9 +18,11 @@ export async function resolveEmailContent(
   const custom = await getCustomEmailTemplate(templateKey);
   if (!custom) return null;
   const layoutData = await getEmailLayoutDataFromSettings();
+  const appUrl = layoutData.appUrl || process.env.NEXT_PUBLIC_APP_URL || '';
   const mergedContext: EmailTemplateContext = {
-    sitename: layoutData.siteName,
     ...context,
+    sitename: layoutData.siteName,
+    site_url: appUrl.replace(/\/$/, ''),
   };
   const subject = replaceTemplateVariables(custom.subject, mergedContext);
   const fromName = custom.fromName

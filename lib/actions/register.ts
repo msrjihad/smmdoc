@@ -5,6 +5,8 @@ import * as z from "zod";
 import { getUserByEmail } from "@/data/user";
 import { db } from "../db";
 import { sendVerificationCodeEmail } from "../nodemailer";
+import { resolveEmailContent } from "@/lib/email-templates/resolve-email-content";
+import { templateContextFromUser } from "@/lib/email-templates/replace-template-variables";
 import { generateVerificationCode } from "../tokens";
 import { signUpSchema, createSignUpSchema } from "../validators/auth.validator";
 import { verifyReCAPTCHA, getReCAPTCHASettings } from "../recaptcha";
@@ -113,11 +115,25 @@ export const register = async (values: any & { recaptchaToken?: string }) => {
     if (emailConfirmationEnabled) {
       const verificationToken = await generateVerificationCode(email);
       if (verificationToken) {
-        const emailSent = await sendVerificationCodeEmail(
-          email,
-          verificationToken.token,
-          userName || username
+        const emailData = await resolveEmailContent(
+          'account_user_account_verification',
+          {
+            ...templateContextFromUser({ id: newUser.id, username, name: userName, email }),
+            otp: verificationToken.token,
+          }
         );
+        const emailSent = emailData
+          ? await sendVerificationCodeEmail(
+              email,
+              verificationToken.token,
+              userName || username,
+              emailData
+            )
+          : await sendVerificationCodeEmail(
+              email,
+              verificationToken.token,
+              userName || username
+            );
 
         if (!emailSent) {
           return { success: false, error: "Failed to send verification code email. Please try again." };

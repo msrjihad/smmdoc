@@ -47,7 +47,14 @@ export default {
           }
 
           const passwordsMatch = await bcrypt.compare(password, user.password);
-          if (passwordsMatch) return user;
+          if (passwordsMatch) {
+            const fullUser = await getUserById(user.id);
+            if (fullUser?.isTwoFactorEnabled) {
+              const twoFactorConfirmation = await getTwoFactorConfirmationByUserId(String(user.id));
+              if (!twoFactorConfirmation) return null;
+            }
+            return user;
+          }
         }
         return null;
       },
@@ -85,6 +92,12 @@ export default {
 
 
       console.log(`Successful login: ${existingUser.email} (Role: ${existingUser.role})`);
+
+      if (existingUser.isTwoFactorEnabled) {
+        await db.twoFactorConfirmations.deleteMany({
+          where: { userId: existingUser.id },
+        });
+      }
 
       try {
         const username = existingUser.username || existingUser.email?.split('@')[0] || `user${existingUser.id}`;

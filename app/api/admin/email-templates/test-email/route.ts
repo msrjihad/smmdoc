@@ -52,10 +52,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const emailData = await resolveEmailContent(
-      templateKey,
-      templateContextFromUser(session.user)
-    );
+    const context = templateContextFromUser(session.user);
+    if (templateKey === 'account_user_account_verification') {
+      (context as { otp?: string }).otp = '123456';
+    }
+    if (['transaction_payment_success', 'transaction_payment_cancelled', 'transaction_user_payment_pending'].includes(templateKey)) {
+      (context as { fund_amount?: string }).fund_amount = '100.00';
+      (context as { transaction_id?: string }).transaction_id = 'TXN-12345';
+    }
+    if (templateKey === 'contact-message_admin_reply_to_user') {
+      (context as { user_message?: string }).user_message = 'Subject: Sample inquiry\n\nHello, I had a question about my order. Can you please help?';
+      (context as { contact_message_id?: string }).contact_message_id = '12345';
+      (context as { message_subject?: string }).message_subject = 'Sample inquiry';
+      (context as { admin_message?: string }).admin_message = 'Thank you for your message. We have reviewed your inquiry and here is our response.';
+    }
+    const emailData = await resolveEmailContent(templateKey, context);
 
     if (!emailData) {
       return NextResponse.json(

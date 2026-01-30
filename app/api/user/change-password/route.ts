@@ -3,6 +3,9 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { ActivityLogger } from '@/lib/activity-logger';
 import bcrypt from 'bcryptjs';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
+import { sendMail } from '@/lib/nodemailer';
 
 export async function POST(req: NextRequest) {
   try {
@@ -50,7 +53,8 @@ export async function POST(req: NextRequest) {
         id: true,
         password: true,
         email: true,
-        username: true
+        username: true,
+        name: true
       }
     });
 
@@ -95,6 +99,23 @@ export async function POST(req: NextRequest) {
       );
     } catch (error) {
       console.error('Failed to log password change activity:', error);
+    }
+
+    try {
+      const emailData = await resolveEmailContent(
+        'account_user_password_changed',
+        templateContextFromUser(user)
+      );
+      if (emailData && user.email) {
+        await sendMail({
+          sendTo: user.email,
+          subject: emailData.subject,
+          html: emailData.html,
+          fromName: emailData.fromName ?? undefined,
+        });
+      }
+    } catch (emailError) {
+      console.error('Failed to send Password Changed email:', emailError);
     }
 
     return NextResponse.json(

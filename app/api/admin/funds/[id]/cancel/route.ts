@@ -59,7 +59,11 @@ export async function POST(
       if (transaction.user.email) {
         const emailData = await resolveEmailContent(
           'transaction_payment_cancelled',
-          templateContextFromUser(transaction.user)
+          {
+            ...templateContextFromUser(transaction.user),
+            fund_amount: String(transaction.amount ?? ''),
+            transaction_id: transaction.transactionId ?? String(transaction.id),
+          }
         );
         if (emailData) {
           await sendMail({

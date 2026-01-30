@@ -90,7 +90,11 @@ export async function POST(
       if (transaction.user.email) {
         const emailData = await resolveEmailContent(
           'transaction_payment_success',
-          templateContextFromUser(transaction.user)
+          {
+            ...templateContextFromUser(transaction.user),
+            fund_amount: String(transaction.amount ?? ''),
+            transaction_id: transaction.transactionId ?? String(transaction.id),
+          }
         );
         if (emailData) {
           await sendMail({
@@ -102,17 +106,6 @@ export async function POST(
         }
       }
 
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-      const adminEmailData = await resolveEmailContent('transaction_admin_auto_approved');
-      if (adminEmailData) {
-        await sendMail({
-          sendTo: adminEmail,
-          subject: adminEmailData.subject,
-          html: adminEmailData.html,
-          fromName: adminEmailData.fromName ?? undefined,
-        });
-      }
-      
       return NextResponse.json({
         success: true,
         message: 'Transaction approved successfully',

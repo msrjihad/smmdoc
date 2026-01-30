@@ -18,14 +18,17 @@ export async function GET() {
     const headerHtml = emailHeader(layoutData);
     const footerHtml = emailFooter(layoutData);
 
+    const appUrl = layoutData.appUrl || process.env.NEXT_PUBLIC_APP_URL || '';
     let previewVariableContext: {
       sitename: string;
+      site_url: string;
       username: string;
       user_full_name: string;
       user_email: string;
       user_id: string;
     } = {
       sitename: layoutData.siteName || 'SMM Panel',
+      site_url: appUrl.replace(/\/$/, ''),
       username: 'johndoe',
       user_full_name: 'John Doe',
       user_email: 'user@example.com',
@@ -41,6 +44,7 @@ export async function GET() {
       if (sampleUser) {
         previewVariableContext = {
           sitename: layoutData.siteName || 'SMM Panel',
+          site_url: appUrl.replace(/\/$/, ''),
           username: sampleUser.username ?? '',
           user_full_name: sampleUser.name ?? '',
           user_email: sampleUser.email ?? '',

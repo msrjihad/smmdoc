@@ -138,9 +138,16 @@ export async function PATCH(
 
     try {
       if (result.currentUser.email && notificationMessage) {
+        const usdAmount = typeof transaction.amount === 'object' && transaction.amount !== null
+          ? Number(transaction.amount)
+          : Number(transaction.amount || 0);
         const emailData = await resolveEmailContent(
           'transaction_payment_success',
-          templateContextFromUser(result.currentUser)
+          {
+            ...templateContextFromUser(result.currentUser),
+            fund_amount: String(usdAmount),
+            transaction_id: transaction.transactionId ?? String(transaction.id),
+          }
         );
         if (emailData) {
           await sendMail({
@@ -150,17 +157,6 @@ export async function PATCH(
             fromName: emailData.fromName ?? undefined,
           });
         }
-      }
-
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-      const adminEmailData = await resolveEmailContent('transaction_admin_auto_approved');
-      if (adminEmailData) {
-        await sendMail({
-          sendTo: adminEmail,
-          subject: adminEmailData.subject,
-          html: adminEmailData.html,
-          fromName: adminEmailData.fromName ?? undefined,
-        });
       }
     } catch (emailError) {
       console.error('Error sending notification emails:', emailError);

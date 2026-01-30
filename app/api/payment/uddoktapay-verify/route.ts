@@ -200,7 +200,11 @@ export async function POST(req: NextRequest) {
           if (payment.user.email) {
             const emailData = await resolveEmailContent(
               'transaction_payment_success',
-              templateContextFromUser(payment.user)
+              {
+                ...templateContextFromUser(payment.user),
+                fund_amount: String(payment.amount ?? ''),
+                transaction_id: transaction_id ?? '',
+              }
             );
             if (emailData) {
               await sendMail({
@@ -210,17 +214,6 @@ export async function POST(req: NextRequest) {
                 fromName: emailData.fromName ?? undefined,
               });
             }
-          }
-
-          const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-          const adminEmailData = await resolveEmailContent('transaction_admin_auto_approved');
-          if (adminEmailData) {
-            await sendMail({
-              sendTo: adminEmail,
-              subject: adminEmailData.subject,
-              html: adminEmailData.html,
-              fromName: adminEmailData.fromName ?? undefined,
-            });
           }
 
           if (phone && payment.user) {
@@ -275,15 +268,27 @@ export async function POST(req: NextRequest) {
           }
         });
 
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
-        const adminEmailData = await resolveEmailContent('transaction_admin_pending_review');
-        if (adminEmailData) {
-          await sendMail({
-            sendTo: adminEmail,
-            subject: adminEmailData.subject,
-            html: adminEmailData.html,
-            fromName: adminEmailData.fromName ?? undefined,
-          });
+        if (payment.user?.email) {
+          try {
+            const emailData = await resolveEmailContent(
+              'transaction_user_payment_pending',
+              {
+                ...templateContextFromUser(payment.user),
+                fund_amount: String(payment.amount ?? ''),
+                transaction_id: transaction_id ?? '',
+              }
+            );
+            if (emailData) {
+              await sendMail({
+                sendTo: payment.user.email,
+                subject: emailData.subject,
+                html: emailData.html,
+                fromName: emailData.fromName ?? undefined,
+              });
+            }
+          } catch (emailError) {
+            console.error('Error sending payment pending email:', emailError);
+          }
         }
 
         return NextResponse.json({
@@ -307,6 +312,29 @@ export async function POST(req: NextRequest) {
             paymentMethod: gatewayVerificationData?.payment_method || payment.paymentMethod || null,
           }
         });
+
+        if (payment.user?.email) {
+          try {
+            const emailData = await resolveEmailContent(
+              'transaction_payment_cancelled',
+              {
+                ...templateContextFromUser(payment.user),
+                fund_amount: String(payment.amount ?? ''),
+                transaction_id: transaction_id ?? gatewayVerificationData?.transaction_id ?? '',
+              }
+            );
+            if (emailData) {
+              await sendMail({
+                sendTo: payment.user.email,
+                subject: emailData.subject,
+                html: emailData.html,
+                fromName: emailData.fromName ?? undefined,
+              });
+            }
+          } catch (emailError) {
+            console.error('Error sending payment cancelled email:', emailError);
+          }
+        }
 
         return NextResponse.json({
           status: "CANCELLED",

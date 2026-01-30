@@ -16,6 +16,7 @@ async function main() {
         templateKey: slot.templateKey,
         subject: slot.name,
         bodyHtml: DEFAULT_BODY,
+        isActive: true,
       },
       update: {},
     });

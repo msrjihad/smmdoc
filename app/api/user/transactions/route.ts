@@ -1,5 +1,8 @@
-﻿import { auth } from '@/auth';
+import { auth } from '@/auth';
 import { db } from '@/lib/db';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
+import { sendMail } from '@/lib/nodemailer';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -231,6 +234,29 @@ export async function GET(request: NextRequest) {
 
                   if (process.env.NODE_ENV === 'development') {
                     console.log(`User ${paymentRecord.userId} balance updated. Original: ${originalAmount}, Bonus: ${bonusAmount}, Total: ${totalAmountToAdd}`);
+                  }
+
+                  if (paymentRecord.user.email) {
+                    try {
+                      const emailData = await resolveEmailContent(
+                        'transaction_payment_success',
+                        {
+                          ...templateContextFromUser(paymentRecord.user),
+                          fund_amount: String(paymentRecord.amount ?? ''),
+                          transaction_id: updateData.transactionId ?? transaction.transactionId ?? paymentRecord.transactionId ?? '',
+                        }
+                      );
+                      if (emailData) {
+                        await sendMail({
+                          sendTo: paymentRecord.user.email,
+                          subject: emailData.subject,
+                          html: emailData.html,
+                          fromName: emailData.fromName ?? undefined,
+                        });
+                      }
+                    } catch (emailError) {
+                      console.error('Error sending payment success email:', emailError);
+                    }
                   }
                 }
 

@@ -182,9 +182,19 @@ export async function PUT(
               }
               
               const { templateContextFromUser } = await import('@/lib/email-templates/replace-template-variables');
+              const userMessagesText = [
+                contactMessage.subject ? `Subject: ${contactMessage.subject}` : null,
+                contactMessage.message || '',
+              ].filter(Boolean).join('\n\n');
               const emailTemplate = await resolveEmailContent(
                 'contact-message_admin_reply_to_user',
-                templateContextFromUser(contactMessage.user)
+                {
+                  ...templateContextFromUser(contactMessage.user),
+                  user_message: userMessagesText,
+                  contact_message_id: String(contactMessage.id),
+                  message_subject: contactMessage.subject ?? '',
+                  admin_message: adminReply.trim(),
+                }
               );
               if (emailTemplate) {
                 await sendMail({

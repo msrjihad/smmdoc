@@ -9,6 +9,9 @@ import { generateVerificationCode } from "../tokens";
 import { sendVerificationCodeEmail } from "../nodemailer";
 import { ActivityLogger } from "../activity-logger";
 import { DEFAULT_SIGN_IN_REDIRECT } from "../routes";
+import { resolveEmailContent } from "@/lib/email-templates/resolve-email-content";
+import { templateContextFromUser } from "@/lib/email-templates/replace-template-variables";
+import { sendMail } from "@/lib/nodemailer";
 
 export const verificationConfirm = async (token: string) => {
   const existingToken = await getVerificationTokenByToken(token);
@@ -29,6 +32,24 @@ export const verificationConfirm = async (token: string) => {
     data: { emailVerified: new Date(), email: existingToken.email },
   });
   await db.verificationTokens.delete({ where: { id: existingToken.id } });
+
+  try {
+    const emailData = await resolveEmailContent(
+      'welcome',
+      templateContextFromUser(existingUser)
+    );
+    if (emailData && existingUser.email) {
+      await sendMail({
+        sendTo: existingUser.email,
+        subject: emailData.subject,
+        html: emailData.html,
+        fromName: emailData.fromName ?? undefined,
+      });
+    }
+  } catch (emailError) {
+    console.error('Failed to send Greetings email after verification:', emailError);
+  }
+
   return { success: true, error: "", message: "Email verified" };
 };
 
@@ -47,11 +68,26 @@ export const sendVerificationCode = async (email: string) => {
     return { success: false, error: "Failed to generate verification code" };
   }
 
-  const emailSent = await sendVerificationCodeEmail(
-    email,
-    verificationToken.token,
-    existingUser.name || existingUser.username || undefined
+  const emailData = await resolveEmailContent(
+    'account_user_account_verification',
+    {
+      ...templateContextFromUser(existingUser),
+      otp: verificationToken.token,
+    }
   );
+
+  const emailSent = emailData
+    ? await sendVerificationCodeEmail(
+        email,
+        verificationToken.token,
+        existingUser.name || existingUser.username || undefined,
+        emailData
+      )
+    : await sendVerificationCodeEmail(
+        email,
+        verificationToken.token,
+        existingUser.name || existingUser.username || undefined
+      );
 
   if (!emailSent) {
     return { success: false, error: "Failed to send verification code email" };
@@ -125,6 +161,23 @@ export const verifyCodeAndLogin = async (email: string, code: string) => {
     where: { id: existingUser.id },
     data: { emailVerified: new Date(), email: existingToken.email },
   });
+
+  try {
+    const emailData = await resolveEmailContent(
+      'welcome',
+      templateContextFromUser(existingUser)
+    );
+    if (emailData && existingUser.email) {
+      await sendMail({
+        sendTo: existingUser.email,
+        subject: emailData.subject,
+        html: emailData.html,
+        fromName: emailData.fromName ?? undefined,
+      });
+    }
+  } catch (emailError) {
+    console.error('Failed to send Greetings email after verification:', emailError);
+  }
 
   try {
     const isAdmin = existingUser.role === 'admin';

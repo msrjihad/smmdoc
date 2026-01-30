@@ -2,6 +2,10 @@ import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { ActivityLogger } from '@/lib/activity-logger';
+import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
+import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
+import { sendMail, sendVerificationCodeEmail } from '@/lib/nodemailer';
+import { generateVerificationCode } from '@/lib/tokens';
 
 export async function POST(req: NextRequest) {
   try {
@@ -79,7 +83,10 @@ export async function POST(req: NextRequest) {
     const updateData: any = {};
     
     if (fullName !== undefined) updateData.name = fullName;
-    if (email !== undefined) updateData.email = email;
+    if (email !== undefined) {
+      updateData.email = email;
+      updateData.emailVerified = null;
+    }
     if (username !== undefined) updateData.username = username;
 
     const updatedUser = await db.users.update({
@@ -104,6 +111,38 @@ export async function POST(req: NextRequest) {
       );
     } catch (error) {
       console.error('Failed to log profile update activity:', error);
+    }
+
+    if (email !== undefined && email !== existingUser.email) {
+      try {
+        const verificationToken = await generateVerificationCode(email);
+        if (verificationToken) {
+          const emailData = await resolveEmailContent(
+            'account_user_account_verification',
+            {
+              ...templateContextFromUser({ ...existingUser, email }),
+              otp: verificationToken.token,
+            }
+          );
+          const emailSent = emailData
+            ? await sendVerificationCodeEmail(
+                email,
+                verificationToken.token,
+                existingUser.name || existingUser.username || undefined,
+                emailData
+              )
+            : await sendVerificationCodeEmail(
+                email,
+                verificationToken.token,
+                existingUser.name || existingUser.username || undefined
+              );
+          if (!emailSent) {
+            console.error('Failed to send verification email to new email');
+          }
+        }
+      } catch (emailError) {
+        console.error('Failed to send verification email after email change:', emailError);
+      }
     }
 
     return NextResponse.json({
