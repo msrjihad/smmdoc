@@ -22,6 +22,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const userId = parseInt(String(session.user.id), 10);
+    if (isNaN(userId)) {
+      return NextResponse.json(
+        { error: 'Invalid user session', success: false, data: null },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const { currentPassword, newPassword } = body;
 
@@ -48,7 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await db.users.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
         id: true,
         password: true,
@@ -84,7 +92,7 @@ export async function POST(req: NextRequest) {
     const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
     await db.users.update({
-      where: { id: session.user.id },
+      where: { id: userId },
       data: { 
         password: hashedNewPassword,
         updatedAt: new Date()
@@ -94,7 +102,7 @@ export async function POST(req: NextRequest) {
     try {
       const username = user.username || user.email?.split('@')[0] || `user${user.id}`;
       await ActivityLogger.passwordChanged(
-        session.user.id,
+        userId,
         username
       );
     } catch (error) {

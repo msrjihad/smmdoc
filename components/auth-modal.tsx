@@ -67,6 +67,14 @@ export default function AuthModal({ isOpen, onClose, type, onSuccess }: AuthModa
           onSuccess();
         } else if (result?.twoFactor) {
           setError('2FA required. Please check your email.');
+        } else if (result?.requiresEmailVerification && result?.email) {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('pendingVerificationEmail', result.email);
+          }
+          setSuccess(result.message || 'Please verify your email to continue.');
+          setTimeout(() => {
+            window.location.href = '/verify-email';
+          }, 1000);
         } else {
           setError('Something went wrong. Please try again.');
         }

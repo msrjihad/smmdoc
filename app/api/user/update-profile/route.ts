@@ -6,6 +6,7 @@ import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content
 import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
 import { sendMail, sendVerificationCodeEmail } from '@/lib/nodemailer';
 import { generateVerificationCode } from '@/lib/tokens';
+import { getVerificationTokenByToken } from '@/data/verification-token';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,11 +23,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const userId = parseInt(String(session.user.id), 10);
+    if (isNaN(userId)) {
+      return NextResponse.json(
+        { error: 'Invalid user session', success: false, data: null },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
-    const { fullName, email, username } = body;
+    const { fullName, email, username, verificationCode } = body;
 
     const existingUser = await db.users.findUnique({
-      where: { id: session.user.id }
+      where: { id: userId }
     });
 
     if (!existingUser) {
@@ -44,7 +53,7 @@ export async function POST(req: NextRequest) {
       const usernameExists = await db.users.findFirst({
         where: {
           username: username,
-          id: { not: session.user.id }
+          id: { not: userId }
         }
       });
 
@@ -60,11 +69,39 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (email !== undefined && email !== existingUser.email) {
+    const isEmailChanging = email !== undefined && email !== existingUser.email;
+
+    // If verification code provided (for email change or current email verification)
+    const code = typeof verificationCode === 'string' ? verificationCode.trim() : '';
+    if (code) {
+      const verificationToken = await getVerificationTokenByToken(code);
+      if (!verificationToken) {
+        return NextResponse.json(
+          { error: 'Invalid verification code', success: false, data: null },
+          { status: 400 }
+        );
+      }
+      const hasExpired = new Date(verificationToken.expires) < new Date();
+      if (hasExpired) {
+        return NextResponse.json(
+          { error: 'Verification code has expired. Please request a new one.', success: false, data: null },
+          { status: 400 }
+        );
+      }
+      const targetEmail = isEmailChanging ? email : existingUser.email;
+      if (!targetEmail || verificationToken.email !== targetEmail) {
+        return NextResponse.json(
+          { error: 'Verification code does not match your email address', success: false, data: null },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (isEmailChanging) {
       const emailExists = await db.users.findFirst({
         where: {
           email: email,
-          id: { not: session.user.id }
+          id: { not: userId }
         }
       });
 
@@ -85,12 +122,16 @@ export async function POST(req: NextRequest) {
     if (fullName !== undefined) updateData.name = fullName;
     if (email !== undefined) {
       updateData.email = email;
-      updateData.emailVerified = null;
+      // If code was provided and validated, mark as verified; otherwise unverified
+      updateData.emailVerified = code ? new Date() : null;
+    } else if (code && existingUser.email) {
+      // Verification code for current email (no email change)
+      updateData.emailVerified = new Date();
     }
     if (username !== undefined) updateData.username = username;
 
     const updatedUser = await db.users.update({
-      where: { id: session.user.id },
+      where: { id: userId },
       data: updateData,
       select: {
         id: true,
@@ -102,10 +143,18 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    // Delete verification token if code was used
+    if (code) {
+      const verificationToken = await getVerificationTokenByToken(code);
+      if (verificationToken) {
+        await db.verificationTokens.delete({ where: { id: verificationToken.id } }).catch(() => {});
+      }
+    }
+
     try {
-      const username = session.user.username || session.user.email?.split('@')[0] || `user${session.user.id}`;
+      const username = session.user.username || session.user.email?.split('@')[0] || `user${userId}`;
       await ActivityLogger.profileUpdated(
-        session.user.id,
+        userId,
         username,
         Object.keys(updateData).join(', ')
       );
@@ -113,7 +162,8 @@ export async function POST(req: NextRequest) {
       console.error('Failed to log profile update activity:', error);
     }
 
-    if (email !== undefined && email !== existingUser.email) {
+    // If email changed WITHOUT code, send verification code to new email (account now unverified)
+    if (isEmailChanging && !code) {
       try {
         const verificationToken = await generateVerificationCode(email);
         if (verificationToken) {

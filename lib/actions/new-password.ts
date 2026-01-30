@@ -47,9 +47,13 @@ export const newPasswordValues = async (
     return { success: false, error: "New password must be different from your current password." };
   }
   const hashedPassword = await bcrypt.hash(password, 10);
+  const updateData: { password: string; emailVerified?: Date } = { password: hashedPassword };
+  if (!existingUser.emailVerified) {
+    updateData.emailVerified = new Date();
+  }
   await db.users.update({
     where: { email: existingToken.email },
-    data: { password: hashedPassword },
+    data: updateData,
   });
   await db.passwordResetTokens.delete({ where: { token } });
 

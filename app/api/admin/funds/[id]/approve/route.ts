@@ -101,7 +101,7 @@ export async function POST(
           {
             ...templateContextFromUser(transaction.user),
             fund_amount: String(transaction.amount ?? ''),
-            transaction_id: modifiedTransactionId?.trim() || transaction.transactionId ?? String(transaction.id),
+            transaction_id: modifiedTransactionId?.trim() || transaction.transactionId || String(transaction.id),
           }
         );
         if (emailData) {

@@ -5,9 +5,9 @@ import { sendVerificationCodeEmail } from '@/lib/nodemailer';
 import { generateVerificationCode } from '@/lib/tokens';
 import { resolveEmailContent } from '@/lib/email-templates/resolve-email-content';
 import { templateContextFromUser } from '@/lib/email-templates/replace-template-variables';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
     const session = await auth();
 
@@ -22,8 +22,25 @@ export async function POST() {
       );
     }
 
+    const userId = parseInt(String(session.user.id), 10);
+    if (isNaN(userId)) {
+      return NextResponse.json(
+        { error: 'Invalid user session', success: false, data: null },
+        { status: 401 }
+      );
+    }
+
+    let body: { email?: string } = {};
+    try {
+      body = await req.json();
+    } catch {
+      // No body or invalid JSON - use user's current email
+    }
+
+    const targetEmail = body.email?.trim();
+
     const user = await db.users.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
         id: true,
         email: true,
@@ -44,7 +61,10 @@ export async function POST() {
       );
     }
 
-    if (!user.email) {
+    // Determine which email to send code to
+    const emailToUse = targetEmail || user.email;
+
+    if (!emailToUse) {
       return NextResponse.json(
         {
           error: 'No email address found for this user',
@@ -55,7 +75,26 @@ export async function POST() {
       );
     }
 
-    if (user.emailVerified) {
+    // If sending to a NEW email (for change flow), validate it's not taken
+    if (targetEmail && targetEmail.toLowerCase() !== (user.email || '').toLowerCase()) {
+      const emailExists = await db.users.findFirst({
+        where: {
+          email: targetEmail,
+          id: { not: userId }
+        }
+      });
+      if (emailExists) {
+        return NextResponse.json(
+          {
+            error: 'Email already exists. Please choose a different email address.',
+            success: false,
+            data: null
+          },
+          { status: 400 }
+        );
+      }
+    } else if (!targetEmail && user.emailVerified) {
+      // Sending to current email and already verified
       return NextResponse.json(
         {
           error: 'Email is already verified',
@@ -66,7 +105,7 @@ export async function POST() {
       );
     }
 
-    const verificationToken = await generateVerificationCode(user.email);
+    const verificationToken = await generateVerificationCode(emailToUse);
 
     if (!verificationToken) {
       return NextResponse.json(
@@ -83,19 +122,19 @@ export async function POST() {
       const emailData = await resolveEmailContent(
         'account_user_account_verification',
         {
-          ...templateContextFromUser(user),
+          ...templateContextFromUser({ ...user, email: emailToUse }),
           otp: verificationToken.token,
         }
       );
       const emailSent = emailData
         ? await sendVerificationCodeEmail(
-            user.email,
+            emailToUse,
             verificationToken.token,
             user.name || user.username || undefined,
             emailData
           )
         : await sendVerificationCodeEmail(
-            user.email,
+            emailToUse,
             verificationToken.token,
             user.name || user.username || undefined
           );
@@ -117,7 +156,7 @@ export async function POST() {
     try {
       const username = user.username || user.email?.split('@')[0] || `user${user.id}`;
       await ActivityLogger.profileUpdated(
-        session.user.id,
+        userId,
         username,
         'verification_email_resent'
       );
@@ -130,7 +169,7 @@ export async function POST() {
         success: true,
         data: { 
           message: 'Verification email sent successfully',
-          email: user.email
+          email: emailToUse
         },
         error: null
       },

@@ -5,7 +5,7 @@ import { getUserDetails } from '@/lib/actions/getUser';
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { setUserDetails } from '@/lib/slice/userDetails';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     FaCamera,
     FaCheck,
@@ -136,8 +136,10 @@ const ProfilePage = () => {
     fullName: '',
     email: '',
     username: '',
+    verificationCode: '',
   });
   const [hasProfileChanges, setHasProfileChanges] = useState(false);
+  const [isSendingVerificationCode, setIsSendingVerificationCode] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [pendingEmailChange, setPendingEmailChange] = useState<string | null>(null);
@@ -152,6 +154,7 @@ const ProfilePage = () => {
     fullName?: string;
     email?: string;
     username?: string;
+    verificationCode?: string;
     currentPass?: string;
     newPass?: string;
     confirmNewPass?: string;
@@ -167,12 +170,10 @@ const ProfilePage = () => {
     { value: 'hi', label: 'Hindi' },
   ];
 
-  const getTimezones = () => {
+  const timezones = useMemo(() => {
     try {
-
-      const timezones = Intl.supportedValuesOf('timeZone');
-
-      return timezones.map(timezone => {
+      const tzList = Intl.supportedValuesOf('timeZone');
+      return tzList.map(timezone => {
         const now = new Date();
         const formatter = new Intl.DateTimeFormat('en', {
           timeZone: timezone,
@@ -194,7 +195,6 @@ const ProfilePage = () => {
           offsetSeconds: offsetSeconds
         };
       }).sort((a, b) => {
-
         if (a.offsetSeconds !== b.offsetSeconds) {
           return a.offsetSeconds - b.offsetSeconds;
         }
@@ -202,38 +202,15 @@ const ProfilePage = () => {
       });
     } catch (error) {
       console.error('Error generating timezones:', error);
-
       return [
-        {
-          value: 'Asia/Dhaka',
-          label: '(UTC+06:00) Asia/Dhaka',
-          timezone: 'Asia/Dhaka'
-        },
-        { 
-          value: 'UTC', 
-          label: '(UTC+00:00) UTC',
-          timezone: 'UTC'
-        },
-        {
-          value: 'Europe/Berlin',
-          label: '(UTC+01:00) Europe/Berlin',
-          timezone: 'Europe/Berlin'
-        },
-        {
-          value: 'Asia/Kolkata',
-          label: '(UTC+05:30) Asia/Kolkata',
-          timezone: 'Asia/Kolkata'
-        },
-        {
-          value: 'America/New_York',
-          label: '(UTC-05:00) America/New York',
-          timezone: 'America/New_York'
-        },
+        { value: 'Asia/Dhaka', label: '(UTC+06:00) Asia/Dhaka', timezone: 'Asia/Dhaka', offsetSeconds: 21600 },
+        { value: 'UTC', label: '(UTC+00:00) UTC', timezone: 'UTC', offsetSeconds: 0 },
+        { value: 'Europe/Berlin', label: '(UTC+01:00) Europe/Berlin', timezone: 'Europe/Berlin', offsetSeconds: 3600 },
+        { value: 'Asia/Kolkata', label: '(UTC+05:30) Asia/Kolkata', timezone: 'Asia/Kolkata', offsetSeconds: 19800 },
+        { value: 'America/New_York', label: '(UTC-05:00) America/New York', timezone: 'America/New_York', offsetSeconds: -18000 },
       ];
     }
-  };
-
-  const timezones = getTimezones();
+  }, []);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -259,6 +236,7 @@ const ProfilePage = () => {
             fullName: userData.name || '',
             email: userData.email || '',
             username: userData.username || '',
+            verificationCode: '',
           });
 
           if ((userData as any).apiKey) {
@@ -369,7 +347,7 @@ const ProfilePage = () => {
         setFormData({ currentPass: '', newPass: '', confirmNewPass: '' });
         showToast('Password changed successfully!', 'success');
       } else {
-        showToast(result.message || 'Failed to change password', 'error');
+        showToast(result.error || 'Failed to change password', 'error');
       }
     } catch (error) {
       console.error('Password change error:', error);
@@ -547,6 +525,7 @@ const ProfilePage = () => {
         username: user?.username || '',
         fullName: user?.name || '',
         email: user?.email || '',
+        verificationCode: '',
       });
       setIsEditingProfile(false);
       setHasProfileChanges(false);
@@ -562,7 +541,9 @@ const ProfilePage = () => {
       [field]: value,
     }));
 
-    validateProfileField(field, value);
+    if (field !== 'verificationCode') {
+      validateProfileField(field, value);
+    }
 
     const originalFullName = user?.name || '';
     const originalEmail = user?.email || '';
@@ -573,10 +554,12 @@ const ProfilePage = () => {
       [field]: value,
     };
 
-    const hasChanges =
+    const hasProfileFieldChanges =
       newData.fullName !== originalFullName || 
       newData.email !== originalEmail ||
       newData.username !== originalUsername;
+    const hasVerificationCodeForUnverified = !!(user as any)?.emailVerified === false && !!newData.verificationCode?.trim();
+    const hasChanges = hasProfileFieldChanges || hasVerificationCodeForUnverified;
     setHasProfileChanges(hasChanges);
   };
 
@@ -613,6 +596,9 @@ const ProfilePage = () => {
           fullName: profileData.fullName,
           email: profileData.email,
           username: profileData.username,
+          ...(profileData.verificationCode?.trim() && {
+            verificationCode: profileData.verificationCode.trim(),
+          }),
         }),
       });
 
@@ -621,26 +607,50 @@ const ProfilePage = () => {
       if (response.ok) {
 
         if (isEmailChanged) {
-          setPendingEmailChange(profileData.email);
-          setIsEmailVerificationPending(true);
-          showToast('Profile updated! Please verify your new email address.', 'info');
+          const wasVerifiedWithCode = !!(profileData.verificationCode?.trim());
+          if (wasVerifiedWithCode) {
+            setPendingEmailChange(null);
+            setIsEmailVerificationPending(false);
+            showToast('Profile updated! Email changed and verified successfully.', 'success');
+          } else {
+            setPendingEmailChange(profileData.email);
+            setIsEmailVerificationPending(true);
+            showToast('Profile updated! Account is unverified. Please verify your new email address.', 'info');
+          }
+        } else if (result.data?.emailVerified && !(userDetails as any)?.emailVerified) {
+          setPendingEmailChange(null);
+          setIsEmailVerificationPending(false);
+          showToast('Email verified successfully!', 'success');
         } else {
           showToast('Profile updated successfully!', 'success');
         }
 
+        const updatedEmailVerified = result.data !== undefined ? result.data.emailVerified : userDetails.emailVerified;
         dispatch(
           setUserDetails({
             ...userDetails,
             name: profileData.fullName,
             username: profileData.username,
-
-            email: isEmailChanged ? userDetails.email : profileData.email,
-            emailVerified: isEmailChanged ? false : (result.data?.emailVerified || userDetails.emailVerified),
+            email: isEmailChanged ? profileData.email : (userDetails.email ?? profileData.email),
+            emailVerified: updatedEmailVerified,
           })
         );
 
         setIsEditingProfile(false);
         setHasProfileChanges(false);
+        setProfileData((prev) => ({
+          ...prev,
+          verificationCode: '',
+          email: result.data?.email ?? prev.email,
+        }));
+
+        if (result.data) {
+          getUserDetails().then((freshUser) => {
+            if (freshUser) {
+              dispatch(setUserDetails(freshUser));
+            }
+          });
+        }
       } else {
 
         const errorMessage = result.error || result.message || 'Failed to update profile';
@@ -656,31 +666,43 @@ const ProfilePage = () => {
   };
 
   const handleResendVerificationEmail = async () => {
+    const emailTarget = pendingEmailChange || (isEditingProfile && profileData.email !== user?.email ? profileData.email : null) || user?.email;
+    if (!emailTarget) {
+      showToast('Please enter an email address first', 'error');
+      return;
+    }
+    if (isEditingProfile && profileData.email !== user?.email) {
+      const emailError = validateEmail(profileData.email);
+      if (emailError) {
+        showToast(emailError, 'error');
+        return;
+      }
+    }
+    setIsSendingVerificationCode(true);
     try {
       const response = await fetch('/api/user/resend-verification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email: pendingEmailChange || user?.email,
-        }),
+        body: JSON.stringify({ email: emailTarget }),
       });
 
       const result = await response.json();
 
       if (response.ok) {
-        const emailTarget = pendingEmailChange || user?.email;
-        showToast(`Verification email sent to ${emailTarget}!`, 'success');
+        showToast(`Verification code sent to ${emailTarget}!`, 'success');
       } else {
         showToast(
-          result.message || 'Failed to send verification email',
+          result.error || result.message || 'Failed to send verification email',
           'error'
         );
       }
     } catch (error) {
       console.error('Resend verification error:', error);
       showToast('Error sending verification email', 'error');
+    } finally {
+      setIsSendingVerificationCode(false);
     }
   };
 
@@ -1083,26 +1105,39 @@ const ProfilePage = () => {
                       onChange={(e) =>
                         handleProfileDataChange('email', e.target.value)
                       }
-                      className={`form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border ${validationErrors.email ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'} rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200`}
+                      readOnly={!(user as any)?.emailVerified}
+                      className={`form-field w-full px-4 py-3 border ${
+                        !(user as any)?.emailVerified
+                          ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                          : 'bg-white dark:bg-gray-700/50'
+                      } ${
+                        !(user as any)?.emailVerified && !pendingEmailChange
+                          ? 'border-red-500 dark:border-red-400'
+                          : validationErrors.email
+                          ? 'border-red-500 dark:border-red-400'
+                          : 'border-gray-300 dark:border-gray-600'
+                      } rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200`}
                       placeholder="Enter email address"
                     />
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      {(user as any)?.emailVerified && !pendingEmailChange ? (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                          Verified
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                          </svg>
-                          Not Verified
-                        </span>
-                      )}
-                    </div>
+                    {profileData.email === user?.email && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        {(user as any)?.emailVerified && !pendingEmailChange ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Verified
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                            Not Verified
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   {validationErrors.email && (
                     <p className="text-red-500 dark:text-red-400 text-sm mt-1">{validationErrors.email}</p>
@@ -1113,6 +1148,41 @@ const ProfilePage = () => {
                     </p>
                   )}
                 </div>
+
+                {(!(user as any)?.emailVerified || pendingEmailChange) && (
+                  <div className="form-group">
+                    <label className="form-label">
+                      {profileData.email !== user?.email && profileData.email
+                        ? 'Verification Code (optional)'
+                        : 'Verification Code'}
+                    </label>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs mb-2">
+                      {profileData.email !== user?.email && profileData.email
+                        ? 'Enter the code sent to your new email to verify immediately. Or save without code, your account will be unverified until you verify via login.'
+                        : 'Enter the code sent to your email to verify your account.'}
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={profileData.verificationCode}
+                        onChange={(e) =>
+                          handleProfileDataChange('verificationCode', e.target.value.replace(/\D/g, '').slice(0, 6))
+                        }
+                        maxLength={6}
+                        className="form-field w-32 px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-all duration-200"
+                        placeholder="123456"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleResendVerificationEmail}
+                        disabled={isSendingVerificationCode}
+                        className="btn btn-secondary whitespace-nowrap"
+                      >
+                        {isSendingVerificationCode ? 'Sending...' : 'Send Code'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-2 flex-wrap">
                   {hasProfileChanges ? (
@@ -1132,14 +1202,6 @@ const ProfilePage = () => {
                     </button>
                   )}
 
-                  {(!(user as any)?.emailVerified || pendingEmailChange) && (
-                    <button
-                      onClick={handleResendVerificationEmail}
-                      className="btn btn-secondary"
-                    >
-                      Send Verification Email
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
