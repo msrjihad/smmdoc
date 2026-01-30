@@ -198,23 +198,74 @@ const HeaderNotificationBox = ({ open, onOpenChange }: HeaderNotificationBoxProp
   useEffect(() => {
     fetchNotifications(5, 0, false);
     fetchUnreadCount();
+  }, []);
 
-    const countInterval = setInterval(() => {
+  useEffect(() => {
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const connectRealtime = () => {
+      try {
+        eventSource = new EventSource('/api/notifications/realtime');
+
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'new_notification' && data.notification) {
+              const notif = data.notification;
+              setNotifications(prev => [
+                {
+                  id: notif.id,
+                  title: notif.title,
+                  message: notif.message,
+                  type: notif.type,
+                  link: notif.link,
+                  read: notif.read ?? false,
+                  createdAt: notif.createdAt,
+                },
+                ...prev,
+              ]);
+              setUnreadCount(prev => prev + 1);
+              setTotalCount(prev => prev + 1);
+            }
+          } catch (error) {
+            logger.error('Error parsing notification SSE message', error);
+          }
+        };
+
+        eventSource.onerror = () => {
+          if (eventSource?.readyState === EventSource.CLOSED) {
+            eventSource.close();
+            eventSource = null;
+            reconnectTimeout = setTimeout(() => connectRealtime(), 5000);
+          }
+        };
+      } catch (error) {
+        logger.error('Error setting up notification real-time sync', error);
+      }
+    };
+
+    connectRealtime();
+
+    return () => {
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const fallbackInterval = setInterval(() => {
       if (!openRef.current) {
         fetchUnreadCount();
-      }
-    }, 30000);
-
-    const notificationsInterval = setInterval(() => {
-      if (!openRef.current) {
         fetchNotifications(displayCountRef.current, 0, false);
       }
     }, 60000);
 
-    return () => {
-      clearInterval(countInterval);
-      clearInterval(notificationsInterval);
-    };
+    return () => clearInterval(fallbackInterval);
   }, []);
 
   useEffect(() => {

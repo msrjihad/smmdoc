@@ -5,6 +5,11 @@ const activeConnections = new Set<{
   userId: string;
 }>();
 
+const notificationConnections = new Set<{
+  send: (data: any) => void;
+  userId: string;
+}>();
+
 export function addRealtimeConnection(send: (data: any) => void, userId: string) {
   const connection = { send, userId };
   activeConnections.add(connection);
@@ -67,5 +72,45 @@ export function broadcastSyncProgress(progress: {
 
 export function getActiveConnectionsCount() {
   return activeConnections.size;
+}
+
+export function addNotificationConnection(send: (data: any) => void, userId: string) {
+  const connection = { send, userId };
+  notificationConnections.add(connection);
+  return () => {
+    notificationConnections.delete(connection);
+  };
+}
+
+export function broadcastNewNotification(userId: number, notification: {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  link: string | null;
+  read: boolean;
+  createdAt: Date;
+}) {
+  const message = {
+    type: 'new_notification',
+    notification: {
+      ...notification,
+      createdAt: notification.createdAt instanceof Date
+        ? notification.createdAt.toISOString()
+        : notification.createdAt,
+    },
+    timestamp: new Date().toISOString(),
+  };
+
+  const userIdStr = String(userId);
+  notificationConnections.forEach(({ send, userId }) => {
+    try {
+      if (userId === userIdStr) {
+        send(message);
+      }
+    } catch (error) {
+      console.error('Error broadcasting notification:', error);
+    }
+  });
 }
 

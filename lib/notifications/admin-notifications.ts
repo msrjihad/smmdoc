@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { trimNotificationsToMax } from '@/lib/notifications-cleanup';
 import { ROUTE_PERMISSION_MAP } from '@/lib/permissions';
+import { broadcastNewNotification } from '@/lib/utils/realtime-sync';
 
 interface NotificationData {
   userId: number;
@@ -28,7 +29,7 @@ const NOTIFICATION_PERMISSION_MAP: Record<string, string | null> = {
 
 async function createNotification(data: NotificationData): Promise<void> {
   try {
-    await db.notifications.create({
+    const notification = await db.notifications.create({
       data: {
         userId: data.userId,
         title: data.title,
@@ -41,6 +42,15 @@ async function createNotification(data: NotificationData): Promise<void> {
     trimNotificationsToMax(data.userId).catch((err) =>
       console.error('Failed to trim notifications:', err)
     );
+    broadcastNewNotification(data.userId, {
+      id: notification.id,
+      title: notification.title,
+      message: notification.message,
+      type: notification.type,
+      link: notification.link,
+      read: notification.read,
+      createdAt: notification.createdAt,
+    });
   } catch (error) {
     console.error('Error creating notification:', error);
   }
