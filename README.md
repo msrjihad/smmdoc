@@ -139,6 +139,14 @@ npm run test      # Run tests
 
 ---
 
+## Provider Order Sync (Automatic)
+
+Provider order sync runs **automatically every 5 minutes** using `node-cron` inside the Next.js process. No shell script or system crontab is required.
+
+When you start the app (`npm run dev` or `npm run start`), the sync job is scheduled. It runs as long as the app is running.
+
+---
+
 ## Conclusions
 
 SMMDOC is a feature‑rich SMM panel with separate user and admin experiences, API and child‑panel support, and configurable payments and notifications. The stack (Next.js, Prisma, NextAuth, Tailwind) is chosen for maintainability and scalability. Use the create‑admin script only when no admin exists; afterward, manage users and roles from the admin panel.
