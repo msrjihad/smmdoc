@@ -174,6 +174,21 @@ export default function EmailTemplateEditPage() {
 
   const handleSave = useCallback(async () => {
     if (!data) return;
+    const trimmedFromName = localForm.fromName.trim();
+    const trimmedSubject = localForm.subject.trim();
+    const trimmedBodyHtml = localForm.bodyHtml.trim();
+    if (!trimmedFromName) {
+      showToast('From name is required', 'error');
+      return;
+    }
+    if (!trimmedSubject) {
+      showToast('Subject line is required', 'error');
+      return;
+    }
+    if (!trimmedBodyHtml) {
+      showToast('Template content is required', 'error');
+      return;
+    }
     try {
       setSaving(true);
       const res = await fetch('/api/admin/email-templates', {
@@ -181,15 +196,16 @@ export default function EmailTemplateEditPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           templateKey: data.templateKey,
-          fromName: localForm.fromName,
-          subject: localForm.subject,
-          bodyHtml: localForm.bodyHtml,
+          fromName: trimmedFromName,
+          subject: trimmedSubject,
+          bodyHtml: trimmedBodyHtml,
         }),
       });
       const json = await res.json();
       if (res.ok && json.success) {
         showToast('Template saved successfully');
-        setData((prev) => (prev ? { ...prev, fromName: localForm.fromName, subject: localForm.subject, bodyHtml: localForm.bodyHtml, isCustom: true } : prev));
+        setData((prev) => (prev ? { ...prev, fromName: trimmedFromName, subject: trimmedSubject, bodyHtml: trimmedBodyHtml, isCustom: true } : prev));
+        setLocalForm((prev) => ({ ...prev, fromName: trimmedFromName, subject: trimmedSubject, bodyHtml: trimmedBodyHtml }));
       } else {
         showToast(json.error || 'Failed to save', 'error');
       }
@@ -366,13 +382,8 @@ export default function EmailTemplateEditPage() {
                 <div>
                   <h3 className="card-title">{data.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {data.categoryName} • Edit subject and HTML content. Custom content is used when sending emails.
+                    Template Category: {data.categoryName}
                   </p>
-                  {data.trigger && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-                      <span className="font-medium text-gray-700 dark:text-gray-200">Trigger:</span> {data.trigger}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
@@ -389,29 +400,31 @@ export default function EmailTemplateEditPage() {
               </div>
 
               <div>
-                <label className="form-label block mb-1">From Name</label>
+                <label className="form-label block mb-1">From Name <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={localForm.fromName}
                   onChange={(e) => updateLocal('fromName', e.target.value)}
                   className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] text-gray-900 dark:text-white"
-                  placeholder="e.g. Support Team, SMM Panel"
+                  placeholder="e.g. {sitename}, Support Team"
+                  required
                 />
               </div>
 
               <div>
-                <label className="form-label block mb-1">Subject</label>
+                <label className="form-label block mb-1">Subject <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={localForm.subject}
                   onChange={(e) => updateLocal('subject', e.target.value)}
                   className="form-field w-full px-4 py-3 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] text-gray-900 dark:text-white"
                   placeholder="Email subject"
+                  required
                 />
               </div>
 
               <div>
-                <label className="form-label block mb-1">Template content (between header and footer)</label>
+                <label className="form-label block mb-1">Body Content <span className="text-red-500">*</span></label>
                 <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
                   <EmailTemplateEditor
                     key={data.templateKey}
@@ -421,11 +434,8 @@ export default function EmailTemplateEditPage() {
                     isDarkMode={isDarkMode}
                   />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  Use the rich text editor to format your content. Header and footer are added automatically when sending.
-                </p>
                 <div className="mt-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 px-4 py-3">
-                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Template variables work in <strong>From Name</strong>, <strong>Subject</strong>, and the <strong>Editor</strong> field. They are replaced when the email is sent:</p>
+                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Template variables:</p>
                   <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 font-mono">
                     <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{sitename}'}</code> Site name</li>
                     <li><code className="px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700">{'{site_url}'}</code> Site URL</li>

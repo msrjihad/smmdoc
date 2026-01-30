@@ -7,6 +7,7 @@ import {
   getTemplateSpecificVariables,
 } from '@/app/api/admin/email-templates/template-data';
 import { getDefaultContent } from '@/lib/email-templates/get-default-content';
+import { DEFAULT_FROM_NAME } from '@/lib/email-templates/get-custom-template';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
@@ -43,10 +44,11 @@ export async function GET(
     let bodyHtml = '';
 
     if (custom) {
-      fromName = custom.fromName ?? '';
+      fromName = custom.fromName?.trim() ? custom.fromName : DEFAULT_FROM_NAME;
       subject = custom.subject;
       bodyHtml = custom.bodyHtml;
     } else {
+      fromName = DEFAULT_FROM_NAME;
       const defaultContent = await getDefaultContent(predefined.templateKey);
       subject = defaultContent.subject;
       bodyHtml = defaultContent.html;

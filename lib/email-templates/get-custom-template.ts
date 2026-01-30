@@ -1,4 +1,7 @@
 import { db } from '@/lib/db';
+import { getPredefinedTemplateBody } from './predefined-bodies';
+
+export const DEFAULT_FROM_NAME = '{sitename}';
 
 export interface CustomEmailTemplate {
   subject: string;
@@ -12,9 +15,10 @@ export async function isEmailTemplateActive(templateKey: string): Promise<boolea
       where: { templateKey },
       select: { isActive: true },
     });
-    return row ? row.isActive : false;
+    if (row) return row.isActive;
+    return !!getPredefinedTemplateBody(templateKey);
   } catch (e) {
-    return false;
+    return !!getPredefinedTemplateBody(templateKey);
   }
 }
 
@@ -30,14 +34,32 @@ export async function getCustomEmailTemplate(
     const row = await db.emailTemplate.findUnique({
       where: { templateKey },
     });
-    if (!row || row.isActive === false) return null;
-    return {
-      subject: row.subject,
-      fromName: row.fromName,
-      bodyHtml: row.bodyHtml,
-    };
+    if (row && row.isActive && row.subject && row.bodyHtml) {
+      return {
+        subject: row.subject,
+        fromName: row.fromName?.trim() ? row.fromName : DEFAULT_FROM_NAME,
+        bodyHtml: row.bodyHtml,
+      };
+    }
+    const predefined = getPredefinedTemplateBody(templateKey);
+    if (predefined) {
+      return {
+        subject: predefined.subject,
+        fromName: predefined.fromName?.trim() ? predefined.fromName : DEFAULT_FROM_NAME,
+        bodyHtml: predefined.bodyHtml,
+      };
+    }
+    return null;
   } catch (e) {
     console.warn('getCustomEmailTemplate failed for', templateKey, e);
+    const predefined = getPredefinedTemplateBody(templateKey);
+    if (predefined) {
+      return {
+        subject: predefined.subject,
+        fromName: predefined.fromName?.trim() ? predefined.fromName : DEFAULT_FROM_NAME,
+        bodyHtml: predefined.bodyHtml,
+      };
+    }
     return null;
   }
 }

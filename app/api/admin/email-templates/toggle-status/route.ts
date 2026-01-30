@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       where: { templateKey },
       create: {
         templateKey,
+        fromName: '{sitename}',
         subject: defaultSubject,
         bodyHtml: DEFAULT_BODY,
         isActive,

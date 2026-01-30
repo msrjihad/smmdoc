@@ -1,21 +1,27 @@
 import { PrismaClient } from '@prisma/client';
 import { TEMPLATE_SLOTS_BY_CATEGORY } from '../lib/email-templates/template-slots';
+import { getPredefinedTemplateBody } from '../lib/email-templates/predefined-bodies';
 
 const prisma = new PrismaClient();
-
-const DEFAULT_BODY = '<p>Edit this template in Admin → Settings → Email Templates.</p>';
 
 async function main() {
   console.log('🌱 Starting database seeding...');
 
   const slots = Object.values(TEMPLATE_SLOTS_BY_CATEGORY).flat();
   for (const slot of slots) {
+    const predefined = getPredefinedTemplateBody(slot.templateKey);
+    const subject = predefined?.subject ?? slot.name;
+    const bodyHtml = predefined?.bodyHtml ?? '<p>Edit this template in Admin → Settings → Email Templates.</p>';
+
+    const fromName = predefined?.fromName?.trim() ? predefined.fromName : '{sitename}';
+
     await prisma.emailTemplate.upsert({
       where: { templateKey: slot.templateKey },
       create: {
         templateKey: slot.templateKey,
-        subject: slot.name,
-        bodyHtml: DEFAULT_BODY,
+        fromName,
+        subject,
+        bodyHtml,
         isActive: true,
       },
       update: {},
