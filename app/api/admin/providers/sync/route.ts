@@ -1,6 +1,7 @@
-﻿import { auth } from '@/auth';
+import { auth } from '@/auth';
 import { convertToUSD } from '@/lib/currency-utils';
 import { db } from '@/lib/db';
+import { trimSyncLogsToMax } from '@/lib/sync-logs-cleanup';
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiRequestBuilder, ApiResponseParser, createApiSpecFromProvider } from '@/lib/provider-api-specification';
 import { validateProvider } from '@/lib/utils/provider-validator';
@@ -343,6 +344,8 @@ export async function POST(req: NextRequest) {
       priceChanges: 0,
       statusChanges: 0
     });
+
+    await trimSyncLogsToMax();
 
     return NextResponse.json({
       success: true,

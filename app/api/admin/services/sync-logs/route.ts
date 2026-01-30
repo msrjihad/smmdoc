@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
+import { trimSyncLogsToMax } from '@/lib/sync-logs-cleanup';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
@@ -131,6 +132,18 @@ export async function GET(req: NextRequest) {
         return false;
       });
     }
+
+    // Keep only last 100 sync logs: auto-delete older ones from database
+    const SYNC_LOGS_MAX = 100;
+    if (filteredServices.length > SYNC_LOGS_MAX) {
+      const idsToClear = filteredServices.slice(SYNC_LOGS_MAX).map((s) => s.id);
+      await db.services.updateMany({
+        where: { id: { in: idsToClear } },
+        data: { updateText: null },
+      });
+      filteredServices = filteredServices.slice(0, SYNC_LOGS_MAX);
+    }
+    await trimSyncLogsToMax();
 
     const total = filteredServices.length;
     const paginatedServices = filteredServices.slice(skip, skip + limit);

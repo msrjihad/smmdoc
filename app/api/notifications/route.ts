@@ -1,11 +1,14 @@
 import { requireAuth } from '@/lib/auth-helpers';
 import { db } from '@/lib/db';
+import { trimNotificationsToMax } from '@/lib/notifications-cleanup';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
     const userId = parseInt(session.user.id);
+
+    await trimNotificationsToMax(userId);
 
     const searchParams = request.nextUrl.searchParams;
     const limit = parseInt(searchParams.get('limit') || '5');

@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
+import { trimActivityLogsToMax } from '@/lib/activity-logs-cleanup';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -27,6 +28,8 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role') || '';
 
     const offset = (page - 1) * limit;
+
+    await trimActivityLogsToMax();
 
     const where: any = {};
 

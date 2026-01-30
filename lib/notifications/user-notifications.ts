@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { trimNotificationsToMax } from '@/lib/notifications-cleanup';
 import { getAppName } from '@/lib/utils/general-settings';
 
 interface NotificationData {
@@ -137,6 +138,9 @@ async function createNotification(data: NotificationData): Promise<void> {
         read: false,
       },
     });
+    trimNotificationsToMax(data.userId).catch((err) =>
+      console.error('Failed to trim notifications:', err)
+    );
   } catch (error) {
     console.error('Error creating notification:', error);
   }

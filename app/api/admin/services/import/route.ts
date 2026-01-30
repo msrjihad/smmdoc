@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
 import { convertToUSD } from '@/lib/currency-utils';
+import { trimSyncLogsToMax } from '@/lib/sync-logs-cleanup';
 import { NextRequest, NextResponse } from 'next/server';
 import { sendNewServiceNotification } from '@/lib/notifications/user-notifications';
 
@@ -1264,6 +1265,8 @@ export async function PUT(req: NextRequest) {
       }
 
       console.log(`?? Import completed: ${importedCount} imported, ${skippedCount} skipped, ${errors.length} errors`);
+
+      await trimSyncLogsToMax();
 
       return NextResponse.json({
         success: true,

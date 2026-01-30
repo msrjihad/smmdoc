@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { trimActivityLogsToMax } from '@/lib/activity-logs-cleanup';
 import { NextRequest } from 'next/server';
 
 export function getClientIP(request?: NextRequest): string {
@@ -57,6 +58,8 @@ export async function logActivity(data: ActivityLogData) {
         metadata: data.metadata ? JSON.stringify(data.metadata) : null,
       },
     });
+
+    trimActivityLogsToMax().catch((err) => console.error('Failed to trim activity logs:', err));
 
     const importantActions = [
       'login', 'admin_login', 'order_created', 'fund_added', 

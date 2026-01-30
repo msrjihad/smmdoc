@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { trimNotificationsToMax } from '@/lib/notifications-cleanup';
 import { ROUTE_PERMISSION_MAP } from '@/lib/permissions';
 
 interface NotificationData {
@@ -37,6 +38,9 @@ async function createNotification(data: NotificationData): Promise<void> {
         read: false,
       },
     });
+    trimNotificationsToMax(data.userId).catch((err) =>
+      console.error('Failed to trim notifications:', err)
+    );
   } catch (error) {
     console.error('Error creating notification:', error);
   }

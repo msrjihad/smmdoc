@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
+import { trimSyncLogsToMax } from '@/lib/sync-logs-cleanup';
 import { NextResponse } from 'next/server';
 import { serializeServices } from '@/lib/utils';
 
@@ -23,6 +24,8 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     
+    await trimSyncLogsToMax();
+
     const whereClause: any = {
       status: 'active',
       updateText: {
