@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = parseInt(searchParams.get('limit') || '25');
     const search = searchParams.get('search') || '';
     const searchBy = searchParams.get('searchBy') || 'all';
     

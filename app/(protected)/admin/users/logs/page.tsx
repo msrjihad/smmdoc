@@ -228,7 +228,7 @@ const UserActivityLogsPage = () => {
   const [activityLogs, setActivityLogs] = useState<UserActivityLog[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
-    limit: 20,
+    limit: 25,
     total: 0,
     totalPages: 0,
     hasNext: false,
@@ -249,12 +249,13 @@ const UserActivityLogsPage = () => {
   const [logsLoading, setLogsLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const fetchActivityLogs = async (page = 1, search = '', searchBy = 'all') => {
+  const fetchActivityLogs = async (page = 1, search = '', searchBy = 'all', limitOverride?: number) => {
     try {
       setLogsLoading(true);
+      const limit = limitOverride ?? pagination.limit;
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: pagination.limit.toString(),
+        limit: limit.toString(),
         search,
         searchBy,
         role: 'user'
@@ -403,7 +404,7 @@ const UserActivityLogsPage = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <select
-                value={pagination.limit}
+                value={pagination.limit >= 1000 ? 'all' : pagination.limit.toString()}
                 onChange={(e) => {
                   const newLimit = e.target.value === 'all' ? 1000 : parseInt(e.target.value);
                   setPagination(prev => ({
@@ -411,7 +412,7 @@ const UserActivityLogsPage = () => {
                     limit: newLimit,
                     page: 1
                   }));
-                  fetchActivityLogs(1, searchTerm, searchBy);
+                  fetchActivityLogs(1, searchTerm, searchBy, newLimit);
                 }}
                 className="pl-4 pr-8 py-2.5 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer text-sm"
               >

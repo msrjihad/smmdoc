@@ -276,7 +276,7 @@ const SyncLogsPage = () => {
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
-    limit: 20,
+    limit: 25,
     total: 0,
     totalPages: 0,
     hasNext: false,
@@ -332,13 +332,15 @@ const SyncLogsPage = () => {
     }
   };
 
-  const fetchSyncLogs = useCallback(async () => {
+  const fetchSyncLogs = useCallback(async (overrides?: { page?: number; limit?: number }) => {
     try {
       setLogsLoading(true);
+      const page = overrides?.page ?? pagination.page;
+      const limit = overrides?.limit ?? pagination.limit;
 
       const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
+        page: page.toString(),
+        limit: limit.toString(),
       });
 
       if (searchTerm) {
@@ -359,6 +361,8 @@ const SyncLogsPage = () => {
         if (result.data.pagination) {
           setPagination((prev) => ({
             ...prev,
+            page: result.data.pagination.page ?? prev.page,
+            limit: result.data.pagination.limit ?? prev.limit,
             total: result.data.pagination.total,
             totalPages: result.data.pagination.totalPages,
             hasNext: result.data.pagination.hasNext,
@@ -487,16 +491,15 @@ const SyncLogsPage = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <select
-                value={pagination.limit}
+                value={pagination.limit >= 1000 ? 'all' : pagination.limit.toString()}
                 onChange={(e) => {
+                  const newLimit = e.target.value === 'all' ? 1000 : parseInt(e.target.value);
                   setPagination((prev) => ({
                     ...prev,
-                    limit:
-                      e.target.value === 'all'
-                        ? 1000
-                        : parseInt(e.target.value),
+                    limit: newLimit,
                     page: 1,
                   }));
+                  fetchSyncLogs({ page: 1, limit: newLimit });
                 }}
                 className="pl-4 pr-8 py-2.5 bg-white dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] dark:focus:ring-[var(--secondary)] focus:border-transparent shadow-sm text-gray-900 dark:text-white transition-all duration-200 appearance-none cursor-pointer text-sm"
               >
