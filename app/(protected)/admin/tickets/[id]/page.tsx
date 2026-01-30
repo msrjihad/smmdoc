@@ -894,9 +894,9 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
                          <div className="w-full h-full flex items-center justify-center text-white font-medium text-sm bg-gradient-to-r from-gray-600 to-gray-700">
                            <FaExclamationTriangle className="h-4 w-4" />
                          </div>
-                      ) : message.userImage ? (
+                      ) : message.type !== 'system' && (message.userImage || message.authorRole === 'user') ? (
                         <img
-                          src={message.userImage}
+                          src={message.userImage || '/general/user-placeholder.jpg'}
                           alt={message.author}
                           className="w-full h-full object-cover relative z-10"
                           onError={(e) => {

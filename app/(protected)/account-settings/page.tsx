@@ -1,11 +1,18 @@
 'use client';
 
+import dynamic from 'next/dynamic';
+import { DEFAULT_USER_PLACEHOLDER } from '@/lib/constants';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { getUserDetails } from '@/lib/actions/getUser';
 import { useAppNameWithFallback } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { setUserDetails } from '@/lib/slice/userDetails';
 import React, { useEffect, useMemo, useState } from 'react';
+
+const MediaAttachModal = dynamic(
+  () => import('@/components/media/media-attach-modal'),
+  { ssr: false }
+);
 import {
     FaCamera,
     FaCheck,
@@ -140,8 +147,7 @@ const ProfilePage = () => {
   });
   const [hasProfileChanges, setHasProfileChanges] = useState(false);
   const [isSendingVerificationCode, setIsSendingVerificationCode] = useState(false);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [showMediaAttachModal, setShowMediaAttachModal] = useState(false);
   const [pendingEmailChange, setPendingEmailChange] = useState<string | null>(null);
   const [isEmailVerificationPending, setIsEmailVerificationPending] = useState(false);
   const [isGeneratingApiKey, setIsGeneratingApiKey] = useState(false);
@@ -706,89 +712,43 @@ const ProfilePage = () => {
     }
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('🔄 Avatar upload started');
-    const file = event.target.files?.[0];
-    if (!file) {
-      console.log('❌ No file selected');
-      return;
-    }
-
-    console.log('📁 File selected:', {
-      name: file.name,
-      type: file.type,
-      size: file.size
-    });
-
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-    if (!allowedTypes.includes(file.type)) {
-      console.log('❌ Invalid file type:', file.type);
-      showToast('Invalid file type. Only JPEG, PNG, and GIF are allowed.', 'error');
-      return;
-    }
-
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-      console.log('❌ File too large:', file.size);
-      showToast('File size too large. Maximum size is 5MB.', 'error');
-      return;
-    }
-
-    console.log('✅ File validation passed');
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      console.log('📷 Preview created');
-      setAvatarPreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    setIsUploadingAvatar(true);
-    console.log('🔄 Starting upload...');
-
+  const handleProfileImageSelected = async (fileUrl: string) => {
+    const user = userDetails || currentUser;
     try {
-      const formData = new FormData();
-      formData.append('avatar', file);
+      if (user?.image?.trim()) {
+        try {
+          await fetch('/api/admin/delete-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imagePath: user.image }),
+          });
+        } catch {
+          /* ignore delete errors, proceed with update */
+        }
+      }
 
-      console.log('📤 Sending request to /api/user/upload-avatar');
-      const response = await fetch('/api/user/upload-avatar', {
+      const response = await fetch('/api/user/set-profile-image', {
         method: 'POST',
-        body: formData,
-      });
-
-      console.log('📥 Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: fileUrl }),
       });
 
       const result = await response.json();
-      console.log('📋 Response data:', result);
 
-      if (response.ok) {
-        console.log('✅ Upload successful');
-
-        const updatedUserDetails = {
-          ...userDetails,
-          image: result.data.image,
-        };
+      if (response.ok && result.success) {
+        const updatedUserDetails = { ...userDetails, image: result.data.image };
         dispatch(setUserDetails(updatedUserDetails));
 
         try {
           await fetch('/api/auth/session', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              image: result.data.image,
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: result.data.image }),
           });
-        } catch (sessionError) {
-          console.log('Session update failed, but image uploaded successfully');
+        } catch {
+          /* session update failed, image still saved */
         }
 
-        setAvatarPreview(null);
         showToast('Profile picture updated successfully!', 'success');
 
         setTimeout(async () => {
@@ -796,25 +756,18 @@ const ProfilePage = () => {
             const updatedUserData = await getUserDetails();
             if (updatedUserData) {
               dispatch(setUserDetails(updatedUserData));
-
               window.dispatchEvent(new CustomEvent('avatarUpdated'));
             }
-          } catch (error) {
-            console.log('Failed to refresh user data, but image uploaded successfully');
+          } catch {
+            /* refresh failed */
           }
         }, 500);
       } else {
-        console.log('❌ Upload failed:', result.error);
-        showToast(result.error || 'Failed to upload profile picture', 'error');
-        setAvatarPreview(null);
+        showToast(result.error || 'Failed to update profile picture', 'error');
       }
     } catch (error) {
-      console.error('❌ Avatar upload error:', error);
-      showToast('Error uploading profile picture', 'error');
-      setAvatarPreview(null);
-    } finally {
-      setIsUploadingAvatar(false);
-      console.log('🏁 Upload process finished');
+      console.error('Profile image update error:', error);
+      showToast('Error updating profile picture', 'error');
     }
   };
 
@@ -1215,15 +1168,9 @@ const ProfilePage = () => {
 
               <div className="flex flex-col items-center space-y-4">
                 <div className="relative">
-                  {avatarPreview ? (
+                  {((user?.image || DEFAULT_USER_PLACEHOLDER) && !profileImageError) ? (
                     <img
-                      src={avatarPreview}
-                      alt="Profile Preview"
-                      className="profile-picture opacity-75 object-cover"
-                    />
-                  ) : user?.image && !profileImageError ? (
-                    <img
-                      src={user.image}
+                      src={user?.image || DEFAULT_USER_PLACEHOLDER}
                       alt="Profile"
                       className="profile-picture object-cover"
                       onError={() => {
@@ -1235,18 +1182,33 @@ const ProfilePage = () => {
                       {user?.username?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
                     </div>
                   )}
-                  <label htmlFor="avatar-upload" className="profile-picture-edit cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => setShowMediaAttachModal(true)}
+                    className="profile-picture-edit cursor-pointer"
+                    title="Change profile picture"
+                  >
                     <FaCamera className="w-4 h-4" />
-                  </label>
-                  <input
-                    id="avatar-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    className="hidden"
-                  />
+                  </button>
                 </div>
               </div>
+
+              <MediaAttachModal
+                isOpen={showMediaAttachModal}
+                onClose={() => setShowMediaAttachModal(false)}
+                currentPath="uploads/avatars"
+                singleFile
+                showTabs={false}
+                accept="image/*"
+                maxFileSize={1 * 1024 * 1024}
+                uploadHint="Image only [Max 1MB]"
+                hideUploadPath
+                onFilesUploaded={(fileUrls) => {
+                  if (fileUrls[0]) {
+                    handleProfileImageSelected(fileUrls[0]);
+                  }
+                }}
+              />
             </div>
 
             <div className="card card-padding">

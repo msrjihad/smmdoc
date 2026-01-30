@@ -264,6 +264,7 @@ class ContactDB {
           u.username,
           u.email,
           u.name,
+          u.image as userImage,
           cc.name as categoryName,
           ru.username as repliedByUsername
         FROM contact_messages cm
@@ -327,6 +328,7 @@ class ContactDB {
           username: message.username || 'Unknown User',
           email: message.email || 'No Email',
           name: message.name || null,
+          image: message.userImage || null,
           total_messages: Number(stats.total_messages) || 0,
           open_messages: Number(stats.open_messages) || 0
         },

@@ -1,4 +1,4 @@
-﻿import { auth } from '@/auth';
+import { auth } from '@/auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
@@ -33,11 +33,8 @@ export async function POST(request: NextRequest) {
       ];
       maxSize = 3 * 1024 * 1024;
     } else if (uploadType === 'admin_uploads') {
-      allowedTypes = [
-        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-        'application/pdf'
-      ];
-      maxSize = 10 * 1024 * 1024;
+      allowedTypes = []; // Allow any file type for admin uploads
+      maxSize = 50 * 1024 * 1024; // 50MB
     } else {
       allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       maxSize = 5 * 1024 * 1024;
@@ -46,6 +43,22 @@ export async function POST(request: NextRequest) {
     let uploadSubDir = 'uploads';
     if (uploadType === 'general') {
       uploadSubDir = 'general';
+    } else if (uploadType === 'admin_uploads') {
+      const uploadPath = data.get('uploadPath') as string | null;
+      if (uploadPath !== undefined && uploadPath !== null && typeof uploadPath === 'string') {
+        const normalized = uploadPath.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        if (!normalized.includes('..') && !path.isAbsolute(normalized)) {
+          const publicDir = path.resolve(process.cwd(), 'public');
+          const targetDir = normalized ? path.resolve(publicDir, normalized) : publicDir;
+          if (targetDir.startsWith(publicDir)) {
+            uploadSubDir = normalized; // empty string = root of public
+          }
+        }
+      }
+    }
+
+    if (uploadSubDir === 'uploads/avatars') {
+      maxSize = 1 * 1024 * 1024; // 1MB for profile avatars
     }
 
     const uploadsDir = path.join(process.cwd(), 'public', uploadSubDir);
@@ -57,9 +70,9 @@ export async function POST(request: NextRequest) {
     const uploadedFiles = [];
     
     for (const file of filesToProcess) {
-      if (!allowedTypes.includes(file.type)) {
+      if (allowedTypes.length > 0 && !allowedTypes.includes(file.type)) {
         return NextResponse.json(
-          { error: `Invalid file type for ${file.name}. Only ${(uploadType === 'uploads' || uploadType === 'admin_uploads') ? 'images and PDF files' : 'images'} are allowed.` },
+          { error: `Invalid file type for ${file.name}. Only ${(uploadType === 'uploads') ? 'images and PDF files' : 'images'} are allowed.` },
           { status: 400 }
         );
       }
@@ -87,7 +100,7 @@ export async function POST(request: NextRequest) {
       uploadedFiles.push({
         originalName: file.name,
         encryptedName: encryptedFilename,
-        fileUrl: `/${uploadSubDir}/${encryptedFilename}`,
+        fileUrl: uploadSubDir ? `/${uploadSubDir}/${encryptedFilename}` : `/${encryptedFilename}`,
         fileSize: file.size,
         mimeType: file.type
       });

@@ -305,8 +305,9 @@ const ProfileCard = ({
     }
   }, [isOpen]);
 
+  const imageUrl = user?.photo || user?.image || userData?.image || '/general/user-placeholder.jpg';
+
   useEffect(() => {
-    const imageUrl = user?.photo || user?.image || userData?.image;
     if (imageUrl) {
       setImageError(false);
       setDropdownImageError(false);
@@ -315,7 +316,7 @@ const ProfileCard = ({
       setDropdownImageError(false);
     }
   }, [user?.photo, user?.image, userData?.image]);
-  
+
   const isLoading = isInitialLoading || isLoadingStats || !user;
 
   const menuItems = [
@@ -384,10 +385,10 @@ const ProfileCard = ({
         style={{ background: 'transparent', backgroundColor: 'transparent' }}
       >
         <Avatar className="h-10 w-10 sm:h-10 sm:w-10">
-          {(user?.photo || user?.image || userData?.image) && !imageError ? (
+          {!imageError ? (
             <img
-              key={`avatar-${user?.photo || user?.image || userData?.image || ''}-${Date.now()}`}
-              src={`${user?.photo || user?.image || userData?.image || ''}${(user?.photo || user?.image || userData?.image) ? ((user?.photo || user?.image || userData?.image)?.includes('?') ? '&' : '?') + '_t=' + Date.now() : ''}`}
+              key={`avatar-${imageUrl}-${Date.now()}`}
+              src={`${imageUrl}${imageUrl?.includes('?') ? '&' : '?'}_t=${Date.now()}`}
               alt={user?.name || userData?.name || 'User'}
               className="w-full h-full object-cover relative z-10"
               onError={() => {
@@ -446,10 +447,10 @@ const ProfileCard = ({
               >
                 <div className="flex items-center space-x-2 sm:space-x-4 mb-3 sm:mb-4">
                   <Avatar className="h-10 w-10 sm:h-14 sm:w-14 ring-2 sm:ring-3 ring-[var(--primary)]/20">
-                    {(user?.photo || user?.image || userData?.image) && !dropdownImageError ? (
+                    {!dropdownImageError ? (
                       <img
-                        key={`dropdown-avatar-${user?.photo || user?.image || userData?.image || ''}-${Date.now()}`}
-                        src={`${user?.photo || user?.image || userData?.image || ''}${(user?.photo || user?.image || userData?.image) ? ((user?.photo || user?.image || userData?.image)?.includes('?') ? '&' : '?') + '_t=' + Date.now() : ''}`}
+                        key={`dropdown-avatar-${imageUrl}-${Date.now()}`}
+                        src={`${imageUrl}${imageUrl?.includes('?') ? '&' : '?'}_t=${Date.now()}`}
                         alt={user?.name || userData?.name || 'User'}
                         className="w-full h-full object-cover relative z-10"
                         onError={() => {

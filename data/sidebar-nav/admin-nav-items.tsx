@@ -181,6 +181,15 @@ export const adminNavItems = [
   },
 
   {
+    title: 'Media',
+    href: '/admin/media',
+    icon: 'FaImages',
+    label: 'Media',
+    roles: ['admin', 'moderator'],
+    permission: 'media',
+  },
+
+  {
     title: 'General Settings',
     href: '/admin/settings',
     icon: 'FaCog',

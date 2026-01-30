@@ -35,6 +35,7 @@ interface AdminSections {
   affiliates: NavItem[];
   additional: NavItem[];
   reseller: NavItem[];
+  media: NavItem[];
   settings: NavItem[];
   emailSettings: NavItem[];
   security: NavItem[];
@@ -90,6 +91,7 @@ export default function SideBarNav({
     'Affiliates': 'FaShareAlt',
     'Additional': 'FaChartBar',
     'Reseller Panels': 'FaSitemap',
+    'Media': 'FaImages',
     'Settings': 'FaCog',
     'Email Settings': 'FaEnvelope',
     'Security': 'FaLock',
@@ -319,6 +321,7 @@ export default function SideBarNav({
           }
           return resellerItems.includes(item.title);
         }),
+        media: items.filter((item) => ['Media'].includes(item.title)),
         settings: items.filter((item) =>
           [
             'General Settings',
@@ -913,6 +916,7 @@ export default function SideBarNav({
             {renderNavSection('Affiliates', getSectionItems('affiliates'))}
             {renderNavSection('Additional', getSectionItems('additional'))}
             {renderNavSection('Reseller Panels', getSectionItems('reseller'))}
+            {renderNavSection('Media', getSectionItems('media'))}
             {renderNavSection('Settings', getSectionItems('settings'))}
             {renderNavSection('Email Settings', getSectionItems('emailSettings'))}
             {renderNavSection('Security', getSectionItems('security'))}

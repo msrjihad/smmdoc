@@ -413,16 +413,10 @@ const Header: React.FC<HeaderProps> = ({
     const balance = 0;
 
     const avatarImageUrl = useMemo(() => {
-      const url = user?.photo || user?.image || '';
-      if (!url) {
-        imageUrlRef.current = null;
-        return null;
-      }
-
+      const url = user?.photo || user?.image || '/general/user-placeholder.jpg';
       if (imageUrlRef.current !== url) {
         imageUrlRef.current = url;
       }
-
       return imageUrlRef.current;
     }, [user?.photo, user?.image]);
 
@@ -653,7 +647,7 @@ const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const mobileAvatarUrl = useMemo(() => {
-    return memoizedSession?.user?.photo || memoizedSession?.user?.image || null;
+    return memoizedSession?.user?.photo || memoizedSession?.user?.image || '/general/user-placeholder.jpg';
   }, [memoizedSession?.user?.photo, memoizedSession?.user?.image]);
 
   const prevMobileAvatarUrl = useRef<string | null>(null);

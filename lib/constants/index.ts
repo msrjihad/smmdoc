@@ -20,3 +20,6 @@ if (typeof window === 'undefined') {
 export const APP_NAME = getAppNameSync();
 export const APP_DESCRIPTION = process.env.NEXT_PUBLIC_APP_DESCRIPTION;
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
+
+/** Default placeholder image for users without a profile picture */
+export const DEFAULT_USER_PLACEHOLDER = '/general/user-placeholder.jpg';

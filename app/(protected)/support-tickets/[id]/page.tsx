@@ -672,9 +672,9 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
                   ticketDetails.messages.map((message) => (
                     <div key={message.id} className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center relative">
-                      {message.userImage && message.type === 'customer' ? (
+                      {(message.userImage || '/general/user-placeholder.jpg') && message.type === 'customer' ? (
                         <img
-                          src={message.userImage}
+                          src={message.userImage || '/general/user-placeholder.jpg'}
                           alt={message.author}
                           className="w-full h-full object-cover relative z-10"
                           onError={(e) => {

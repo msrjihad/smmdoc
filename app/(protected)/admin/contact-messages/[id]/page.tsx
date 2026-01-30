@@ -139,6 +139,7 @@ interface ContactMessageDetails {
   userInfo: {
     fullName: string;
     email: string;
+    image?: string | null;
     phone?: string;
     company?: string;
     address?: string;
@@ -477,6 +478,7 @@ const ContactDetailsPage = ({ params }: { params: Promise<{ id: string }> }) => 
           userInfo: {
             fullName: data.message.user?.name || data.message.user?.username || 'Unknown User',
             email: data.message.user?.email || 'No Email',
+            image: data.message.user?.image || null,
             phone: data.message.user?.phone || '',
             company: data.message.user?.company || '',
             address: data.message.user?.address || '',
@@ -1195,9 +1197,19 @@ const ContactDetailsPage = ({ params }: { params: Promise<{ id: string }> }) => 
 
               {showUserInfo && (
                 <div className="space-y-4">
-                  <div>
-                    <div className="form-label">Username</div>
-                    <div className="mt-1 text-sm text-gray-900 dark:text-gray-100">{contactDetails?.username || 'No Username'}</div>
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={contactDetails?.userInfo?.image || '/general/user-placeholder.jpg'}
+                      alt={contactDetails?.userInfo?.fullName || 'Customer'}
+                      className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                      onError={(e) => {
+                        e.currentTarget.src = '/general/user-placeholder.jpg';
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="form-label">Username</div>
+                      <div className="mt-1 text-sm text-gray-900 dark:text-gray-100">{contactDetails?.username || 'No Username'}</div>
+                    </div>
                   </div>
                   <div>
                     <div className="form-label">Full Name</div>

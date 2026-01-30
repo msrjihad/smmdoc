@@ -1,9 +1,15 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAppNameWithFallback, updateGlobalAppName } from '@/contexts/app-name-context';
 import { setPageTitle } from '@/lib/utils/set-page-title';
 import { useEffect, useState } from 'react';
+
+const MediaAttachModal = dynamic(
+  () => import('@/components/media/media-attach-modal'),
+  { ssr: false }
+);
 import Image from 'next/image';
 import {
     FaCheck,
@@ -431,6 +437,7 @@ const GeneralSettingsPage = () => {
 
   const [newSubject, setNewSubject] = useState('');
   const [newCategory, setNewCategory] = useState('');
+  const [uploadFieldFor, setUploadFieldFor] = useState<'siteIcon' | 'siteLogo' | 'siteDarkLogo' | 'thumbnail' | null>(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -770,143 +777,32 @@ const GeneralSettingsPage = () => {
     }
   };
 
-  const handleDeleteImage = async (field: 'siteIcon' | 'siteLogo' | 'siteDarkLogo') => {
-    const imageType = field === 'siteIcon' ? 'Site Icon' : field === 'siteLogo' ? 'Site Logo' : 'Site Dark Logo';
-
-    if (filledFields.has(field)) {
-      showToast(`${imageType} cannot be removed once it has been set.`, 'error');
-      setValidationErrors(prev => ({
-        ...prev,
-        [field]: `${imageType} cannot be empty once it has been filled.`
-      }));
-      return;
-    }
-
-    const confirmed = window.confirm(`Are you sure you want to delete the ${imageType}? This action cannot be undone.`);
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      setLoadingStates(prev => ({ ...prev, general: true }));
-      showToast('Removing image...', 'pending');
-
-      const currentImagePath = generalSettings[field];
-
-      if (currentImagePath && currentImagePath.trim() !== '') {
-        try {
-          const deleteResponse = await fetch('/api/admin/delete-image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imagePath: currentImagePath }),
-          });
-
-          if (!deleteResponse.ok) {
-            const errorData = await deleteResponse.json();
-            console.warn('Failed to delete file from server:', errorData);
-          }
-        } catch (deleteError) {
-          console.error('Error deleting file from server:', deleteError);
-        }
+  const applyUploadedFile = async (field: 'siteIcon' | 'siteLogo' | 'siteDarkLogo' | 'thumbnail', fileUrl: string) => {
+    const existingPath = field === 'thumbnail' ? metaSettings.thumbnail : generalSettings[field];
+    if (existingPath?.trim()) {
+      try {
+        await fetch('/api/admin/delete-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imagePath: existingPath }),
+        });
+      } catch {
+        /* ignore delete errors, proceed with update */
       }
+    }
 
-      setGeneralSettings(prev => ({ ...prev, [field]: '' }));
-
-      const updatedSettings = { ...generalSettings, [field]: '' };
-      const saveResponse = await fetch('/api/admin/general-settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ generalSettings: updatedSettings }),
+    if (field === 'thumbnail') {
+      setMetaSettings(prev => ({ ...prev, [field]: fileUrl }));
+      showToast('Thumbnail selected. Click Save Meta Settings to apply.', 'success');
+    } else {
+      setGeneralSettings(prev => ({ ...prev, [field]: fileUrl }));
+      setValidationErrors(prev => {
+        const updated = { ...prev };
+        delete updated[field];
+        return updated;
       });
-
-      if (saveResponse.ok) {
-        showToast(`${imageType} removed successfully!`, 'success');
-      } else {
-        showToast(`Failed to remove ${imageType}`, 'error');
-      }
-    } catch (error) {
-      console.error('Error removing image:', error);
-      showToast('Error removing image', 'error');
-    } finally {
-      setLoadingStates(prev => ({ ...prev, general: false }));
-    }
-  };
-
-  const handleFileUpload = async (field: 'siteIcon' | 'siteLogo' | 'siteDarkLogo' | 'thumbnail', file: File) => {
-    try {
-
-      if ((field === 'siteIcon' || field === 'siteLogo' || field === 'siteDarkLogo') && file.type !== 'image/png') {
-        showToast('Only PNG format is allowed for site icon, site logo, and site dark logo', 'error');
-        return;
-      }
-
-      setLoadingStates(prev => ({ ...prev, general: true }));
-
-      if (field === 'siteIcon' || field === 'siteLogo' || field === 'siteDarkLogo') {
-        setImageLoadingStates(prev => ({ ...prev, [field]: true }));
-      }
-      showToast('Uploading file...', 'pending');
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      if (field === 'siteIcon' || field === 'siteLogo' || field === 'siteDarkLogo' || field === 'thumbnail') {
-        formData.append('type', 'general');
-      }
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const fileUrl = data.fileUrl;
-
-        if (field === 'thumbnail') {
-          setMetaSettings(prev => ({ ...prev, [field]: fileUrl }));
-          showToast('Thumbnail uploaded successfully!', 'success');
-        } else {
-
-          setGeneralSettings(prev => ({ ...prev, [field]: fileUrl }));
-
-          try {
-            const updatedSettings = { ...generalSettings, [field]: fileUrl };
-            const saveResponse = await fetch('/api/admin/general-settings', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ generalSettings: updatedSettings }),
-            });
-
-            if (saveResponse.ok) {
-              const fieldName = field === 'siteIcon' ? 'Site Icon' : field === 'siteLogo' ? 'Site Logo' : 'Site Dark Logo';
-              showToast(`${fieldName} uploaded and saved successfully!`, 'success');
-              setFilledFields(prev => new Set(prev).add(field));
-              setValidationErrors(prev => {
-                const updated = { ...prev };
-                delete updated[field];
-                return updated;
-              });
-            } else {
-              const fieldName = field === 'siteIcon' ? 'Site Icon' : field === 'siteLogo' ? 'Site Logo' : 'Site Dark Logo';
-              showToast(`${fieldName} uploaded but failed to save to database`, 'error');
-            }
-          } catch (saveError) {
-            console.error('Error auto-saving general settings:', saveError);
-            const fieldName = field === 'siteIcon' ? 'Site Icon' : field === 'siteLogo' ? 'Site Logo' : 'Site Dark Logo';
-            showToast(`${fieldName} uploaded but failed to save to database`, 'error');
-          }
-        }
-      } else {
-        const errorData = await response.json();
-        showToast(errorData.error || 'Failed to upload file', 'error');
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      showToast('Error uploading file', 'error');
-    } finally {
-      setLoadingStates(prev => ({ ...prev, general: false }));
+      const fieldName = field === 'siteIcon' ? 'Site Icon' : field === 'siteLogo' ? 'Site Logo' : 'Site Dark Logo';
+      showToast(`${fieldName} selected. Click Save General Settings to apply.`, 'success');
     }
   };
 
@@ -1075,39 +971,25 @@ const GeneralSettingsPage = () => {
                     {isPageLoading || imageLoadingStates.siteIcon ? (
                       <ImageSkeleton width={32} height={32} className="rounded" />
                     ) : generalSettings.siteIcon ? (
-                      <div className="relative group">
-                        <Image
-                          src={generalSettings.siteIcon}
-                          alt="Site Icon"
-                          width={32}
-                          height={32}
-                          className="w-8 h-8 rounded object-cover"
-                          onLoadStart={() => setImageLoadingStates(prev => ({ ...prev, siteIcon: true }))}
-                          onLoad={() => setImageLoadingStates(prev => ({ ...prev, siteIcon: false }))}
-                          onError={() => setImageLoadingStates(prev => ({ ...prev, siteIcon: false }))}
-                        />
-                        <button
-                          onClick={() => handleDeleteImage('siteIcon')}
-                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          title="Remove Site Icon"
-                        >
-                          <FaTimes className="w-2 h-2" />
-                        </button>
-                      </div>
+                      <Image
+                        src={generalSettings.siteIcon}
+                        alt="Site Icon"
+                        width={32}
+                        height={32}
+                        className="w-8 h-8 rounded object-cover"
+                        onLoadStart={() => setImageLoadingStates(prev => ({ ...prev, siteIcon: true }))}
+                        onLoad={() => setImageLoadingStates(prev => ({ ...prev, siteIcon: false }))}
+                        onError={() => setImageLoadingStates(prev => ({ ...prev, siteIcon: false }))}
+                      />
                     ) : null}
-                    <label className="btn btn-secondary cursor-pointer">
+                    <button
+                      type="button"
+                      onClick={() => setUploadFieldFor('siteIcon')}
+                      className="btn btn-secondary"
+                    >
                       <FaUpload className="w-4 h-4 mr-2" />
                       Upload Icon
-                      <input
-                        type="file"
-                        accept="image/png"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload('siteIcon', file);
-                        }}
-                        className="hidden"
-                      />
-                    </label>
+                    </button>
                   </div>
                   {validationErrors.siteIcon && (
                     <p className="text-red-500 dark:text-red-400 text-sm mt-1">{validationErrors.siteIcon}</p>
@@ -1122,39 +1004,25 @@ const GeneralSettingsPage = () => {
                         {isPageLoading || imageLoadingStates.siteLogo ? (
                           <ImageSkeleton width={128} height={32} className="rounded" />
                         ) : generalSettings.siteLogo ? (
-                          <div className="relative group">
-                            <Image
-                              src={generalSettings.siteLogo}
-                              alt="Site Logo"
-                              width={128}
-                              height={32}
-                              className="h-8 max-w-32 object-contain"
-                              onLoadStart={() => setImageLoadingStates(prev => ({ ...prev, siteLogo: true }))}
-                              onLoad={() => setImageLoadingStates(prev => ({ ...prev, siteLogo: false }))}
-                              onError={() => setImageLoadingStates(prev => ({ ...prev, siteLogo: false }))}
-                            />
-                            <button
-                              onClick={() => handleDeleteImage('siteLogo')}
-                              className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                              title="Remove Site Logo"
-                            >
-                              <FaTimes className="w-2 h-2" />
-                            </button>
-                          </div>
+                          <Image
+                            src={generalSettings.siteLogo}
+                            alt="Site Logo"
+                            width={128}
+                            height={32}
+                            className="h-8 max-w-32 object-contain"
+                            onLoadStart={() => setImageLoadingStates(prev => ({ ...prev, siteLogo: true }))}
+                            onLoad={() => setImageLoadingStates(prev => ({ ...prev, siteLogo: false }))}
+                            onError={() => setImageLoadingStates(prev => ({ ...prev, siteLogo: false }))}
+                          />
                         ) : null}
-                        <label className="btn btn-secondary cursor-pointer">
+                        <button
+                          type="button"
+                          onClick={() => setUploadFieldFor('siteLogo')}
+                          className="btn btn-secondary"
+                        >
                           <FaUpload className="w-4 h-4 mr-2" />
                           Upload Logo
-                          <input
-                            type="file"
-                            accept="image/png"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleFileUpload('siteLogo', file);
-                            }}
-                            className="hidden"
-                          />
-                        </label>
+                        </button>
                       </div>
                     </div>
                     <div>
@@ -1163,39 +1031,25 @@ const GeneralSettingsPage = () => {
                         {isPageLoading || imageLoadingStates.siteDarkLogo ? (
                           <ImageSkeleton width={128} height={32} className="rounded" />
                         ) : generalSettings.siteDarkLogo ? (
-                          <div className="relative group">
-                            <Image
-                              src={generalSettings.siteDarkLogo}
-                              alt="Site Dark Logo"
-                              width={128}
-                              height={32}
-                              className="h-8 max-w-32 object-contain"
-                              onLoadStart={() => setImageLoadingStates(prev => ({ ...prev, siteDarkLogo: true }))}
-                              onLoad={() => setImageLoadingStates(prev => ({ ...prev, siteDarkLogo: false }))}
-                              onError={() => setImageLoadingStates(prev => ({ ...prev, siteDarkLogo: false }))}
-                            />
-                            <button
-                              onClick={() => handleDeleteImage('siteDarkLogo')}
-                              className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                              title="Remove Site Dark Logo"
-                            >
-                              <FaTimes className="w-2 h-2" />
-                            </button>
-                          </div>
+                          <Image
+                            src={generalSettings.siteDarkLogo}
+                            alt="Site Dark Logo"
+                            width={128}
+                            height={32}
+                            className="h-8 max-w-32 object-contain"
+                            onLoadStart={() => setImageLoadingStates(prev => ({ ...prev, siteDarkLogo: true }))}
+                            onLoad={() => setImageLoadingStates(prev => ({ ...prev, siteDarkLogo: false }))}
+                            onError={() => setImageLoadingStates(prev => ({ ...prev, siteDarkLogo: false }))}
+                          />
                         ) : null}
-                        <label className="btn btn-secondary cursor-pointer">
+                        <button
+                          type="button"
+                          onClick={() => setUploadFieldFor('siteDarkLogo')}
+                          className="btn btn-secondary"
+                        >
                           <FaUpload className="w-4 h-4 mr-2" />
                           Upload Dark Logo
-                          <input
-                            type="file"
-                            accept="image/png"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleFileUpload('siteDarkLogo', file);
-                            }}
-                            className="hidden"
-                          />
-                        </label>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1388,64 +1242,22 @@ const GeneralSettingsPage = () => {
                   <label className="form-label">Thumbnail (1200x630px)</label>
                   <div className="flex items-center gap-3">
                     {metaSettings.thumbnail ? (
-                      <div className="relative group">
-                        <Image
-                          src={metaSettings.thumbnail}
-                          alt="SEO Thumbnail"
-                          width={80}
-                          height={40}
-                          className="w-20 h-10 rounded object-cover border border-gray-200 dark:border-gray-700"
-                        />
-                        <button
-                          onClick={async () => {
-                            const confirmed = window.confirm('Are you sure you want to delete the thumbnail? This action cannot be undone.');
-                            if (!confirmed) return;
-
-                            try {
-                              if (metaSettings.thumbnail && metaSettings.thumbnail.trim() !== '') {
-                                try {
-                                  const deleteResponse = await fetch('/api/admin/delete-image', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ imagePath: metaSettings.thumbnail }),
-                                  });
-
-                                  if (!deleteResponse.ok) {
-                                    const errorData = await deleteResponse.json();
-                                    console.warn('Failed to delete thumbnail file from server:', errorData);
-                                  }
-                                } catch (deleteError) {
-                                  console.error('Error deleting thumbnail file from server:', deleteError);
-                                }
-                              }
-
-                              setMetaSettings(prev => ({ ...prev, thumbnail: '' }));
-                              showToast('Thumbnail removed successfully!', 'success');
-                            } catch (error) {
-                              console.error('Error removing thumbnail:', error);
-                              showToast('Error removing thumbnail', 'error');
-                            }
-                          }}
-                          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          title="Remove Thumbnail"
-                        >
-                          <FaTimes className="w-2 h-2" />
-                        </button>
-                      </div>
+                      <Image
+                        src={metaSettings.thumbnail}
+                        alt="SEO Thumbnail"
+                        width={80}
+                        height={40}
+                        className="w-20 h-10 rounded object-cover border border-gray-200 dark:border-gray-700"
+                      />
                     ) : null}
-                    <label className="btn btn-secondary cursor-pointer">
+                    <button
+                      type="button"
+                      onClick={() => setUploadFieldFor('thumbnail')}
+                      className="btn btn-secondary"
+                    >
                       <FaImage className="w-4 h-4 mr-2" />
                       Upload Thumbnail
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleFileUpload('thumbnail', file);
-                        }}
-                        className="hidden"
-                      />
-                    </label>
+                    </button>
                   </div>
                 </div>
 
@@ -2056,6 +1868,29 @@ const GeneralSettingsPage = () => {
           </div>
         </div>
       </div>
+
+      <MediaAttachModal
+        isOpen={uploadFieldFor !== null}
+        onClose={() => setUploadFieldFor(null)}
+        currentPath="general"
+        singleFile
+        accept={
+          uploadFieldFor === 'thumbnail'
+            ? 'image/*'
+            : uploadFieldFor === 'siteIcon' || uploadFieldFor === 'siteLogo' || uploadFieldFor === 'siteDarkLogo'
+            ? 'image/png'
+            : undefined
+        }
+        onFilesUploaded={
+          uploadFieldFor
+            ? (fileUrls) => {
+                if (fileUrls[0] && uploadFieldFor) {
+                  applyUploadedFile(uploadFieldFor, fileUrls[0]);
+                }
+              }
+            : undefined
+        }
+      />
     </div>
   );
 };

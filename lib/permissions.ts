@@ -15,6 +15,7 @@ export const PERMISSION_ROUTE_MAP: Record<string, string[]> = {
   withdrawals: ['/admin/affiliates/withdrawals'],
   analytics: ['/admin/analytics'],
   child_panels: ['/admin/child-panels'],
+  media: ['/admin/media'],
 };
 
 export const ROUTE_PERMISSION_MAP: Record<string, string> = {
@@ -34,6 +35,7 @@ export const ROUTE_PERMISSION_MAP: Record<string, string> = {
   '/admin/affiliates/withdrawals': 'withdrawals',
   '/admin/analytics': 'analytics',
   '/admin/child-panels': 'child_panels',
+  '/admin/media': 'media',
 };
 
 export function hasPermission(
