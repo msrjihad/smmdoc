@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
       ];
       maxSize = 3 * 1024 * 1024;
     } else if (uploadType === 'admin_uploads') {
-      allowedTypes = []; // Allow any file type for admin uploads
-      maxSize = 50 * 1024 * 1024; // 50MB
+      allowedTypes = [];
+      maxSize = 50 * 1024 * 1024;
     } else {
       allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       maxSize = 5 * 1024 * 1024;
@@ -51,14 +51,14 @@ export async function POST(request: NextRequest) {
           const publicDir = path.resolve(process.cwd(), 'public');
           const targetDir = normalized ? path.resolve(publicDir, normalized) : publicDir;
           if (targetDir.startsWith(publicDir)) {
-            uploadSubDir = normalized; // empty string = root of public
+            uploadSubDir = normalized;
           }
         }
       }
     }
 
     if (uploadSubDir === 'uploads/avatars') {
-      maxSize = 1 * 1024 * 1024; // 1MB for profile avatars
+      maxSize = 1 * 1024 * 1024;
     }
 
     const uploadsDir = path.join(process.cwd(), 'public', uploadSubDir);

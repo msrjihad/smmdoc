@@ -98,13 +98,18 @@ interface TicketMessage {
 }
 
 interface TicketAttachment {
-  id: string;
-  filename: string;
-  filesize: string;
-  mimetype: string;
-  uploadedAt: string;
-  uploadedBy: string;
+  id?: string;
+  filename?: string;
+  encryptedName?: string;
+  originalName?: string;
+  filesize?: string;
+  mimetype?: string;
+  mimeType?: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
   url?: string;
+  fileUrl?: string;
+  encryptedPath?: string;
 }
 
 interface TicketNote {
@@ -894,7 +899,7 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
                          <div className="w-full h-full flex items-center justify-center text-white font-medium text-sm bg-gradient-to-r from-gray-600 to-gray-700">
                            <FaExclamationTriangle className="h-4 w-4" />
                          </div>
-                      ) : message.type !== 'system' && (message.userImage || message.authorRole === 'user') ? (
+                      ) : (message.userImage || message.authorRole === 'user') ? (
                         <img
                           src={message.userImage || '/general/user-placeholder.jpg'}
                           alt={message.author}
@@ -953,13 +958,13 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
                           <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Attachments:</h4>
                           {message.attachments.map((attachment, index) => {
 
-                            const attachmentUrl = typeof attachment === 'string' ? attachment : attachment.url;
+                            const attachmentUrl = typeof attachment === 'string' ? attachment : (attachment.url || attachment.fileUrl || attachment.encryptedPath);
                             const filename = typeof attachment === 'string' 
                               ? attachment.split('/').pop() || 'Unknown file'
-                              : attachment.filename;
+                              : (attachment.filename || attachment.encryptedName || attachment.originalName || 'Unknown file');
                             const mimetype = typeof attachment === 'string'
                               ? ''
-                              : attachment.mimetype;
+                              : (attachment.mimetype || attachment.mimeType || '');
 
                             return (
                               <div key={index} className="flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
@@ -969,13 +974,15 @@ const SupportTicketDetailsPage = ({ params }: { params: Promise<{ id: string }> 
                                     {filename}
                                   </div>
                                   <div className="text-xs text-gray-600 dark:text-gray-400">
-                                    {typeof attachment === 'object' && attachment.filesize ? `${attachment.filesize} • ` : ''}Attachment
+                                    {typeof attachment === 'object' && attachment.filesize ? `${attachment.filesize} • ` : ''}
+                                    {(typeof attachment === 'object' && attachment.uploadedBy) || message.author ? `Uploaded by ${(typeof attachment === 'object' && attachment.uploadedBy) || message.author} • ` : ''}Attachment
                                   </div>
                                 </div>
                                 <button 
                                   className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                                  onClick={() => window.open(attachmentUrl, '_blank')}
+                                  onClick={() => attachmentUrl && window.open(attachmentUrl, '_blank')}
                                   title="View attachment"
+                                  disabled={!attachmentUrl}
                                 >
                                   <FaEye className="h-4 w-4" />
                                 </button>

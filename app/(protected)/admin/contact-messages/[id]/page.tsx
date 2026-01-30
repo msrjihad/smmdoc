@@ -101,18 +101,19 @@ interface ContactMessage {
 }
 
 interface ContactAttachment {
-  id: string;
-  filename: string;
+  id?: string;
+  filename?: string;
   originalName?: string;
   encryptedName?: string;
-  filesize: string;
-  mimetype: string;
+  filesize?: string;
+  mimetype?: string;
   mimeType?: string;
   fileSize?: number;
   url?: string;
   fileUrl?: string;
-  uploadedAt: string;
-  uploadedBy: string;
+  encryptedPath?: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
 }
 
 interface ContactNote {
@@ -972,8 +973,8 @@ const ContactDetailsPage = ({ params }: { params: Promise<{ id: string }> }) => 
                         <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Attachments:</h4>
                         {message.attachments.map((attachment, index) => {
 
-                          const attachmentUrl = attachment.url || attachment.fileUrl;
-                          const filename = attachment.encryptedName || attachment.filename || 'Unknown file';
+                          const attachmentUrl = attachment.url || attachment.fileUrl || attachment.encryptedPath;
+                          const filename = attachment.encryptedName || attachment.filename || attachment.originalName || 'Unknown file';
                           const mimetype = attachment.mimetype || attachment.mimeType || 'application/octet-stream';
                           const filesize = attachment.filesize || (attachment.fileSize ? `${Math.round(attachment.fileSize / 1024)} KB` : '');
 
@@ -985,13 +986,15 @@ const ContactDetailsPage = ({ params }: { params: Promise<{ id: string }> }) => 
                                   {filename}
                                 </div>
                                 <div className="text-xs text-gray-600 dark:text-gray-400">
-                                  {filesize ? `${filesize} • ` : ''}Attachment
+                                  {filesize ? `${filesize} • ` : ''}
+                                  {attachment.uploadedBy ? `Uploaded by ${attachment.uploadedBy} • ` : ''}Attachment
                                 </div>
                               </div>
                               <button 
-                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                                onClick={() => window.open(attachmentUrl, '_blank')}
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={() => attachmentUrl && window.open(attachmentUrl, '_blank')}
                                 title="View attachment"
+                                disabled={!attachmentUrl}
                               >
                                 <FaEye className="h-4 w-4" />
                               </button>
@@ -1037,8 +1040,8 @@ const ContactDetailsPage = ({ params }: { params: Promise<{ id: string }> }) => 
                           <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Attachments:</h4>
                           {message.attachments.map((attachment, index) => {
 
-                            const attachmentUrl = attachment.url || attachment.fileUrl;
-                            const filename = attachment.encryptedName || attachment.filename || 'Unknown file';
+                            const attachmentUrl = attachment.url || attachment.fileUrl || attachment.encryptedPath;
+                            const filename = attachment.encryptedName || attachment.filename || attachment.originalName || 'Unknown file';
                             const mimetype = attachment.mimetype || attachment.mimeType || 'application/octet-stream';
                             const filesize = attachment.filesize || (attachment.fileSize ? `${Math.round(attachment.fileSize / 1024)} KB` : '');
 
@@ -1050,13 +1053,15 @@ const ContactDetailsPage = ({ params }: { params: Promise<{ id: string }> }) => 
                                     {filename}
                                   </div>
                                   <div className="text-xs text-gray-600 dark:text-gray-400">
-                                    {filesize ? `${filesize} • ` : ''}Attachment
+                                    {filesize ? `${filesize} • ` : ''}
+                                    {attachment.uploadedBy ? `Uploaded by ${attachment.uploadedBy} • ` : ''}Attachment
                                   </div>
                                 </div>
                                 <button 
-                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                                  onClick={() => window.open(attachmentUrl, '_blank')}
+                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  onClick={() => attachmentUrl && window.open(attachmentUrl, '_blank')}
                                   title="View attachment"
+                                  disabled={!attachmentUrl}
                                 >
                                   <FaEye className="h-4 w-4" />
                                 </button>

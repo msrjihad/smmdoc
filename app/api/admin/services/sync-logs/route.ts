@@ -133,7 +133,6 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Keep only last 100 sync logs: auto-delete older ones from database
     const SYNC_LOGS_MAX = 100;
     if (filteredServices.length > SYNC_LOGS_MAX) {
       const idsToClear = filteredServices.slice(SYNC_LOGS_MAX).map((s) => s.id);

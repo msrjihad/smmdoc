@@ -34,7 +34,6 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      // No body or invalid JSON - use user's current email
     }
 
     const targetEmail = body.email?.trim();
@@ -61,7 +60,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Determine which email to send code to
     const emailToUse = targetEmail || user.email;
 
     if (!emailToUse) {
@@ -75,7 +73,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // If sending to a NEW email (for change flow), validate it's not taken
     if (targetEmail && targetEmail.toLowerCase() !== (user.email || '').toLowerCase()) {
       const emailExists = await db.users.findFirst({
         where: {
@@ -94,7 +91,6 @@ export async function POST(req: NextRequest) {
         );
       }
     } else if (!targetEmail && user.emailVerified) {
-      // Sending to current email and already verified
       return NextResponse.json(
         {
           error: 'Email is already verified',

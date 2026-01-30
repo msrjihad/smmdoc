@@ -70,11 +70,17 @@ interface TicketMessage {
 }
 
 interface TicketAttachment {
-  id: string;
-  filename: string;
-  filesize: string;
-  mimetype: string;
-  url: string;
+  id?: string;
+  filename?: string;
+  encryptedName?: string;
+  originalName?: string;
+  filesize?: string;
+  mimetype?: string;
+  mimeType?: string;
+  url?: string;
+  fileUrl?: string;
+  encryptedPath?: string;
+  uploadedBy?: string;
 }
 
 interface SupportTicketDetails {
@@ -715,13 +721,13 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
                         <div className="mt-4 space-y-2">
                           {message.attachments && message.attachments.map((attachment, index) => {
 
-                            const attachmentUrl = typeof attachment === 'string' ? attachment : attachment.url;
+                            const attachmentUrl = typeof attachment === 'string' ? attachment : (attachment.url || attachment.fileUrl || attachment.encryptedPath);
                             const filename = typeof attachment === 'string' 
                               ? (attachment as string).split('/').pop() || 'Unknown file'
-                              : attachment.filename;
+                              : (attachment.filename || attachment.encryptedName || attachment.originalName || 'Unknown file');
                             const mimetype = typeof attachment === 'string'
                               ? ''
-                              : attachment.mimetype;
+                              : (attachment.mimetype || attachment.mimeType || '');
                             const filesize = typeof attachment === 'object' && attachment.filesize ? attachment.filesize : '';
 
                             return (
@@ -732,13 +738,15 @@ const UserSupportTicketPage = ({ params }: { params: Promise<{ id: string }> }) 
                                     {filename}
                                   </div>
                                   <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                    {filesize ? `${filesize} • ` : ''}Attachment
+                                    {filesize ? `${filesize} • ` : ''}
+                                    {(typeof attachment === 'object' && attachment.uploadedBy) || message.author ? `Uploaded by ${(typeof attachment === 'object' && attachment.uploadedBy) || message.author} • ` : ''}Attachment
                                   </div>
                                 </div>
                                 <button 
-                                  className="text-blue-600 hover:text-blue-800"
-                                  onClick={() => window.open(attachmentUrl, '_blank')}
+                                  className="text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  onClick={() => attachmentUrl && window.open(attachmentUrl, '_blank')}
                                   title="View attachment"
+                                  disabled={!attachmentUrl}
                                 >
                                   <FaEye className="h-4 w-4" />
                                 </button>

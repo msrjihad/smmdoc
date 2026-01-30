@@ -71,7 +71,6 @@ export async function POST(req: NextRequest) {
 
     const isEmailChanging = email !== undefined && email !== existingUser.email;
 
-    // If verification code provided (for email change or current email verification)
     const code = typeof verificationCode === 'string' ? verificationCode.trim() : '';
     if (code) {
       const verificationToken = await getVerificationTokenByToken(code);
@@ -122,10 +121,8 @@ export async function POST(req: NextRequest) {
     if (fullName !== undefined) updateData.name = fullName;
     if (email !== undefined) {
       updateData.email = email;
-      // If code was provided and validated, mark as verified; otherwise unverified
       updateData.emailVerified = code ? new Date() : null;
     } else if (code && existingUser.email) {
-      // Verification code for current email (no email change)
       updateData.emailVerified = new Date();
     }
     if (username !== undefined) updateData.username = username;
@@ -143,7 +140,6 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Delete verification token if code was used
     if (code) {
       const verificationToken = await getVerificationTokenByToken(code);
       if (verificationToken) {
@@ -162,7 +158,6 @@ export async function POST(req: NextRequest) {
       console.error('Failed to log profile update activity:', error);
     }
 
-    // If email changed WITHOUT code, send verification code to new email (account now unverified)
     if (isEmailChanging && !code) {
       try {
         const verificationToken = await generateVerificationCode(email);
