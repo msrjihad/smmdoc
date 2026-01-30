@@ -8,9 +8,6 @@ import {
   FaEnvelope,
   FaFileAlt,
   FaSearch,
-  FaShoppingCart,
-  FaTicketAlt,
-  FaBullhorn,
   FaPlug,
   FaUser,
   FaCreditCard,
@@ -36,10 +33,7 @@ const AUDIENCE_FILTER_OPTIONS: Array<{ value: '' | AudienceRole; label: string }
 const CATEGORY_ICON_MAP: Record<EmailCategoryId, React.ComponentType<{ className?: string }>> = {
   2: FaUser,
   3: FaCreditCard,
-  4: FaShoppingCart,
-  5: FaTicketAlt,
   6: FaEnvelope,
-  7: FaBullhorn,
   8: FaPlug,
 };
 
