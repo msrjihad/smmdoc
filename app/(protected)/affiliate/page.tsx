@@ -155,7 +155,7 @@ function AffiliateStatsCards() {
 
   const referralLink = (() => {
     if (typeof window === 'undefined') return '';
-    const base = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+    const base = window.location.origin;
     const code = (stats as any)?.referralCode || cachedReferralCode;
     return code ? `${base}/api/ref/${code}` : '';
   })();

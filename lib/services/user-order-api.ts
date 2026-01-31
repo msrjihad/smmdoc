@@ -1,8 +1,11 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
+const getBaseUrl = () =>
+  typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_API_URL || '');
+
 export const userOrderApi = createApi({
   reducerPath: 'userOrderApi',
-  baseQuery: fetchBaseQuery({ baseUrl: process.env.NEXT_PUBLIC_API_URL }),
+  baseQuery: fetchBaseQuery({ baseUrl: getBaseUrl() }),
   tagTypes: ['UserOrders'],
   endpoints: (builder) => ({
     getUserOrders: builder.query({

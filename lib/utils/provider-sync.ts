@@ -275,7 +275,6 @@ type OrderWithService = Awaited<ReturnType<typeof db.newOrders.findMany>>[number
 };
 
 async function fetchOrdersToSync(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   where: any,
   includeProviderId = false
 ) {

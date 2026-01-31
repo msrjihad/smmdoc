@@ -61,6 +61,12 @@ export function CurrencyProvider({
       setAvailableCurrencies(currencies);
       setCurrencySettings(settings);
 
+      // If current currency is not in enabled list, use admin default
+      setCurrencyState((prev) => {
+        const isAvailable = currencies.some((c) => c.code === prev);
+        return isAvailable ? prev : (settings.defaultCurrency || 'USD');
+      });
+
       console.log('Currency data loaded successfully:', {
         currenciesCount: currencies.length,
         defaultCurrency: settings.defaultCurrency
@@ -70,8 +76,6 @@ export function CurrencyProvider({
 
       const fallbackCurrencies: Currency[] = [
         { id: 1, code: 'USD', name: 'US Dollar', symbol: '$', rate: 1.0000, enabled: true },
-        { id: 5, code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳', rate: 110.0000, enabled: true },
-        { id: 6, code: 'USDT', name: 'Tether USD', symbol: '₮', rate: 1.0000, enabled: true },
       ];
 
       const fallbackSettings: CurrencySettings = {

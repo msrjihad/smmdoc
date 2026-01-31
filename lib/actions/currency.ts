@@ -6,8 +6,10 @@ import { db } from '@/lib/db';
 export async function getUserCurrency() {
   const session = await auth();
   const user = await getUserById(session?.user?.id || '0');
-  if (!user) return 'USD';
-  return user.currency as 'USD' | 'BDT' | 'USDT';
+  if (user) return user.currency as 'USD' | 'BDT' | 'USDT';
+  // For guests: use admin's default currency from settings
+  const currencySettings = await db.currencySettings.findFirst();
+  return (currencySettings?.defaultCurrency || 'USD') as 'USD' | 'BDT' | 'USDT';
 }
 
 export async function updateUserCurrency(currency: 'USD' | 'BDT' | 'USDT') {

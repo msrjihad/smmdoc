@@ -80,8 +80,7 @@ export async function fetchCurrencyData(): Promise<{
         console.log('Currency settings: Using fallback due to error:', settingsError);
       }
     } else {
-
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      const baseUrl = window.location.origin;
 
       const currenciesResponse = await fetch(`${baseUrl}/api/currencies/enabled`, {
         method: 'GET',
