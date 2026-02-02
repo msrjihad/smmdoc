@@ -578,7 +578,6 @@ const Header: React.FC<HeaderProps> = ({
 
   const logoFetchedRef = useRef(false);
   useEffect(() => {
-
     if (logoFetchedRef.current) {
       setMounted(true);
       setLogoLoaded(true);
@@ -586,12 +585,9 @@ const Header: React.FC<HeaderProps> = ({
     }
 
     let isMounted = true;
-    let abortController: AbortController | null = null;
 
     const fetchSiteLogo = async () => {
       try {
-
-        abortController = new AbortController();
         const data = await cachedFetch<{
           success: boolean;
           generalSettings?: {
@@ -600,10 +596,7 @@ const Header: React.FC<HeaderProps> = ({
           };
         }>(
           '/api/public/general-settings',
-          {
-            method: 'GET',
-            signal: abortController.signal,
-          },
+          { method: 'GET' },
           300000
         );
 
@@ -621,11 +614,9 @@ const Header: React.FC<HeaderProps> = ({
           setSiteLogo('/logo.png');
         }
       } catch (error) {
-        if (!isMounted || (error as any)?.name === 'AbortError') return;
+        if (!isMounted) return;
         logger.error('Error fetching site logo', error);
-        if (isMounted) {
-          setSiteLogo('/logo.png');
-        }
+        setSiteLogo('/logo.png');
       } finally {
         if (isMounted) {
           logoFetchedRef.current = true;
@@ -640,9 +631,6 @@ const Header: React.FC<HeaderProps> = ({
 
     return () => {
       isMounted = false;
-      if (abortController) {
-        abortController.abort();
-      }
     };
   }, []);
 
