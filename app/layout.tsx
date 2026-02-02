@@ -116,6 +116,7 @@ export default async function RootLayout({
               enableSystem
               disableTransitionOnChange={false}
             >
+              <NextTopLoader showSpinner={false} />
               <Toaster richColors position="bottom-right" />
               <ServiceWorkerRegistration />
               <CustomCodesInjector />
