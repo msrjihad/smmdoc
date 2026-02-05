@@ -37,13 +37,10 @@ export const resetPassword = async (values: z.infer<typeof resetSchema>) => {
       }
     );
     if (emailData) {
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '');
-      const resetLink = `${appUrl}/new-password?token=${resetPasswordToken.token}`;
-      const htmlWithResetLink = emailData.html + `<p style="margin-top: 20px;">To reset your password, <a href="${resetLink}">click here</a>.</p>`;
       await sendMail({
         sendTo: email,
         subject: emailData.subject,
-        html: htmlWithResetLink,
+        html: emailData.html,
         fromName: emailData.fromName ?? undefined,
       });
     } else {
