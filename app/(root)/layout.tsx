@@ -1,6 +1,7 @@
 import Footer from '@/components/frontend/footer';
 import Header from '@/components/frontend/header';
 import LiveChatWidget from '@/components/frontend/live-chat-widget';
+import RootLayoutContent from '@/components/frontend/root-layout-content';
 import ScrollToTop from '@/components/frontend/scroll-to-top';
 
 export default function RootLayout({
@@ -11,7 +12,9 @@ export default function RootLayout({
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        <RootLayoutContent>{children}</RootLayoutContent>
+      </main>
       <Footer />
       <LiveChatWidget />
       <ScrollToTop />
