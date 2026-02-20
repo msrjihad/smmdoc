@@ -1,0 +1,166 @@
+
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  expiresAt: number;
+}
+
+interface PendingRequest<T> {
+  promise: Promise<T>;
+  timestamp: number;
+}
+
+class ApiCache {
+  private cache = new Map<string, CacheEntry<any>>();
+  private pendingRequests = new Map<string, PendingRequest<any>>();
+  private defaultTTL = 60000;
+
+  
+
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    if (Date.now() > entry.expiresAt) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.data as T;
+  }
+
+  
+
+  set<T>(key: string, data: T, ttl: number = this.defaultTTL): void {
+    const expiresAt = Date.now() + ttl;
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      expiresAt,
+    });
+  }
+
+  
+
+  getPendingRequest<T>(key: string): Promise<T> | null {
+    const pending = this.pendingRequests.get(key);
+    if (!pending) return null;
+
+    if (Date.now() - pending.timestamp > 30000) {
+      this.pendingRequests.delete(key);
+      return null;
+    }
+
+    return pending.promise;
+  }
+
+  
+
+  setPendingRequest<T>(key: string, promise: Promise<T>): void {
+    this.pendingRequests.set(key, {
+      promise,
+      timestamp: Date.now(),
+    });
+
+    promise
+      .finally(() => {
+
+        setTimeout(() => {
+          this.pendingRequests.delete(key);
+        }, 1000);
+      });
+  }
+
+  
+
+  delete(key: string): void {
+    this.cache.delete(key);
+    this.pendingRequests.delete(key);
+  }
+
+  
+
+  clear(): void {
+    this.cache.clear();
+    this.pendingRequests.clear();
+  }
+
+  
+
+  generateKey(url: string, options?: RequestInit): string {
+    const method = options?.method || 'GET';
+    const body = options?.body ? JSON.stringify(options.body) : '';
+    return `${method}:${url}:${body}`;
+  }
+
+  
+
+  async fetch<T>(
+    url: string,
+    options?: RequestInit,
+    ttl?: number
+  ): Promise<T> {
+    const key = this.generateKey(url, options);
+
+    const cached = this.get<T>(key);
+    if (cached !== null) {
+      return cached;
+    }
+
+    const pending = this.getPendingRequest<T>(key);
+    if (pending) {
+      return pending;
+    }
+
+    const promise = fetch(url, {
+      ...options,
+      credentials: 'include',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json() as Promise<T>;
+      })
+      .then((data) => {
+
+        this.set(key, data, ttl);
+        return data;
+      })
+      .catch((error) => {
+
+        this.delete(key);
+        throw error;
+      });
+
+    this.setPendingRequest(key, promise);
+    return promise;
+  }
+}
+
+export const apiCache = new ApiCache();
+
+export async function cachedFetch<T>(
+  url: string,
+  options?: RequestInit,
+  ttl?: number
+): Promise<T> {
+  return apiCache.fetch<T>(url, options, ttl);
+}
+
+export function clearCachePattern(pattern: string | RegExp): void {
+  const regex = typeof pattern === 'string' ? new RegExp(pattern) : pattern;
+
+  for (const key of apiCache['cache'].keys()) {
+    if (regex.test(key)) {
+      apiCache.delete(key);
+    }
+  }
+}
+

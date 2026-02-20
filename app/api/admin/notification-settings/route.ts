@@ -1,0 +1,90 @@
+import { auth } from '@/auth';
+import { db } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET() {
+  try {
+    const session = await auth();
+
+    if (!session?.user || session.user.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const integrationSettings = await db.integrationSettings.findFirst();
+
+    if (!integrationSettings) {
+      return NextResponse.json({
+        success: true,
+        userNotifications: {
+          welcomeEnabled: false,
+          apiKeyChangedEnabled: false,
+          orderStatusChangedEnabled: false,
+          newServiceEnabled: false,
+          serviceUpdatesEnabled: false,
+          transactionAlertEnabled: false,
+          transferFundsEnabled: false,
+          affiliateWithdrawalsEnabled: false,
+          supportTicketsEnabled: false,
+          contactMessagesEnabled: false,
+          blogPostEnabled: false,
+          announcementEnabled: false,
+        },
+        adminNotifications: {
+          apiBalanceAlertsEnabled: false,
+          supportTicketsEnabled: false,
+          newMessagesEnabled: false,
+          newManualServiceOrdersEnabled: false,
+          failOrdersEnabled: false,
+          refillRequestsEnabled: false,
+          cancelRequestsEnabled: false,
+          newUsersEnabled: false,
+          userActivityLogsEnabled: false,
+          pendingTransactionsEnabled: false,
+          apiSyncLogsEnabled: false,
+          newChildPanelOrdersEnabled: false,
+          announcementEnabled: false,
+        },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      userNotifications: {
+        welcomeEnabled: integrationSettings.userNotifWelcome ?? false,
+        apiKeyChangedEnabled: integrationSettings.userNotifApiKeyChanged ?? false,
+        orderStatusChangedEnabled: integrationSettings.userNotifOrderStatusChanged ?? false,
+        newServiceEnabled: integrationSettings.userNotifNewService ?? false,
+        serviceUpdatesEnabled: integrationSettings.userNotifServiceUpdates ?? false,
+        transactionAlertEnabled: integrationSettings.userNotifTransactionAlert ?? false,
+        transferFundsEnabled: integrationSettings.userNotifTransferFunds ?? false,
+        affiliateWithdrawalsEnabled: integrationSettings.userNotifAffiliateWithdrawals ?? false,
+        supportTicketsEnabled: integrationSettings.userNotifSupportTickets ?? false,
+        contactMessagesEnabled: integrationSettings.userNotifContactMessages ?? false,
+        blogPostEnabled: integrationSettings.userNotifBlogPost ?? false,
+        announcementEnabled: integrationSettings.userNotifAnnouncement ?? false,
+      },
+      adminNotifications: {
+        apiBalanceAlertsEnabled: integrationSettings.adminNotifApiBalanceAlerts ?? false,
+        supportTicketsEnabled: integrationSettings.adminNotifSupportTickets ?? false,
+        newMessagesEnabled: integrationSettings.adminNotifNewMessages ?? false,
+        newManualServiceOrdersEnabled: integrationSettings.adminNotifNewManualServiceOrders ?? false,
+        failOrdersEnabled: integrationSettings.adminNotifFailOrders ?? false,
+        refillRequestsEnabled: integrationSettings.adminNotifNewManualRefillRequests ?? false,
+        cancelRequestsEnabled: integrationSettings.adminNotifNewManualCancelRequests ?? false,
+        newUsersEnabled: integrationSettings.adminNotifNewUsers ?? false,
+        userActivityLogsEnabled: integrationSettings.adminNotifUserActivityLogs ?? false,
+        pendingTransactionsEnabled: integrationSettings.adminNotifPendingTransactions ?? false,
+        apiSyncLogsEnabled: integrationSettings.adminNotifApiSyncLogs ?? false,
+        newChildPanelOrdersEnabled: integrationSettings.adminNotifNewChildPanelOrders ?? false,
+        announcementEnabled: integrationSettings.adminNotifAnnouncement ?? false,
+      },
+    });
+  } catch (error) {
+    console.error('Error loading notification settings:', error);
+    return NextResponse.json(
+      { error: 'Failed to load notification settings' },
+      { status: 500 }
+    );
+  }
+}
+
