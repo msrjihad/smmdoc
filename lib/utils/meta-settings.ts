@@ -1,4 +1,7 @@
+import { unstable_cache, revalidateTag } from 'next/cache';
 import { db } from '@/lib/db';
+
+export const META_SETTINGS_CACHE_TAG = 'meta-settings';
 
 export interface MetaSettings {
   googleTitle: string;
@@ -20,50 +23,51 @@ const DEFAULT_META_SETTINGS: MetaSettings = {
   thumbnail: '/general/og-image.jpg'
 };
 
-export async function getMetaSettings(): Promise<MetaSettings> {
-  const now = Date.now();
-
-  if (cachedMetaSettings && (now - lastFetchTime) < CACHE_DURATION) {
-    return cachedMetaSettings;
-  }
-
+async function fetchMetaSettingsFromDb(): Promise<MetaSettings> {
   try {
-
     const settings = await db.generalSettings.findFirst();
-
     if (settings) {
       const googleTitle = settings.googleTitle?.trim() || '';
       const siteTitle = settings.siteTitle?.trim() || DEFAULT_META_SETTINGS.siteTitle;
-
       const siteDescriptionValue = settings.siteDescription?.trim() || '';
       const siteDescription = siteDescriptionValue === '' ? DEFAULT_META_SETTINGS.siteDescription : siteDescriptionValue;
-
       const keywordsValue = settings.metaKeywords?.trim() || '';
       const keywords = keywordsValue === '' ? DEFAULT_META_SETTINGS.keywords : keywordsValue;
-
-      const metaSettings: MetaSettings = {
+      return {
         googleTitle,
         siteTitle,
         siteDescription,
         keywords,
         thumbnail: settings.thumbnail || DEFAULT_META_SETTINGS.thumbnail
       };
-
-      cachedMetaSettings = metaSettings;
-      lastFetchTime = now;
-
-      return metaSettings;
     }
   } catch (error) {
     console.error('Error fetching meta settings:', error);
   }
-
   return DEFAULT_META_SETTINGS;
+}
+
+const getCachedMetaSettings = unstable_cache(
+  fetchMetaSettingsFromDb,
+  [META_SETTINGS_CACHE_TAG],
+  { revalidate: 300, tags: [META_SETTINGS_CACHE_TAG] }
+);
+
+export async function getMetaSettings(): Promise<MetaSettings> {
+  const now = Date.now();
+  if (cachedMetaSettings && (now - lastFetchTime) < CACHE_DURATION) {
+    return cachedMetaSettings;
+  }
+  const metaSettings = await getCachedMetaSettings();
+  cachedMetaSettings = metaSettings;
+  lastFetchTime = now;
+  return metaSettings;
 }
 
 export function clearMetaSettingsCache(): void {
   cachedMetaSettings = null;
   lastFetchTime = 0;
+  revalidateTag(META_SETTINGS_CACHE_TAG, 'max');
 }
 
 export function formatKeywords(keywords: string): string[] {

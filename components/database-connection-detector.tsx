@@ -28,16 +28,13 @@ export default function DatabaseConnectionDetector({ children }: { children: Rea
 
   useEffect(() => {
     let isMounted = true;
-    let intervalId: NodeJS.Timeout | null = null;
 
     const performCheck = async () => {
       const connected = await checkDatabaseConnection();
 
       if (!isMounted) return;
 
-      const wasConnected = isDatabaseConnected;
       setIsDatabaseConnected((prev) => {
-
         if (prev === connected) return prev;
 
         if (!connected && (prev === true || (prev === null && !toastShownRef.current))) {
@@ -54,17 +51,10 @@ export default function DatabaseConnectionDetector({ children }: { children: Rea
 
     performCheck();
 
-    intervalId = setInterval(() => {
-      performCheck();
-    }, 30000);
-
     return () => {
       isMounted = false;
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
     };
-  }, []);
+  }, [checkDatabaseConnection]);
 
   return (
     <>

@@ -13,7 +13,6 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import {
     FaChevronDown,
     FaCog,
-    FaDesktop,
     FaEllipsisV,
     FaFileContract,
     FaHeadset,
@@ -181,8 +180,8 @@ const ThemeToggle = ({
   };
 
   const cycleTheme = () => {
-    const themeOrder = ['system', 'light', 'dark'];
-    const currentIndex = themeOrder.indexOf(theme || 'system');
+    const themeOrder = ['light', 'dark'];
+    const currentIndex = themeOrder.indexOf(theme || 'light');
     const nextIndex = (currentIndex + 1) % themeOrder.length;
     const nextTheme = themeOrder[nextIndex];
     handleThemeChange(nextTheme);
@@ -208,11 +207,10 @@ const ThemeToggle = ({
   const themeOptions = [
     { key: 'light', label: 'Light', icon: FaSun },
     { key: 'dark', label: 'Dark', icon: FaMoon },
-    { key: 'system', label: 'System', icon: FaDesktop },
   ];
 
   const currentTheme =
-    themeOptions.find((option) => option.key === theme) || themeOptions[2];
+    themeOptions.find((option) => option.key === theme) || themeOptions[0];
   const CurrentIcon = currentTheme.icon;
 
   if (isMobile) {

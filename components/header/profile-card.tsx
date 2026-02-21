@@ -23,7 +23,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { FaDesktop, FaMoon, FaSun } from 'react-icons/fa';
+import { FaMoon, FaSun } from 'react-icons/fa';
 
 const Avatar = ({
   className,
@@ -163,7 +163,6 @@ const ThemeToggle = ({ isMobile = false }: { isMobile?: boolean }) => {
   const themeOptions = [
     { key: 'light', label: 'Light', icon: FaSun },
     { key: 'dark', label: 'Dark', icon: FaMoon },
-    { key: 'system', label: 'System', icon: FaDesktop },
   ];
 
   if (isMobile) {

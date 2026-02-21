@@ -15,7 +15,7 @@ const createPrismaClient = () => {
   
   if (!connectionString.includes("connection_limit") && !connectionString.includes("pool_timeout")) {
     const separator = connectionString.includes("?") ? "&" : "?";
-    const poolSize = process.env.DATABASE_POOL_SIZE || "10";
+    const poolSize = process.env.DATABASE_POOL_SIZE || "5";
     const poolTimeout = process.env.DATABASE_POOL_TIMEOUT || "10";
     
     connectionString = `${connectionString}${separator}connection_limit=${poolSize}&pool_timeout=${poolTimeout}`;
